@@ -27,7 +27,7 @@ Rules for AI coding agents (Claude Code, Codex, others):
 
 - Agents commit with the identity above. They never use their own name, a bot account, or another person's account.
 - Do not add `Co-authored-by:` trailers that add contributors. A second contributor in the repo contradicts the team size in the submission.
-- AI tooling is disclosed in the README section "Baseline & tools", as hackathon rule Q-005 requires. That is where AI usage is credited, not in commit authorship.
+- AI tooling is disclosed in the README section "Tools & disclosure", as hackathon rule Q-005 requires. That is where AI usage is credited, not in commit authorship.
 
 ## 2. Language
 
@@ -46,9 +46,9 @@ Areas: `factory`, `meme`, `pool`, `mnav`, `chainsig`, `intents`, `oracle`, `rela
 
 Hackathon tags (rule Q-003):
 
-- `pre-hackathon`: the last commit of any baseline code brought in from earlier projects.
+- No `pre-hackathon` tag: the repo was created inside the window and contains no earlier code.
 - `hackathon-submission`: the commit submitted to judges.
-- The README links the diff `pre-hackathon...hackathon-submission`.
+- The README states that the full history was written during the hackathon.
 
 ## 4. Commits
 

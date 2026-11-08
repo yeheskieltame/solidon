@@ -260,8 +260,8 @@ Deadline: 14 Nov 2026 23:59 UTC, or 15 Nov 06:59 WIB.
 
 **Checklist**
 
-- [ ] Public repo with tags `pre-hackathon` and `hackathon-submission`, plus a README section linking the diff
-- [ ] README lists the older code (bStocks/PancakeSwap code from the BNB project) as baseline
+- [ ] Public repo with the tag `hackathon-submission` on the submitted commit
+- [ ] README states there is no baseline code: the repo was created on 8 Nov 2026 and every commit is inside the window
 - [ ] README names NYXERON as the other project by the same person
 - [ ] README includes "do X, see Y" steps, threat model, trust assumption, and 60-day simulation results
 - [ ] LICENSE file (MIT)

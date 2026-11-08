@@ -18,11 +18,11 @@ Summary of [HACKATHON.md](https://nearhackathon.com/HACKATHON.md) as of 8 Nov 20
 
 | Code | Rule | What it means for Solidon |
 | --- | --- | --- |
-| Q-001 | Code from 19 Oct counts; earlier commits are baseline | Keep old code separate from new code |
-| Q-002 | A product on another chain is allowed; only the NEAR integration is judged | Old bStocks/PancakeSwap code = baseline, stated in the README |
-| Q-003 | A new repo is not required: a dedicated branch or tags `pre-hackathon` and `hackathon-submission` + a diff link in the README | Both tags are mandatory |
+| Q-001 | Code from 19 Oct counts; earlier commits are baseline | The repo was created on 8 Nov 2026, so its whole history counts. No baseline code |
+| Q-002 | A product on another chain is allowed; only the NEAR integration is judged | No earlier code is reused; the BSC side (bStocks, PancakeSwap) is rebuilt in the window |
+| Q-003 | A new repo is not required: a dedicated branch or tags `pre-hackathon` and `hackathon-submission` + a diff link in the README | No `pre-hackathon` tag needed (no baseline). Tag `hackathon-submission` on the submitted commit |
 | Q-004 | An old project as-is is not allowed; new features built in the window are | Every NEAR part is built inside the window |
-| Q-005 | Libraries, templates, and AI code are allowed but must be listed | README has a "Baseline & tools" section |
+| Q-005 | Libraries, templates, and AI code are allowed but must be listed | README has a "Tools & disclosure" section |
 | Q-006 | 1Click JWT is optional; without it the fee is 0.2% | Optional |
 | Q-007 | Intents has no testnet | Mainnet, separate dev account, small amounts, `dry: true` |
 | Q-010 | Testnet-only projects are eligible | Non-Intents parts may stay on testnet |
