@@ -20,6 +20,7 @@ Rust smart contracts for NEAR, one cargo workspace.
 cd contracts
 ./build.sh          # build every contract to target/near/
 cargo test          # unit tests + sandbox integration tests
+./deploy-testnet.sh # one-shot testnet deploy, signs with your keychain (see docs/DEPLOYMENTS.md)
 ```
 
 ## Meme contract methods

@@ -6,6 +6,8 @@ Built for NEAR HACKATHON 2026 · Tracks: `defi`, `memecoins` · Maintainer: [@ye
 
 > This README is a working index. The judge-facing README (problem, "do X, see Y" steps, threat model, simulation results, tools & disclosure, disclosure of NYXERON) is written before submission.
 
+**Live on NEAR testnet:** factory [`solidon.testnet`](https://testnet.nearblocks.io/address/solidon.testnet), first meme [`nvda.solidon.testnet`](https://testnet.nearblocks.io/address/nvda.solidon.testnet). Details: [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md).
+
 ## Repository layout
 
 | Path | Contents |
@@ -14,7 +16,7 @@ Built for NEAR HACKATHON 2026 · Tracks: `defi`, `memecoins` · Maintainer: [@ye
 | [`backend/`](backend) | Node.js relayer and keeper |
 | [`frontend/`](frontend) | Next.js app and proof dashboard |
 | [`simulation/`](simulation) | 60-day mNAV simulation |
-| [`docs/`](docs) | Spec, references, hackathon rules, PR evidence |
+| [`docs/`](docs) | Spec, references, hackathon rules, [deployments](docs/DEPLOYMENTS.md), PR evidence |
 
 Each folder is self-contained, with its own README, manifest, and commands. Nothing is installed at the root.
 
