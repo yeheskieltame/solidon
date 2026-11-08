@@ -6,6 +6,18 @@ Built for NEAR HACKATHON 2026 · Tracks: `defi`, `memecoins` · Maintainer: [@ye
 
 > This README is a working index. The judge-facing README (problem, "do X, see Y" steps, threat model, simulation results, baseline & tools, disclosure of NYXERON) is written before submission.
 
+## Repository layout
+
+| Path | Contents |
+| --- | --- |
+| [`contracts/`](contracts) | Rust smart contracts on NEAR: `meme` (token, pool, mNAV engine), `factory`, `mock-ft` |
+| [`backend/`](backend) | Node.js relayer and keeper |
+| [`frontend/`](frontend) | Next.js app and proof dashboard |
+| [`simulation/`](simulation) | 60-day mNAV simulation |
+| [`docs/`](docs) | Spec, references, hackathon rules, PR evidence |
+
+Each folder is self-contained, with its own README, manifest, and commands. Nothing is installed at the root.
+
 ## Documents
 
 | Document | Contents |
