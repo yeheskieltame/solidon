@@ -2,7 +2,7 @@ name: contracts
 
 on:
   pull_request:
-    paths: ["contracts/**/*.rs", "contracts/**/Cargo.toml", "contracts/Cargo.lock", "contracts/build.sh", ".github/workflows/contracts.yml"]
+    paths: ["contracts/**/*.rs", "contracts/**/Cargo.toml", "contracts/Cargo.lock", "contracts/build.sh"]
   push:
     branches: [main]
     paths: ["contracts/**/*.rs", "contracts/**/Cargo.toml", "contracts/Cargo.lock", "contracts/build.sh"]
