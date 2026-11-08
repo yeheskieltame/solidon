@@ -13,6 +13,7 @@ use near_sdk::{
     assert_one_yocto, env, near, require, AccountId, Gas, NearToken, Promise, PromiseOrValue,
 };
 
+use crate::twap::PRICE_SCALE;
 use crate::{Meme, MemeExt, Params};
 
 // The macro expands to code clippy flags; the lint is not ours to fix.
@@ -56,6 +57,14 @@ pub struct PoolView {
     pub meme_reserve: U128,
     pub usdc_reserve: U128,
     pub treasury_usdc: U128,
+    /// USDC raw per meme raw, scaled by 1e30. Zero before the seed.
+    pub spot_price: U128,
+    /// 30-minute TWAP, same scale. `null` while the pool is younger than the window.
+    pub twap_price: Option<U128>,
+}
+
+pub fn now_secs() -> u64 {
+    env::block_timestamp() / 1_000_000_000
 }
 
 const GAS_FT_TRANSFER: Gas = Gas::from_tgas(10);
@@ -71,6 +80,20 @@ fn emit(event: &str, data: near_sdk::serde_json::Value) {
 impl Meme {
     fn meme_reserve(&self) -> u128 {
         self.token.ft_balance_of(env::current_account_id()).0
+    }
+
+    pub(crate) fn spot_price(&self) -> u128 {
+        mul_div(self.usdc_reserve, PRICE_SCALE, self.meme_reserve())
+    }
+
+    /// Call after every reserve change.
+    pub(crate) fn observe_price(&mut self) {
+        let price = self.spot_price();
+        self.twap.observe(now_secs(), price);
+    }
+
+    pub(crate) fn twap_price(&self) -> Option<u128> {
+        self.twap.average(now_secs(), self.params.twap_window_secs)
     }
 
     fn credit(&mut self, account: &AccountId, amount: u128) {
@@ -105,6 +128,7 @@ impl Meme {
         self.credit(&creator, to_creator);
         self.token
             .internal_transfer(&env::current_account_id(), &buyer, out, None);
+        self.observe_price();
         emit(
             "buy",
             json!({"account": buyer, "usdc_in": U128(usdc_in), "meme_out": U128(out)}),
@@ -134,6 +158,7 @@ impl FungibleTokenReceiver for Meme {
                 require!(self.usdc_reserve == 0, "Pool is already seeded");
                 require!(amount.0 > 0, "Seed must be positive");
                 self.usdc_reserve = amount.0;
+                self.observe_price();
                 emit("seed", json!({"account": sender_id, "usdc_in": amount}));
             }
             TransferAction::Buy { min_out } => self.buy(sender_id, amount.0, min_out.0),
@@ -160,6 +185,7 @@ impl Meme {
         self.token
             .internal_transfer(&seller, &env::current_account_id(), amount.0, None);
         self.usdc_reserve -= gross;
+        self.observe_price();
         self.treasury_usdc += to_treasury;
         let creator = self.creator.clone();
         self.credit(&creator, to_creator);
@@ -194,6 +220,8 @@ impl Meme {
             meme_reserve: U128(self.meme_reserve()),
             usdc_reserve: U128(self.usdc_reserve),
             treasury_usdc: U128(self.treasury_usdc),
+            spot_price: U128(self.spot_price()),
+            twap_price: self.twap_price().map(U128),
         }
     }
 
@@ -235,14 +263,7 @@ mod tests {
     /// Meme with 1,000 USDC seeded by the creator (accounts(1) = "bob").
     fn seeded() -> Meme {
         ctx("factory.near", 0);
-        let mut m = Meme::new(
-            accounts(1),
-            "usdc.near".parse().unwrap(),
-            "Nvidia Meme".into(),
-            "NVDA".into(),
-            "NVDA".into(),
-            None,
-        );
+        let mut m = crate::test_meme(accounts(1));
         m.token.internal_register_account(&accounts(2));
         ctx("usdc.near", 0);
         m.ft_on_transfer(
@@ -255,6 +276,32 @@ mod tests {
 
     fn k(m: &Meme) -> U256 {
         U256::from(m.meme_reserve()) * U256::from(m.usdc_reserve)
+    }
+
+    #[test]
+    fn twap_follows_reserves_after_the_window() {
+        let mut m = seeded(); // seeded at t = 0
+        let seed_price = m.spot_price();
+        assert!(m.get_pool().twap_price.is_none());
+        // Buy 100 USDC at t = 20 min, read at t = 30 min.
+        testing_env!(VMContextBuilder::new()
+            .current_account_id("nvda.solidon.near".parse().unwrap())
+            .predecessor_account_id("usdc.near".parse().unwrap())
+            .block_timestamp(1_200 * 1_000_000_000)
+            .build());
+        m.ft_on_transfer(
+            accounts(2),
+            U128(100 * USDC),
+            r#"{"action":"buy","min_out":"1"}"#.into(),
+        );
+        let after = m.spot_price();
+        testing_env!(VMContextBuilder::new()
+            .current_account_id("nvda.solidon.near".parse().unwrap())
+            .block_timestamp(1_800 * 1_000_000_000)
+            .build());
+        let twap = m.get_pool().twap_price.unwrap().0;
+        assert_eq!(twap, (seed_price * 1_200 + after * 600) / 1_800);
+        assert!(seed_price < twap && twap < after);
     }
 
     #[test]
@@ -320,14 +367,7 @@ mod tests {
     #[should_panic(expected = "Only the creator")]
     fn only_creator_seeds() {
         ctx("factory.near", 0);
-        let mut m = Meme::new(
-            accounts(1),
-            "usdc.near".parse().unwrap(),
-            "A".into(),
-            "A".into(),
-            "A".into(),
-            None,
-        );
+        let mut m = crate::test_meme(accounts(1));
         ctx("usdc.near", 0);
         m.ft_on_transfer(accounts(2), U128(USDC), r#"{"action":"seed"}"#.into());
     }

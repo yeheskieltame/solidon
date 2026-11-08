@@ -61,6 +61,13 @@ Last updated: 8 Nov 2026 · Owner: [@yeheskieltame](https://github.com/yeheskiel
 | --- | --- | --- |
 | Oracles on NEAR (Pyth + OutLayer) | https://docs.near.org/primitives/oracles | Mainnet `pyth-oracle.near`, testnet `pyth-oracle.testnet`, Hermes `hermes.pyth.network` |
 | Pyth price feed list | https://pyth.network/price-feeds | Find the NVDA/USD feed ID (equity, follows US market hours) |
+| Pyth NEAR receiver source | https://github.com/pyth-network/pyth-crosschain/tree/main/target_chains/near/receiver/src | `get_price_no_older_than(price_id, age)` returns `Option<Price { price: I64, conf: U64, expo: i32, publish_time: i64 }>`; `price_id` is 64 hex characters without `0x` |
+| NVDA/USD feed ID (verified 9 Nov 2026) | https://hermes.pyth.network/v2/price_feeds?query=NVDA&asset_type=equity | `Equity.US.NVDA/USD` = `b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593`, same ID on Hermes beta. Schedule: US market hours only |
+
+Notes from verification on 9 Nov 2026:
+
+- The NVDA feed does not exist on `pyth-oracle.near` yet (`price_feed_exists` = `false`). Pyth on NEAR is pull-based: the keeper must push the first `update_price_feeds`.
+- Hermes `/v2/updates/price/latest` answered `401 unauthorized` without credentials, while `/v2/price_feeds` stayed public. The keeper needs a Hermes API key or another update source.
 
 ## 6. NEAR ecosystem partners
 

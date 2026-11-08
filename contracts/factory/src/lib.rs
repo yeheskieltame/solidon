@@ -1,7 +1,8 @@
 //! Solidon factory: anyone launches a meme as `<symbol>.<factory>`.
 //!
-//! The factory has no owner. It fixes the USDC token at init so a creator
-//! cannot launch a meme against a fake stablecoin.
+//! The factory has no owner. It fixes the USDC token, the Pyth oracle, and the
+//! list of supported stocks at init, so a creator cannot launch a meme against
+//! a fake stablecoin or a wrong price feed.
 
 use near_sdk::json_types::U128;
 use near_sdk::serde_json::json;
@@ -18,19 +19,34 @@ const GAS_ON_CREATE: Gas = Gas::from_tgas(10);
 /// Bytes reserved for the meme's own state on top of its code.
 const STATE_BYTES: u128 = 20_000;
 
+/// Same shape as `meme::Stock`; the meme contract validates it in `new`.
+#[near(serializers = [borsh, json])]
+#[derive(Clone)]
+pub struct Stock {
+    pub ticker: String,
+    pub price_id: String,
+    pub bsc_token: String,
+    pub decimals: u8,
+}
+
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
 pub struct Factory {
     usdc: AccountId,
+    oracle: AccountId,
+    stocks: Vec<Stock>,
     memes: IterableSet<AccountId>,
 }
 
 #[near]
 impl Factory {
     #[init]
-    pub fn new(usdc: AccountId) -> Self {
+    pub fn new(usdc: AccountId, oracle: AccountId, stocks: Vec<Stock>) -> Self {
+        require!(!stocks.is_empty(), "List at least one stock");
         Self {
             usdc,
+            oracle,
+            stocks,
             memes: IterableSet::new(b"m"),
         }
     }
@@ -67,11 +83,17 @@ impl Factory {
             .parse()
             .unwrap();
         require!(!self.memes.contains(&meme), "Symbol already launched");
+        let stock = self
+            .stocks
+            .iter()
+            .find(|s| s.ticker == thesis_stock)
+            .unwrap_or_else(|| env::panic_str("Stock not listed in this factory"))
+            .clone();
 
         let creator = env::predecessor_account_id();
         let args = json!({
-            "creator": creator, "usdc": self.usdc, "name": name,
-            "symbol": symbol, "thesis_stock": thesis_stock, "icon": icon,
+            "creator": creator, "usdc": self.usdc, "oracle": self.oracle,
+            "stock": stock, "name": name, "symbol": symbol, "icon": icon,
         });
         Promise::new(meme.clone())
             .create_account()
@@ -120,5 +142,13 @@ impl Factory {
 
     pub fn get_usdc(&self) -> AccountId {
         self.usdc.clone()
+    }
+
+    pub fn get_oracle(&self) -> AccountId {
+        self.oracle.clone()
+    }
+
+    pub fn get_stocks(&self) -> Vec<Stock> {
+        self.stocks.clone()
     }
 }
