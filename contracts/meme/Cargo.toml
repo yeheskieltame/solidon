@@ -1,0 +1,17 @@
+[package]
+name = "meme"
+description = "Solidon meme: NEP-141 token with locked treasury parameters"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/yeheskieltame/solidon"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk.workspace = true
+near-contract-standards.workspace = true
+
+[dev-dependencies]
+near-sdk = { workspace = true, features = ["unit-testing"] }
