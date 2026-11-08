@@ -7,6 +7,12 @@ use serde_json::json;
 
 const USDC: u128 = 1_000_000;
 
+pub fn nvda() -> serde_json::Value {
+    json!({"ticker": "NVDA",
+           "price_id": "b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593",
+           "bsc_token": "0x0000000000000000000000000000000000000001", "decimals": 18})
+}
+
 fn wasm(name: &str) -> Vec<u8> {
     let path = format!(
         "{}/../target/near/{name}/{name}.wasm",
@@ -98,8 +104,8 @@ async fn seed_buy_sell_claim() -> anyhow::Result<()> {
         .into_result()?;
     meme.call("new")
         .args_json(json!({
-            "creator": creator.id(), "usdc": usdc.id(),
-            "name": "Nvidia Meme", "symbol": "NVDA", "thesis_stock": "NVDA", "icon": null
+            "creator": creator.id(), "usdc": usdc.id(), "oracle": "pyth.test.near", "stock": nvda(),
+            "name": "Nvidia Meme", "symbol": "NVDA", "icon": null
         }))
         .transact()
         .await?
@@ -119,8 +125,8 @@ async fn seed_buy_sell_claim() -> anyhow::Result<()> {
     let again = meme
         .call("new")
         .args_json(json!({
-            "creator": bob.id(), "usdc": usdc.id(),
-            "name": "X", "symbol": "X", "thesis_stock": "X", "icon": null
+            "creator": bob.id(), "usdc": usdc.id(), "oracle": "pyth.test.near", "stock": nvda(),
+            "name": "X", "symbol": "X", "icon": null
         }))
         .transact()
         .await?;

@@ -1,0 +1,13 @@
+[package]
+name = "mock-pyth"
+description = "Test-only Pyth oracle with the pyth-oracle.near read interface"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk.workspace = true
