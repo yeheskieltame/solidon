@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: NEAR HACKATHON rules (HACKATHON.md)
+    url: https://nearhackathon.com/HACKATHON.md
+    about: Official hackathon rules and submission procedure.
+  - name: NEAR Discord
+    url: https://discord.gg/nearprotocol
+    about: Questions about building on NEAR.

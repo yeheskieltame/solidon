@@ -1,0 +1,23 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+**/credentials*.json
+
+# Rust / NEAR
+target/
+neardev/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+coverage/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

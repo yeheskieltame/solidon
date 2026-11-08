@@ -1,0 +1,63 @@
+name: Feature request
+description: New capability or scope change.
+title: "[Feature] <area>: <short description>"
+labels: ["type:feature"]
+assignees: ["yeheskieltame"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Assign to @yeheskieltame. Link the matching section of docs/SPEC.md.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or judge problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [factory, meme, pool, mnav, chainsig, intents, oracle, relayer, keeper, web, sim, docs]
+    validations:
+      required: true
+  - type: dropdown
+    id: track
+    attributes:
+      label: Track it strengthens
+      multiple: true
+      options: [defi, memecoins]
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - MVP (needed for the demo)
+        - Nice to have (only if time allows)
+        - Vision (README only)
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Checkable statements, format "do X, see Y".
+      placeholder: |
+        - [ ] Do ... → see ...
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+    validations:
+      required: false

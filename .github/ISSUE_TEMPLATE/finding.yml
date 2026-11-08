@@ -1,0 +1,72 @@
+name: Finding (security / economic / research)
+description: An exploit path, wrong math, risky assumption, or research result that changes the design.
+title: "[Finding] <area>: <short description>"
+labels: ["type:finding"]
+assignees: ["yeheskieltame"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Assign to @yeheskieltame. For a live exploit against real funds, do not open a public issue:
+        use a private GitHub security advisory instead.
+  - type: textarea
+    id: finding
+    attributes:
+      label: Finding
+      description: What was found, stated in one paragraph.
+    validations:
+      required: true
+  - type: input
+    id: location
+    attributes:
+      label: Location
+      description: File and line, contract method, or page.
+      placeholder: contracts/meme/src/mnav.rs:142 `rebalance()`
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity (impact)
+      options:
+        - S0 Critical
+        - S1 High
+        - S2 Medium
+        - S3 Low
+    validations:
+      required: true
+  - type: dropdown
+    id: likelihood
+    attributes:
+      label: Likelihood
+      options: [likely, possible, unlikely]
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: What an attacker or a market condition can cause, in numbers if possible.
+    validations:
+      required: true
+  - type: textarea
+    id: proof
+    attributes:
+      label: Proof
+      description: Steps, test case, simulation output, or transaction links that demonstrate it.
+    validations:
+      required: true
+  - type: textarea
+    id: recommendation
+    attributes:
+      label: Recommendation
+      description: Proposed fix and why it closes the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Docs, prior incidents, or specs that support the finding.
+    validations:
+      required: false

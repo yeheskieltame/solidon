@@ -1,0 +1,87 @@
+name: Bug report
+description: Something behaves differently from docs/SPEC.md.
+title: "[Bug] <area>: <short description>"
+labels: ["type:bug", "status:needs-evidence"]
+assignees: ["yeheskieltame"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Assign to @yeheskieltame. Attach evidence: screenshots, test output, or transaction links.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One or two sentences describing the bug.
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: See CONTRIBUTING.md section 6.
+      options:
+        - S0 Critical (funds at risk or submission blocked)
+        - S1 High (core flow broken or wrong economic action)
+        - S2 Medium (degraded, workaround exists)
+        - S3 Low (cosmetic or copy)
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [factory, meme, pool, mnav, chainsig, intents, oracle, relayer, keeper, web, sim, docs]
+    validations:
+      required: true
+  - type: dropdown
+    id: network
+    attributes:
+      label: Network
+      options: [NEAR testnet, NEAR mainnet, BSC testnet, BSC mainnet, Local, Not on-chain]
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Format "do X, see Y".
+      placeholder: |
+        1. Do ...
+        2. Do ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: What should happen, with a reference to docs/SPEC.md if possible.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Screenshots, logs, test output, NearBlocks / BscScan links.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: Who or what is affected, and whether funds or the demo are at risk.
+    validations:
+      required: true
+  - type: textarea
+    id: fix
+    attributes:
+      label: Suspected cause or proposed fix
+    validations:
+      required: false
