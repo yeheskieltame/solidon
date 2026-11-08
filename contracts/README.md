@@ -9,6 +9,8 @@ Rust smart contracts for NEAR, one cargo workspace.
 | `mock-ft` | Minimal NEP-141 used as USDC in sandbox tests and on testnet |
 | `mock-pyth` | Pyth read interface with settable prices, for sandbox tests and testnet |
 
+`stocks/bsc-mainnet.json` is the verified list of stocks the factory lists; `python3 stocks/verify.py` re-checks it on-chain ([docs/STOCKS.md](../docs/STOCKS.md)).
+
 ## Requirements
 
 - Rust (see `rust-toolchain.toml` when present) with the `wasm32-unknown-unknown` target

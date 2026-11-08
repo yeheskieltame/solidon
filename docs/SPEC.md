@@ -186,6 +186,8 @@ The MVP knowingly accepts one trust assumption: the NEAR contract cannot read BS
 | Pool price manipulation to trigger issuance or buyback | mNAV uses a 30-minute TWAP, a 1-hour cooldown, and issuance capped at 1% of supply per day |
 | Stale oracle while the stock market is closed | All mNAV actions stop if the Pyth feed is older than 15 minutes. Pool trading keeps working |
 | Bank run on redemptions | Redemptions only draw on the cash buffer. A queue forms if the buffer runs out, and a stock sale is scheduled to refill it |
+| bStock issuer blocks the treasury, pauses the token, or upgrades it | Accepted trust assumption (bStocks are regulated securities tokens with a blocklist, a pause switch, and an upgradeable beacon; no allowlist today). Stock sales stop, the stock is still valued at the Pyth price, and redemptions use the USDC cash buffer on NEAR. Evidence: docs/STOCKS.md |
+| Fake token with a bStock symbol | The factory's stock list is immutable and verified by `contracts/stocks/verify.py`, which binds each token to its official PancakeSwap v3 USDT pool |
 | Relayer withholds transactions | Anyone can broadcast a signed transaction. The official relayer is a convenience, not a trust point |
 | Front-running the swap on BSC | `minAmountOut` is computed from the Pyth price with at most 1% slippage |
 | Premium bubble then crash | The floor only defends NAV: buyback below 1.0×, redemption below 0.9×. Issuance is accretive, so a bubble leaves holders with more stock per token, not less |
