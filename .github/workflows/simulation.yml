@@ -1,0 +1,21 @@
+name: simulation
+
+on:
+  pull_request:
+    paths: ["simulation/**"]
+  push:
+    branches: [main]
+    paths: ["simulation/**"]
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run the 60-day simulation (fails if a SPEC check fails)
+        run: python3 simulation/sim.py
+      - name: RESULTS.md and charts are up to date
+        run: git diff --exit-code simulation/
