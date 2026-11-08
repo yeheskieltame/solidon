@@ -17,7 +17,7 @@ Solidon is a memecoin launchpad on NEAR where every meme is an on-chain treasury
 
 - Every meme owns a treasury of real stocks at a BSC address controlled by the NEAR contract through Chain Signatures. No custodian, no admin key.
 - **Same direction as the stock, more aggressive, with a floor.** The meme's NAV follows the stock, the hype premium amplifies it, and the contract defends NAV when the premium collapses.
-- An asymmetric mNAV engine: the upside is allowed to run (issuance only at a high premium, small and accretive), while the downside is defended (buyback below NAV, USDC redemption well below NAV).
+- An asymmetric mNAV engine: the upside is allowed to run (issuance only at a high premium, small and accretive), while the downside is defended (redemption at NAV well below NAV, plus a small buyback from surplus cash below NAV).
 - Enter and exit from any chain through NEAR Intents.
 
 **Tracks:** Unstoppable DeFi (`defi`) and Memecoins With Mechanics (`memecoins`).
@@ -51,7 +51,7 @@ Solidon keeps the aggressive behaviour and adds a floor:
 | Stock return | NAV per token follows the bStock price | Same direction as the real stock |
 | Premium change | mNAV, driven by hype and demand | Amplifies moves, especially upward |
 | Leverage | Stock units per token (and, later, borrowing) | Grows over time through accretive issuance |
-| Floor | Buyback below NAV, redemption below 0.9 × NAV | The meme cannot stay far below the value of its stocks |
+| Floor | Redemption at NAV below 0.9 × NAV, small buyback below NAV | The meme cannot stay far below the value of its stocks |
 
 The floor is a NAV floor, not a price guarantee. If the stock itself falls, NAV falls with it. What the floor removes is the extra loss from the hype premium collapsing below zero.
 
@@ -59,7 +59,7 @@ The floor is a NAV floor, not a price guarantee. If the stock itself falls, NAV 
 
 - **Upside runs.** Issuance only starts at a high premium (mNAV > 2.0) and is capped small, so the premium can expand when the stock rallies.
 - **Issuance is accretive.** New memes are only sold above NAV, so every issuance buys more stock than it dilutes. Stock units per token rise, which makes the meme more sensitive to the stock over time. This is the MicroStrategy flywheel, enforced by code.
-- **Downside is defended.** Below NAV the contract buys back and burns. Far below NAV, holders can redeem for USDC.
+- **Downside is defended.** Far below NAV, holders can redeem for USDC at NAV per token, which is value-neutral for everyone who stays. Below NAV, surplus cash buys back and burns.
 
 ### Leverage (roadmap)
 
@@ -76,7 +76,7 @@ The MVP focuses on one complete flow that can be proven on-chain. Everything els
 | Internal meme/USDC pool | Constant-product AMM inside the meme contract, price read directly for mNAV | MVP |
 | BSC treasury via Chain Signatures | One BSC address per meme, derived from the meme account + path, holding a bStock (NVDAB) | MVP |
 | Asymmetric mNAV engine | Small accretive issuance only at a high premium, buyback + burn below NAV, brake when the oracle is stale | MVP |
-| USDC redemption | Burn memes and receive a pro-rata share of USDC cash when mNAV < 0.9 | MVP |
+| USDC redemption | Burn memes and receive NAV per token in USDC, paid from cash, when mNAV < 0.9 | MVP |
 | Enter from any chain | Pay with BTC/SOL/USDC from other chains through Intents 1Click, arriving as USDC on NEAR | MVP |
 | Proof dashboard | NAV, mNAV, stocks held + BscScan link, stock units per token, meme vs stock chart, log of every mint/burn/buy | MVP |
 | 60-day simulation | Script that simulates supply, NAV, and meme price against the stock under several market scenarios | MVP |
@@ -125,10 +125,10 @@ Every parameter is set at launch, readable by anyone, and there is no admin func
 | --- | --- | --- |
 | Pool swap fee | 1% per trade | 0.8% to treasury, 0.2% to creator |
 | Issuance threshold | mNAV > 2.0 | Contract mints new memes and sells them into the pool; proceeds buy stock. Set high so the premium can run |
-| Max issuance per epoch | 1% of supply per 24 hours | Small enough not to cap a rally, prevents sudden dilution |
+| Max issuance per epoch | 1% of circulating supply per 24 hours | Small enough not to cap a rally, prevents sudden dilution |
 | Accretion rule | Issue only if stock units per token after ≥ before | Every issuance increases exposure per token; enforced as a contract invariant |
-| Buyback threshold | mNAV < 1.0 | Contract uses USDC cash to buy memes from the pool, then burns them |
-| Redemption threshold | mNAV < 0.9 | Holders can burn memes and receive pro-rata USDC from cash |
+| Buyback threshold | mNAV < 1.0 | Contract uses USDC cash **above the 20% buffer** to buy memes from the pool, then burns them. Never sells stock to fund a buyback (finding #12) |
+| Redemption threshold | mNAV < 0.9 | Holders can burn memes and receive NAV per token in USDC from cash |
 | Cash buffer on NEAR | 20% of NAV | Cash ready for buybacks and redemptions without waiting for a stock sale on BSC |
 | Pool price for mNAV | 30-minute TWAP | Prevents short-term price manipulation |
 | Oracle staleness limit | 15 minutes | If the Pyth feed is older than this, all mNAV actions stop |
@@ -136,7 +136,9 @@ Every parameter is set at launch, readable by anyone, and there is no admin func
 | Caller tip | 0.05% of the action value | Incentive for anyone who calls `rebalance()` |
 | Target leverage | 1.0× (MVP), 1.5–2.0× (roadmap) | Exposure to the stock per unit of NAV; above 1.0× requires borrowing on Venus |
 
-**Cash ordering rule.** Buybacks and redemptions always use the USDC buffer on NEAR first. If the buffer falls below 10% of NAV, the contract schedules a partial stock sale on BSC to refill it.
+**Cash ordering rule.** Redemptions use the USDC buffer on NEAR. If the buffer falls below 10% of NAV, the contract schedules a partial stock sale on BSC to refill it to 20%. Buybacks only spend cash above the 20% buffer and never trigger a stock sale: bought-back tokens come from the pool's inventory, so circulating supply does not fall and each buyback lowers NAV per token (finding #12, `simulation/RESULTS.md`).
+
+**Circulating supply** is total supply minus the pool's meme inventory. NAV per token and the issuance cap use it.
 
 ## User and system flows
 
@@ -166,12 +168,12 @@ Users only see buy, sell, and redeem. All cross-chain work happens in the backgr
 
 1. The contract reads the NVDA price from Pyth and the meme TWAP from the pool.
 2. The contract computes NAV and mNAV.
-3. mNAV > 2.0: small accretive issuance. 1.0 ≤ mNAV ≤ 2.0: no action, the premium moves freely. mNAV < 1.0: buyback + burn. mNAV < 0.9: redemption window opens. Stale oracle: no action.
+3. mNAV > 2.0: small accretive issuance. 1.0 ≤ mNAV ≤ 2.0: no action, the premium moves freely. mNAV < 1.0: buyback + burn from surplus cash only. mNAV < 0.9: redemption window opens. Stale oracle: no action.
 
 **Sell or redeem (user)**
 
 1. Sell: swap the meme to USDC in the pool, withdraw to any chain.
-2. Redeem (while the window is open): burn memes, receive pro-rata USDC from the cash buffer.
+2. Redeem (while the window is open): burn memes, receive NAV per token in USDC from the cash buffer.
 
 ## Trust assumptions & threat model
 
@@ -228,12 +230,14 @@ The 60-day simulation proves the core claim: **same direction as the stock, more
 | Scenario | Stock path | Meme demand | What must hold |
 | --- | --- | --- | --- |
 | Steady bull | +30% over 60 days | Rising | Meme return > stock return; stock units per token rise after each issuance |
-| Bull then hype fades | +30%, then flat | Rising, then falling | Meme falls back toward NAV but stays at or above 0.9 × NAV |
-| Stock crash | −30% | Panic selling | Meme falls with the stock; buyback and redemption keep mNAV ≥ 0.9 |
+| Bull then hype fades | +30%, then flat | Rising, then falling | Meme falls back toward NAV; mNAV is back at ≥ 0.9 within 2 hours of dropping below |
+| Stock crash | −30% | Panic selling | Meme falls with the stock; redemption brings mNAV back to ≥ 0.9 within 2 hours |
 | Sideways chop | ±5% swings | Random | No runaway issuance; supply changes stay within the epoch cap |
 | Weekend gap | Flat, oracle stale for 48 hours | Random | No mNAV action during staleness; the pool keeps trading |
 
 Reported metrics per scenario: correlation between meme and stock returns, beta of the meme to the stock, maximum drawdown versus the stock, lowest mNAV reached, total supply change, and stock units per token at day 60.
+
+**Result (9 Nov 2026, 12 seeds per scenario): every check passes with the parameters above, which are now locked.** The floor is stated as "back at ≥ 0.9 within 2 hours" because the redemption window only opens once mNAV is already below 0.9. Worst case across all runs: min mNAV 0.87, at most 1 hour below 0.9. Full tables and charts: [simulation/RESULTS.md](../simulation/RESULTS.md).
 
 ## Daily build plan
 
@@ -277,5 +281,5 @@ Deadline: 14 Nov 2026 23:59 UTC, or 15 Nov 06:59 WIB.
 - The Pyth feed ID for NVDA/USD on NEAR mainnet.
 - Use Omni Transaction inside the contract, or take the off-chain transaction-building fallback?
 - Get a 1Click JWT to avoid the 0.2% fee?
-- Is an issuance threshold of 2.0× and a 1% epoch cap the right balance between an aggressive upside and dilution? Decided by the simulation.
+- ~~Is an issuance threshold of 2.0× and a 1% epoch cap the right balance?~~ Yes: a sweep of {2.0, 2.5, 3.0} × {0.5%, 1%} kept the floor identical, and a 0.5% cap hurt the bull case. Kept 2.0× and 1%.
 - Leverage roadmap: confirm Venus supports the chosen bStock as collateral, and its loan-to-value limits.
