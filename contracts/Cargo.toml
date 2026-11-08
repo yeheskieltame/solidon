@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["meme"]
+members = ["meme", "mock-ft"]
 
 [workspace.dependencies]
 near-sdk = "5.30"
