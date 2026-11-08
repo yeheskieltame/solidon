@@ -21,3 +21,17 @@ cd contracts
 ./build.sh          # build every contract to target/near/
 cargo test          # unit tests + sandbox integration tests
 ```
+
+## Meme contract methods
+
+| Method | Who | What it does |
+| --- | --- | --- |
+| `ft_transfer_call` on USDC, `msg: {"action":"seed"}` | creator, once | First USDC liquidity |
+| `ft_transfer_call` on USDC, `msg: {"action":"buy","min_out":"<u128>"}` | anyone | Buy; full refund if `min_out` is not met |
+| `sell(amount, min_out)` + 1 yocto | holder | Sell for USDC |
+| `rebalance()`, 100 TGas | anyone, once per hour | Reads Pyth, then issuance (mNAV > 2.0), buyback (< 1.0), redemption window (< 0.9); 0.05% tip to the caller |
+| `redeem(amount, min_usdc)` + 1 yocto, 100 TGas | holder, window open | Burns and pays NAV per token in USDC from cash; refunds on any failure |
+| `claim_usdc()` | creator, callers, failed payouts | Withdraws claimable USDC |
+| `get_params`, `get_info`, `get_pool`, `get_treasury`, `quote_buy`, `quote_sell`, `claimable_of` | view | Locked parameters, stock config, reserves and TWAP, NAV/mNAV state |
+
+There is no owner method. Prices are USDC raw units per meme raw unit, scaled by 1e30.

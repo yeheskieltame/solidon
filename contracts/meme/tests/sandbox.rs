@@ -194,3 +194,141 @@ async fn seed_buy_sell_claim() -> anyhow::Result<()> {
     assert_eq!(balance(&usdc, meme.as_account()).await, reserve + treasury);
     Ok(())
 }
+
+const NVDA_ID: &str = "b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593";
+
+async fn advance(worker: &near_workspaces::Worker<near_workspaces::network::Sandbox>, secs: u64) {
+    let target = worker.view_block().await.unwrap().timestamp() + secs * 1_000_000_000;
+    while worker.view_block().await.unwrap().timestamp() < target {
+        worker.fast_forward(2_000).await.unwrap();
+    }
+}
+
+async fn set_nvda(pyth: &Contract, usd_cents: i64) {
+    pyth.call("set_price")
+        .args_json(json!({"price_id": NVDA_ID, "price": (usd_cents * 1_000_000).to_string(), "expo": -8}))
+        .transact()
+        .await
+        .unwrap()
+        .into_result()
+        .unwrap();
+}
+
+async fn rebalance(caller: &Account, meme: &Contract) -> near_workspaces::result::ExecutionFinalResult {
+    caller.call(meme.id(), "rebalance").max_gas().transact().await.unwrap()
+}
+
+/// The engine end to end with real promises: stale price, young pool, issuance,
+/// cooldown, then a sell-off that opens the redemption window, and a redemption.
+#[tokio::test]
+async fn rebalance_issue_then_redeem() -> anyhow::Result<()> {
+    let worker = near_workspaces::sandbox().await?;
+    let root = worker.root_account()?;
+    let make = |name: &'static str| {
+        let root = root.clone();
+        async move {
+            root.create_subaccount(name)
+                .initial_balance(NearToken::from_near(20))
+                .transact()
+                .await
+                .unwrap()
+                .into_result()
+                .unwrap()
+        }
+    };
+    let (creator, bob, keeper) = (make("creator").await, make("bob").await, make("keeper").await);
+    let usdc = make("usdc").await.deploy(&wasm("mock_ft")).await?.into_result()?;
+    usdc.call("new")
+        .args_json(json!({"name": "USD Coin", "symbol": "USDC", "decimals": 6}))
+        .transact()
+        .await?
+        .into_result()?;
+    let pyth = make("pyth").await.deploy(&wasm("mock_pyth")).await?.into_result()?;
+    pyth.call("new").transact().await?.into_result()?;
+    let meme = make("nvda").await.deploy(&wasm("meme")).await?.into_result()?;
+    meme.call("new")
+        .args_json(json!({
+            "creator": creator.id(), "usdc": usdc.id(), "oracle": pyth.id(), "stock": nvda(),
+            "name": "Nvidia Meme", "symbol": "NVDA", "icon": null
+        }))
+        .transact()
+        .await?
+        .into_result()?;
+    for a in [&creator, &bob] {
+        a.call(usdc.id(), "mint")
+            .args_json(json!({"account_id": a.id(), "amount": (10_000 * USDC).to_string()}))
+            .transact()
+            .await?
+            .into_result()?;
+    }
+    storage_deposit(&creator, &usdc, meme.id().as_str()).await;
+    storage_deposit(&bob, &meme, bob.id().as_str()).await;
+    ft_call(&creator, &usdc, &meme, 1_000 * USDC, r#"{"action":"seed"}"#).await;
+    ft_call(&bob, &usdc, &meme, 1_000 * USDC, r#"{"action":"buy","min_out":"1"}"#).await;
+
+    // 1. No Pyth price yet: nothing happens, cooldown not consumed.
+    let out: serde_json::Value = rebalance(&keeper, &meme).await.into_result()?.json()?;
+    assert_eq!(out, json!("stale_price"));
+
+    // 2. Fresh price but the pool is younger than the 30-minute TWAP window.
+    set_nvda(&pyth, 18_000).await;
+    let out: serde_json::Value = rebalance(&keeper, &meme).await.into_result()?.json()?;
+    assert_eq!(out, json!("no_market"));
+
+    // 3. After 30 minutes: mNAV is huge (treasury = fees), so the engine issues.
+    advance(&worker, 31 * 60).await;
+    set_nvda(&pyth, 18_000).await;
+    let supply0 = view_u128(&meme, "ft_total_supply", json!({})).await;
+    let out: serde_json::Value = rebalance(&keeper, &meme).await.into_result()?.json()?;
+    let issued: u128 = out["issued"]["meme"].as_str().unwrap().parse()?;
+    assert!(issued > 0, "{out}");
+    assert_eq!(view_u128(&meme, "ft_total_supply", json!({})).await, supply0 + issued);
+    assert!(view_u128(&meme, "claimable_of", json!({"account_id": keeper.id()})).await > 0, "caller tip");
+
+    // 4. Cooldown: a second call within the hour is rejected.
+    assert!(rebalance(&keeper, &meme).await.is_failure());
+
+    // 5. Bob dumps 95% into the pool: circulating falls, NAV per token jumps,
+    //    and the next rebalance (after TWAP + cooldown) opens the redemption window.
+    let held = balance(&meme, &bob).await;
+    bob.call(meme.id(), "sell")
+        .args_json(json!({"amount": (held * 95 / 100).to_string(), "min_out": "1"}))
+        .deposit(NearToken::from_yoctonear(1))
+        .max_gas()
+        .transact()
+        .await?
+        .into_result()?;
+    advance(&worker, 61 * 60).await;
+    set_nvda(&pyth, 18_000).await;
+    rebalance(&keeper, &meme).await.into_result()?;
+    let t: serde_json::Value = meme.view("get_treasury").await?.json()?;
+    assert_eq!(t["redemption_open"], true, "{t}");
+
+    // 6. Bob redeems a slice and receives NAV per token in USDC.
+    let left = balance(&meme, &bob).await;
+    let usdc_before = balance(&usdc, &bob).await;
+    let paid: String = bob
+        .call(meme.id(), "redeem")
+        .args_json(json!({"amount": (left / 10).to_string(), "min_usdc": "1"}))
+        .deposit(NearToken::from_yoctonear(1))
+        .max_gas()
+        .transact()
+        .await?
+        .into_result()?
+        .json()?;
+    let paid: u128 = paid.parse()?;
+    assert!(paid > 0);
+    assert_eq!(balance(&meme, &bob).await, left - left / 10);
+    assert_eq!(balance(&usdc, &bob).await, usdc_before + paid);
+
+    // Nothing leaks: contract USDC = pool reserve + treasury cash + claimable.
+    let pool: serde_json::Value = meme.view("get_pool").await?.json()?;
+    let reserve: u128 = pool["usdc_reserve"].as_str().unwrap().parse()?;
+    let cash: u128 = pool["treasury_usdc"].as_str().unwrap().parse()?;
+    let mut owed = 0;
+    for a in [&creator, &keeper] {
+        owed += view_u128(&meme, "claimable_of", json!({"account_id": a.id()})).await;
+    }
+    assert_eq!(balance(&usdc, meme.as_account()).await, reserve + cash + owed);
+    Ok(())
+}
