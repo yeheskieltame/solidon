@@ -88,6 +88,8 @@ Notes from verification on 9 Nov 2026:
 | bStocks list (Trust Wallet) | https://trustwallet.com/blog/announcements/access-bstocks-on-trust-wallet-tokenized-shares-on-chain | Initial tickers: TSLAB, CRCLB, MUB, SNDKB, NVDAB. **Take full addresses from BscScan/Binance** |
 | BscScan | https://bscscan.com/ | Verify token, pool, and treasury balances |
 | PancakeSwap developer docs | https://developer.pancakeswap.finance/ | Router addresses and swap ABI |
+| PancakeSwap v3 addresses (verified 9 Nov 2026) | https://developer.pancakeswap.finance/contracts/v3/addresses | Mainnet: Factory `0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865`, SwapRouter `0x1b81D678ffb9C0263b24A97847620C99d213eB14`, QuoterV2 `0xB048Bbc1Ee6b733FFfCFb9e9CeF7375518e25997`. Testnet: same Factory and SwapRouter, QuoterV2 `0xbC203d7f83677c7ed3F7acEc959963E7F4ECC5C2` |
+| Verified bStocks list | [docs/STOCKS.md](STOCKS.md) | Token, Pyth feed, and pool per listed stock, with evidence |
 | Tokenized equities on BNB (xStocks, KYC) | https://www.bnbchain.org/en/blog/the-next-step-for-tokenized-equities-funding-paths-matter-after-assets-move-onchain | xStocks alternative, KYC at the platform level |
 
 ## 8. Internal
