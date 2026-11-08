@@ -1,0 +1,20 @@
+[package]
+name = "factory"
+description = "Solidon factory: deploys each meme as a sub-account"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/yeheskieltame/solidon"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk.workspace = true
+
+[dev-dependencies]
+near-sdk = { workspace = true, features = ["unit-testing"] }
+near-workspaces = "0.24"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+serde_json = "1"
+anyhow = "1"
