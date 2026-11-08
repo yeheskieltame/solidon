@@ -70,7 +70,7 @@ pub fn now_secs() -> u64 {
 const GAS_FT_TRANSFER: Gas = Gas::from_tgas(10);
 const GAS_ON_PAYOUT: Gas = Gas::from_tgas(5);
 
-fn emit(event: &str, data: near_sdk::serde_json::Value) {
+pub(crate) fn emit(event: &str, data: near_sdk::serde_json::Value) {
     env::log_str(&format!(
         "EVENT_JSON:{}",
         json!({"standard": "solidon", "version": "1.0.0", "event": event, "data": [data]})
@@ -78,7 +78,7 @@ fn emit(event: &str, data: near_sdk::serde_json::Value) {
 }
 
 impl Meme {
-    fn meme_reserve(&self) -> u128 {
+    pub(crate) fn meme_reserve(&self) -> u128 {
         self.token.ft_balance_of(env::current_account_id()).0
     }
 
@@ -96,7 +96,7 @@ impl Meme {
         self.twap.average(now_secs(), self.params.twap_window_secs)
     }
 
-    fn credit(&mut self, account: &AccountId, amount: u128) {
+    pub(crate) fn credit(&mut self, account: &AccountId, amount: u128) {
         if amount > 0 {
             let prev = self.claimable.get(account).copied().unwrap_or(0);
             self.claimable.insert(account.clone(), prev + amount);
@@ -104,7 +104,7 @@ impl Meme {
     }
 
     /// Sends USDC; on failure the amount becomes claimable instead of lost.
-    fn payout(&self, account: AccountId, amount: u128) -> Promise {
+    pub(crate) fn payout(&self, account: AccountId, amount: u128) -> Promise {
         ext_ft_core::ext(self.usdc.clone())
             .with_attached_deposit(NearToken::from_yoctonear(1))
             .with_static_gas(GAS_FT_TRANSFER)
