@@ -4,7 +4,7 @@
 
 Built for NEAR HACKATHON 2026 · Tracks: `defi`, `memecoins` · Maintainer: [@yeheskieltame](https://github.com/yeheskieltame)
 
-> This README is a working index. The judge-facing README (problem, "do X, see Y" steps, threat model, simulation results, baseline & tools, disclosure of NYXERON) is written before submission.
+> This README is a working index. The judge-facing README (problem, "do X, see Y" steps, threat model, simulation results, tools & disclosure, disclosure of NYXERON) is written before submission.
 
 ## Repository layout
 
