@@ -3,6 +3,8 @@
 //! There is no owner and no setter. Every parameter in [`Params`] is fixed in
 //! `new` and readable by anyone through `get_params`.
 
+mod pool;
+
 use near_contract_standards::fungible_token::events::FtMint;
 use near_contract_standards::fungible_token::metadata::{
     FungibleTokenMetadata, FungibleTokenMetadataProvider, FT_METADATA_SPEC,
@@ -14,6 +16,7 @@ use near_contract_standards::storage_management::{
     StorageBalance, StorageBalanceBounds, StorageManagement,
 };
 use near_sdk::json_types::U128;
+use near_sdk::store::LookupMap;
 use near_sdk::{env, near, AccountId, BorshStorageKey, NearToken, PanicOnDefault, PromiseOrValue};
 
 pub const DECIMALS: u8 = 18;
@@ -75,6 +78,7 @@ pub struct MemeInfo {
 #[near]
 enum StorageKey {
     Token,
+    Claimable,
 }
 
 #[near(contract_state)]
@@ -86,6 +90,12 @@ pub struct Meme {
     usdc: AccountId,
     thesis_stock: String,
     params: Params,
+    /// USDC side of the internal pool. The meme side is this contract's own token balance.
+    usdc_reserve: u128,
+    /// USDC cash owned by the treasury (fees for now; buffer for buybacks later).
+    treasury_usdc: u128,
+    /// USDC owed to an account: creator fees and payouts whose transfer failed.
+    claimable: LookupMap<AccountId, u128>,
 }
 
 #[near]
@@ -118,6 +128,9 @@ impl Meme {
             usdc,
             thesis_stock,
             params: Params::default(),
+            usdc_reserve: 0,
+            treasury_usdc: 0,
+            claimable: LookupMap::new(StorageKey::Claimable),
         };
         let pool = env::current_account_id();
         this.token.internal_register_account(&pool);
