@@ -9,8 +9,11 @@
 mod cash;
 mod mnav;
 mod pool;
-#[allow(dead_code)] // Solana treasury builder; wired into the contract in the next phase.
+// The pool-level PDA helpers are unused by the contract (those accounts are locked
+// config) but kept with their devnet test vectors.
+#[allow(dead_code)]
 mod solana;
+mod solana_treasury;
 mod treasury;
 mod twap;
 
@@ -31,6 +34,8 @@ use near_sdk::{
 };
 
 use crate::mnav::Engine;
+use crate::solana::parse_pubkey;
+use crate::solana_treasury::SolanaVenue;
 use crate::treasury::{parse_address, ChainsConfig, Treasury};
 use crate::twap::Twap;
 
@@ -86,11 +91,13 @@ impl Default for Params {
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Debug, PartialEq)]
 pub struct Venue {
-    /// An `EvmChain::name` from the chains config.
+    /// A chain name from the chains config.
     pub chain: String,
-    /// ERC-20 address, `0x` + 40 hex characters.
+    /// ERC-20 address, `0x` + 40 hex characters; on Solana the mint, base58.
     pub token: String,
     pub decimals: u8,
+    /// On Solana (only), the stock's Raydium CLMM pool accounts.
+    pub solana: Option<SolanaVenue>,
 }
 
 /// The thesis stock: its oracle feed on NEAR and its token on each treasury chain.
@@ -122,15 +129,23 @@ impl Stock {
         );
         require!(!self.venues.is_empty(), "List at least one venue");
         for (i, v) in self.venues.iter().enumerate() {
-            require!(
-                chains.index(&v.chain).is_some(),
-                "Venue chain is not in the chains config"
-            );
+            let chain = chains
+                .index(&v.chain)
+                .unwrap_or_else(|| env::panic_str("Venue chain is not in the chains config"));
             require!(
                 self.venues[..i].iter().all(|w| w.chain != v.chain),
                 "One venue per chain"
             );
-            parse_address(&v.token);
+            match (&v.solana, chains.is_solana(chain)) {
+                (None, false) => {
+                    parse_address(&v.token);
+                }
+                (Some(pool), true) => {
+                    parse_pubkey(&v.token);
+                    pool.assert_valid();
+                }
+                _ => env::panic_str("A venue lists pool accounts if and only if it is on Solana"),
+            }
             // Keeps 10^(decimals + 18) inside u128 in the value math.
             require!(v.decimals <= 18, "Stock decimals must be at most 18");
         }
@@ -217,7 +232,7 @@ impl Meme {
             claimable: LookupMap::new(StorageKey::Claimable),
             twap: Twap::default(),
             engine: Engine::default(),
-            treasury: Treasury::new(chains.evm.len()),
+            treasury: Treasury::new(chains.len()),
             chains,
         };
         let pool = env::current_account_id();
@@ -337,21 +352,38 @@ pub(crate) fn nvda() -> Stock {
                 chain: "base".into(),
                 token: "0x8f13563130684478E617C1797308A081Cb2c2654".into(),
                 decimals: 8,
+                solana: None,
             },
             Venue {
                 chain: "robinhood".into(),
                 token: "0x82289af84B9a0faf598a4D2052E16c8D1619f7f4".into(),
                 decimals: 18,
+                solana: None,
+            },
+            // contracts/stocks/solana-devnet.json
+            Venue {
+                chain: "solana".into(),
+                token: "88Bseqdd57C3sD5E8SaLPfwQ18e47RvzCXsRApiwSqbB".into(),
+                decimals: 8,
+                solana: Some(SolanaVenue {
+                    pool: "FEstNywAgrVXixWbLkFaqqMjT7jbdjwmkoPdmudtRCqU".into(),
+                    usdc_vault: "7QxxoL5DRDo2Q1Z6nvXkFa7Z55cN7r8YRyj4ig8i5sPB".into(),
+                    stock_vault: "2x5h8nw3sH9zEo7g8G3e3ub7n9GMXJWLvivrXtJ18BN6".into(),
+                    observation: "AggvhJqcKyXuGnW2xx52MeY3veqwsm4JSCVJDg1bfiVF".into(),
+                    bitmap_extension: "5nUE56LNNXaxeYwZWSfpWfD2qBLXmzy2F41nSrxBKhPu".into(),
+                }),
             },
         ],
     }
 }
 
 /// The testnet config of contracts/deploy-testnet.sh: Base Sepolia (USDC 6 dp, cash proven
-/// by MPC) and Robinhood Chain testnet (USDC 18 dp, cash reported by the relayer).
+/// by MPC), Robinhood Chain testnet (USDC 18 dp) and Solana devnet (Circle USDC, Raydium
+/// CLMM), both with cash reported by the relayer.
 #[cfg(test)]
 pub(crate) fn test_chains() -> ChainsConfig {
     use crate::cash::{CashProof, Finality};
+    use crate::solana_treasury::SolanaChain;
     use crate::treasury::EvmChain;
     ChainsConfig {
         mpc: "v1.signer-prod.testnet".parse().unwrap(),
@@ -386,6 +418,15 @@ pub(crate) fn test_chains() -> ChainsConfig {
                 proof: CashProof::Relayer,
             },
         ],
+        solana: Some(SolanaChain {
+            name: "solana".into(),
+            usdc_mint: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU".into(),
+            usdc_token_program: crate::solana::TOKEN_PROGRAM.into(),
+            stock_token_program: crate::solana::TOKEN_2022_PROGRAM.into(),
+            clmm_program: "devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH".into(),
+            amm_config: "GVSwm4smQBYcgAJU7qjFHLQBHTc4AdB3F2HbZp6KqKof".into(),
+            max_swap_usdc: U128(5 * 10u128.pow(6)),
+        }),
     }
 }
 
@@ -462,6 +503,33 @@ mod tests {
         let _ = setup();
         let mut stock = nvda();
         stock.venues[1].chain = "bsc".into();
+        stock.assert_valid(&test_chains());
+    }
+
+    #[test]
+    #[should_panic(expected = "pool accounts if and only if it is on Solana")]
+    fn rejects_pool_accounts_on_an_evm_venue() {
+        let _ = setup();
+        let mut stock = nvda();
+        stock.venues[0].solana = stock.venues[2].solana.clone();
+        stock.assert_valid(&test_chains());
+    }
+
+    #[test]
+    #[should_panic(expected = "pool accounts if and only if it is on Solana")]
+    fn rejects_a_solana_venue_without_pool_accounts() {
+        let _ = setup();
+        let mut stock = nvda();
+        stock.venues[2].solana = None;
+        stock.assert_valid(&test_chains());
+    }
+
+    #[test]
+    #[should_panic(expected = "32 bytes, base58")]
+    fn rejects_an_evm_token_on_solana() {
+        let _ = setup();
+        let mut stock = nvda();
+        stock.venues[2].token = stock.venues[0].token.clone();
         stock.assert_valid(&test_chains());
     }
 

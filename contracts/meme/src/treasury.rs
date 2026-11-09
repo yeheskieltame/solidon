@@ -21,6 +21,8 @@ use omni_transaction::evm::EVMTransaction;
 use crate::cash::CashProof;
 use crate::mnav::PythPrice;
 use crate::pool::{emit, mul_div};
+use crate::solana::encode_pubkey;
+use crate::solana_treasury::{base64, SolanaChain, SolanaState, SolanaView};
 use crate::{Meme, MemeExt, StorageKey, Venue};
 
 pub const PATH: &str = "evm-treasury";
@@ -30,9 +32,9 @@ const SLIPPAGE_BPS: u128 = 100;
 /// Measured: approve 55k on Base Sepolia; first buys 213k-217k on both testnets.
 const GAS_LIMIT_APPROVE: u128 = 100_000;
 const GAS_LIMIT_SWAP: u128 = 400_000;
-const GAS_MPC_VIEW: Gas = Gas::from_tgas(10);
+pub(crate) const GAS_MPC_VIEW: Gas = Gas::from_tgas(10);
 const GAS_MPC_SIGN: Gas = Gas::from_tgas(50);
-const GAS_CALLBACK: Gas = Gas::from_tgas(30);
+pub(crate) const GAS_CALLBACK: Gas = Gas::from_tgas(30);
 /// Longer than the MPC contract's yield timeout (200 blocks): after this, a request
 /// whose callback never cleared the slot (e.g. it panicked) can be cleared by anyone.
 const STUCK_AFTER_BLOCKS: u64 = 300;
@@ -76,6 +78,8 @@ pub struct ChainsConfig {
     /// Reports cash arriving on `CashProof::Relayer` chains (the MPC cannot read them).
     pub relayer: AccountId,
     pub evm: Vec<EvmChain>,
+    /// Optional Solana chain; its ledger comes after the EVM chains'.
+    pub solana: Option<SolanaChain>,
 }
 
 /// `None` unless `s` is `0x` + 40 hex characters.
@@ -129,10 +133,56 @@ impl ChainsConfig {
             );
             c.proof.assert_valid();
         }
+        if let Some(s) = &self.solana {
+            s.assert_valid();
+            require!(
+                self.evm.iter().all(|c| c.name != s.name),
+                "Chain names and chain ids must be unique"
+            );
+        }
+    }
+
+    /// Number of per-chain ledgers: the EVM chains, then Solana.
+    pub fn len(&self) -> usize {
+        self.evm.len() + usize::from(self.solana.is_some())
     }
 
     pub fn index(&self, name: &str) -> Option<usize> {
-        self.evm.iter().position(|c| c.name == name)
+        self.evm.iter().position(|c| c.name == name).or_else(|| {
+            self.solana
+                .as_ref()
+                .filter(|s| s.name == name)
+                .map(|_| self.evm.len())
+        })
+    }
+
+    pub fn is_solana(&self, i: usize) -> bool {
+        self.solana.is_some() && i == self.evm.len()
+    }
+
+    pub fn name(&self, i: usize) -> &str {
+        match self.evm.get(i) {
+            Some(c) => &c.name,
+            None => &self.solana().name,
+        }
+    }
+
+    pub fn solana(&self) -> &SolanaChain {
+        self.solana
+            .as_ref()
+            .unwrap_or_else(|| env::panic_str("No Solana chain in the config"))
+    }
+
+    /// Raw units of chain `i`'s USDC per 6-decimal unit (Solana USDC has 6 decimals).
+    pub fn usdc_scale(&self, i: usize) -> u128 {
+        self.evm.get(i).map_or(1, EvmChain::usdc_scale)
+    }
+
+    pub fn max_swap_usdc(&self, i: usize) -> u128 {
+        match self.evm.get(i) {
+            Some(c) => c.max_swap_usdc.0,
+            None => self.solana().max_swap_usdc.0,
+        }
     }
 }
 
@@ -140,21 +190,30 @@ impl ChainsConfig {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TxKind {
     Approve,
-    Swap { usdc_in: U128, min_stock_out: U128 },
+    Swap {
+        usdc_in: U128,
+        min_stock_out: U128,
+    },
+    /// The last Solana buy again, with a new blockhash; the ledger already holds it.
+    Resign,
 }
 
-/// The one transaction waiting for its MPC signature.
+/// The one transaction waiting for its MPC signature, on any chain.
 #[near(serializers = [borsh])]
 pub struct PendingTx {
     /// Block height of the signature request, for `clear_stuck_signature`.
-    requested_at: u64,
-    /// Index into `ChainsConfig::evm`.
-    chain: u32,
-    nonce: u64,
-    to: [u8; 20],
-    input: Vec<u8>,
-    gas_limit: u128,
-    kind: TxKind,
+    pub requested_at: u64,
+    /// Ledger index (`ChainsConfig::index`).
+    pub chain: u32,
+    /// EVM nonce; on Solana the sequence number the signed transaction is stored under.
+    pub nonce: u64,
+    /// EVM only.
+    pub to: [u8; 20],
+    /// EVM: the calldata. Solana: the whole message the MPC signs.
+    pub input: Vec<u8>,
+    /// EVM only.
+    pub gas_limit: u128,
+    pub kind: TxKind,
 }
 
 /// The treasury's ledger on one chain, in raw token units.
@@ -173,13 +232,14 @@ pub struct ChainState {
 #[near(serializers = [borsh])]
 pub struct Treasury {
     pub address: Option<[u8; 20]>,
-    /// One per `ChainsConfig::evm` entry, same order.
+    /// One per chain (`ChainsConfig::index`): the EVM chains in order, then Solana.
     pub chains: Vec<ChainState>,
-    pending: Option<PendingTx>,
-    /// (chain index, nonce) -> signed raw transaction.
-    signed: LookupMap<(u32, u64), Vec<u8>>,
+    pub pending: Option<PendingTx>,
+    /// (chain index, nonce or Solana sequence) -> signed raw transaction.
+    pub signed: LookupMap<(u32, u64), Vec<u8>>,
     /// (chain index, tx hash, log index) of every cash arrival credited or being verified.
     pub credited: LookupSet<(u32, [u8; 32], u64)>,
+    pub solana: SolanaState,
 }
 
 impl Treasury {
@@ -190,6 +250,7 @@ impl Treasury {
             pending: None,
             signed: LookupMap::new(StorageKey::SignedTxs),
             credited: LookupSet::new(StorageKey::CreditedCash),
+            solana: SolanaState::default(),
         }
     }
 }
@@ -204,10 +265,11 @@ pub struct SignRequest {
 }
 
 #[near(serializers = [json])]
-pub struct Payload {
+pub enum Payload {
     /// 32-byte hash, hex.
-    #[serde(rename = "Ecdsa")]
-    pub ecdsa: String,
+    Ecdsa(String),
+    /// The message itself, hex.
+    Eddsa(String),
 }
 
 #[near(serializers = [json])]
@@ -348,21 +410,38 @@ impl Meme {
             .unwrap_or_else(|| env::panic_str("Unknown chain"))
     }
 
-    /// The thesis stock's venue on chain `i`, if it trades there.
-    pub(crate) fn venue(&self, i: usize) -> Option<&Venue> {
-        let name = &self.chains.evm[i].name;
-        self.stock.venues.iter().find(|v| &v.chain == name)
+    fn evm_index(&self, name: &str) -> usize {
+        let i = self.chain_index(name);
+        require!(
+            i < self.chains.evm.len(),
+            "Not an EVM chain: use the Solana methods"
+        );
+        i
     }
 
-    fn assert_can_sign(&self) {
+    /// The treasury's address on chain `i`, as that chain writes it.
+    pub(crate) fn treasury_address_on(&self, i: usize) -> String {
+        if self.chains.is_solana(i) {
+            encode_pubkey(&self.solana_key())
+        } else {
+            format!("0x{}", hex_encode(&self.treasury_address()))
+        }
+    }
+
+    /// The thesis stock's venue on chain `i`, if it trades there.
+    pub(crate) fn venue(&self, i: usize) -> Option<&Venue> {
+        let name = self.chains.name(i);
+        self.stock.venues.iter().find(|v| v.chain == name)
+    }
+
+    pub(crate) fn assert_can_sign(&self) {
         require!(
             self.treasury.pending.is_none(),
             "A signature is already in flight"
         );
     }
 
-    /// Queues `tx` on chain `i` and asks the MPC contract to sign it. One request at a
-    /// time across all chains.
+    /// Queues `tx` on EVM chain `i` and asks the MPC contract to sign it.
     fn request_signature(
         &mut self,
         i: usize,
@@ -381,14 +460,18 @@ impl Meme {
             kind,
         };
         let hash = env::keccak256(self.evm_tx(&pending).build_for_signing());
-        self.treasury.pending = Some(pending);
         let request = SignRequest {
             path: PATH.into(),
-            payload_v2: Payload {
-                ecdsa: hex_encode(&hash),
-            },
+            payload_v2: Payload::Ecdsa(hex_encode(&hash)),
             domain_id: DOMAIN_ID,
         };
+        self.queue_signature(pending, request)
+    }
+
+    /// Takes the one signing slot (shared by all chains) for `pending` and asks the MPC
+    /// contract to sign it.
+    pub(crate) fn queue_signature(&mut self, pending: PendingTx, request: SignRequest) -> Promise {
+        self.treasury.pending = Some(pending);
         ext_mpc::ext(self.chains.mpc.clone())
             .with_attached_deposit(NearToken::from_yoctonear(1))
             .with_static_gas(GAS_MPC_SIGN)
@@ -443,6 +526,7 @@ impl Meme {
                 state.usdc -= usdc_in.0;
                 state.stock += min_stock_out.0;
             }
+            TxKind::Resign => {} // Solana only
         }
         state.nonce += 1;
         self.treasury
@@ -479,7 +563,9 @@ pub struct TreasuryChainsView {
     pub address: Option<String>,
     pub mpc: AccountId,
     pub signing: bool,
+    /// EVM chains.
     pub chains: Vec<ChainView>,
+    pub solana: Option<SolanaView>,
 }
 
 #[near]
@@ -528,7 +614,7 @@ impl Meme {
     /// Signs `approve(router, max)` on `chain`'s USDC for the treasury. Anyone, once per
     /// chain. Attach 300 TGas.
     pub fn approve_router(&mut self, chain: String) -> Promise {
-        let i = self.chain_index(&chain);
+        let i = self.evm_index(&chain);
         require!(!self.treasury.chains[i].approved, "Router already approved");
         self.assert_can_sign();
         self.treasury_address();
@@ -543,7 +629,7 @@ impl Meme {
     /// Swaps up to `max_swap_usdc` of the treasury's USDC on `chain` into the thesis
     /// stock. Anyone. Attach 300 TGas.
     pub fn buy_stock(&mut self, chain: String) -> Promise {
-        let i = self.chain_index(&chain);
+        let i = self.evm_index(&chain);
         require!(
             self.venue(i).is_some(),
             "The stock does not trade on this chain"
@@ -609,10 +695,13 @@ impl Meme {
     pub fn on_signed(&mut self) -> Option<String> {
         // A signature response is ~250 bytes; the bound keeps a huge result from
         // exhausting the callback's gas.
-        let sig = env::promise_result_checked(0, 1024)
-            .ok()
-            .and_then(|bytes| near_sdk::serde_json::from_slice::<MpcSignature>(&bytes).ok());
+        let result = env::promise_result_checked(0, 1024).ok();
         let chain = self.treasury.pending.as_ref().map(|p| p.chain);
+        if chain.is_some_and(|i| self.chains.is_solana(i as usize)) {
+            return self.on_solana_signed(result);
+        }
+        let sig =
+            result.and_then(|bytes| near_sdk::serde_json::from_slice::<MpcSignature>(&bytes).ok());
         let raw = self.finish_signature(sig);
         if raw.is_none() {
             let i = chain.expect("no pending transaction") as usize;
@@ -638,18 +727,21 @@ impl Meme {
         );
         emit(
             "signature_cleared",
-            json!({"chain": self.chains.evm[pending.chain as usize].name, "nonce": pending.nonce}),
+            json!({"chain": self.chains.name(pending.chain as usize), "nonce": pending.nonce}),
         );
         self.treasury.pending = None;
     }
 
-    /// The signed raw transaction for `nonce` on `chain`, ready to broadcast.
+    /// The signed raw transaction for `nonce` on `chain`, ready to broadcast: `0x` hex on
+    /// EVM chains, base64 on Solana (`sendTransaction` with `encoding: base64`).
     pub fn get_signed_tx(&self, chain: String, nonce: u64) -> Option<String> {
-        let i = self.chains.index(&chain)? as u32;
-        self.treasury
-            .signed
-            .get(&(i, nonce))
-            .map(|r| format!("0x{}", hex_encode(r)))
+        let i = self.chains.index(&chain)?;
+        let raw = self.treasury.signed.get(&(i as u32, nonce))?;
+        Some(if self.chains.is_solana(i) {
+            base64(raw)
+        } else {
+            format!("0x{}", hex_encode(raw))
+        })
     }
 
     pub fn get_treasury_chains(&self) -> TreasuryChainsView {
@@ -676,6 +768,7 @@ impl Meme {
                     in_transit: U128(s.in_transit),
                 })
                 .collect(),
+            solana: self.solana_view(),
         }
     }
 }

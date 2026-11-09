@@ -7,8 +7,10 @@
 #   pyth.<factory>     mock-pyth, Pyth read interface with settable prices
 #   creator.<factory>  demo creator account
 #   <factory>          factory listing the 8 stocks of stocks/feeds.json, each with a venue
-#                      on Base Sepolia (stocks/base-sepolia.json) and Robinhood Chain
-#                      testnet (stocks/hood-testnet.json)
+#                      on Base Sepolia (stocks/base-sepolia.json), Robinhood Chain
+#                      testnet (stocks/hood-testnet.json) and Solana devnet
+#                      (stocks/solana-devnet.json, pool accounts checked against devnet
+#                      by stocks/solana-accounts.py before the deploy)
 # No meme is launched: launch one from the launchpad (or `create_meme`).
 #
 # Signs with keys in the macOS keychain (near-cli-rs). No key is stored in the repo.
@@ -61,6 +63,9 @@ view() { # contract, method, args
 # at 5 USDC. Cash arriving on Base is proven by the MPC (`Latest`: Base Sepolia blocks
 # take tens of minutes to be `Finalized`, S18); Robinhood Chain is not in the MPC's
 # list, so the relayer reports it.
+# Solana devnet: Circle USDC, Raydium CLMM devnet program and AMM config, swaps capped at
+# 5 USDC; cash reported by the relayer (an MPC-proven balance is not an arrival, see
+# meme/src/solana_treasury.rs). Each Solana venue carries its pool's accounts.
 # Stocks: the oracle feed id from feeds.json and one venue per chain.
 FACTORY_ARGS=$(python3 -c "
 import json
@@ -78,16 +83,29 @@ for name, path, priority, proof in chains:
                 'max_swap_usdc': str(5 * 10**r['usdc_decimals']), 'proof': proof})
     for s in r['stocks']:
         venues.setdefault(s['ticker'], []).append({'chain': name, 'token': s['token'], 'decimals': s['decimals']})
+sol = json.load(open('stocks/solana-devnet.json'))
+assert sol['usdc_decimals'] == 6, 'the meme assumes 6-decimal USDC on Solana'
+solana = {'name': 'solana', 'usdc_mint': sol['usdc'], 'usdc_token_program': sol['usdc_token_program'],
+          'stock_token_program': sol['stock_token_program'], 'clmm_program': sol['raydium_clmm']['program'],
+          'amm_config': sol['raydium_clmm']['amm_config'], 'max_swap_usdc': str(5 * 10**6)}
+pool_keys = ('pool', 'usdc_vault', 'stock_vault', 'observation', 'bitmap_extension')
+for s in sol['stocks']:
+    venues[s['ticker']].append({'chain': 'solana', 'token': s['token'], 'decimals': s['decimals'],
+                                'solana': {k: s[k] for k in pool_keys}})
 feeds = json.load(open('stocks/feeds.json'))['feeds']
 assert set(feeds) == set(venues), 'every listed stock needs a feed and venues'
 stocks = [{'ticker': t, 'price_id': f, 'venues': venues[t]} for t, f in feeds.items()]
 print(json.dumps({'usdc': '$USDC', 'oracle': '$PYTH',
-                  'chains': {'mpc': 'v1.signer-prod.testnet', 'bridge': '$KEEPER', 'relayer': '$KEEPER', 'evm': evm},
+                  'chains': {'mpc': 'v1.signer-prod.testnet', 'bridge': '$KEEPER', 'relayer': '$KEEPER', 'evm': evm,
+                             'solana': solana},
                   'stocks': stocks}))")
 if [ -n "${DRY_RUN:-}" ]; then
   echo "$FACTORY_ARGS"
   exit 0
 fi
+
+# The Solana pool accounts are locked into every meme: check them against devnet first.
+python3 stocks/solana-accounts.py
 
 ./build.sh
 
