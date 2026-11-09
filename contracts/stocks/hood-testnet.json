@@ -1,0 +1,129 @@
+{
+  "_comment": "Testnet stock venues on hood-testnet, written by contracts/evm/deploy-testnet-stocks.py. synthetic=true: Solidon MockERC20 (owner-only mint), one-sided liquidity at the reference price. synthetic=false: the chain's official testnet token and its existing pool. The testnet's Uniswap v3 fork pays a 0.1% protocol fee in the input token to 0x6063\u2026e305 before the swap callback, so each synthetic pool also holds ~0.0106 USDC of float, sent by the deployer.",
+  "network": "hood-testnet",
+  "chain_id": 46630,
+  "usdc": "0xbf4479C07Dc6fdc6dAa764A0ccA06969e894275F",
+  "usdc_decimals": 18,
+  "uniswap_v3": {
+    "factory": "0x911b4000d3422f482f4062a913885f7b035382df",
+    "swap_router02": "0x3ce954107b1a675826b33bf23060dd655e3758fe",
+    "position_manager": "0x54A0EF7da351cb8fD1998E7945cc51E5825fB233"
+  },
+  "deployer": "0xcF1ED498f96d272c949CB6b8FcD67c137F766D28",
+  "stocks": [
+    {
+      "ticker": "NVDA",
+      "name": "NVIDIA",
+      "token": "0x82289af84B9a0faf598a4D2052E16c8D1619f7f4",
+      "symbol": "NVDA",
+      "decimals": 18,
+      "synthetic": true,
+      "pool": "0x7AD201DB77530864213f30Bd87Ddc2c520D86E07",
+      "pool_fee": 3000,
+      "ref_price_usd": "177.56",
+      "liquidity_range_ticks": [
+        51780,
+        58740
+      ]
+    },
+    {
+      "ticker": "AAPL",
+      "name": "Apple",
+      "token": "0x3ab373732E7bE9fD387e767F0e36040677a14057",
+      "symbol": "AAPL",
+      "decimals": 18,
+      "synthetic": true,
+      "pool": "0x9f34D4E076DD19a36C36ff28DeA2F8C671D28eD0",
+      "pool_fee": 3000,
+      "ref_price_usd": "350.44",
+      "liquidity_range_ticks": [
+        58560,
+        65520
+      ]
+    },
+    {
+      "ticker": "MSFT",
+      "name": "Microsoft",
+      "token": "0x8d26425Ea6B44032938b290Bab5C032CaA747cdD",
+      "symbol": "MSFT",
+      "decimals": 18,
+      "synthetic": true,
+      "pool": "0x2016FfecC830012aaDB3B378b4D3b59829045fed",
+      "pool_fee": 3000,
+      "ref_price_usd": "544.15",
+      "liquidity_range_ticks": [
+        62940,
+        69900
+      ]
+    },
+    {
+      "ticker": "GOOGL",
+      "name": "Alphabet",
+      "token": "0xaf95AE21417c4a1489C7C49990a9C03DD3C6B98C",
+      "symbol": "GOOGL",
+      "decimals": 18,
+      "synthetic": true,
+      "pool": "0x116B775D35C0A53708b515156eF962171411bddd",
+      "pool_fee": 3000,
+      "ref_price_usd": "290.38",
+      "liquidity_range_ticks": [
+        56700,
+        63660
+      ]
+    },
+    {
+      "ticker": "AMZN",
+      "name": "Amazon",
+      "token": "0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02",
+      "symbol": "AMZN",
+      "decimals": 18,
+      "synthetic": false,
+      "pool": "0x0A837200fB77687ba9b749E5174bd9a09E51286A",
+      "pool_fee": 3000,
+      "pool_price_usd": "0.067935",
+      "ref_price_usd": "268.14"
+    },
+    {
+      "ticker": "META",
+      "name": "Meta Platforms",
+      "token": "0x4d65dBeD417B42Ecef039aF0931948bC07507D53",
+      "symbol": "META",
+      "decimals": 18,
+      "synthetic": true,
+      "pool": "0x4CFbc8761a81367C2BEAf301dc2DaAB142bD7fAE",
+      "pool_fee": 3000,
+      "ref_price_usd": "642.58",
+      "liquidity_range_ticks": [
+        64620,
+        71580
+      ]
+    },
+    {
+      "ticker": "TSLA",
+      "name": "Tesla",
+      "token": "0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E",
+      "symbol": "TSLA",
+      "decimals": 18,
+      "synthetic": false,
+      "pool": "0xFfEf1147c3724a19AB7328F4e361C049ba452dA9",
+      "pool_fee": 3000,
+      "pool_price_usd": "0.067272",
+      "ref_price_usd": "376.77"
+    },
+    {
+      "ticker": "SPCX",
+      "name": "SpaceX",
+      "token": "0xf0c264689aC444FFe95b9F03e8eFF2bA36E508E0",
+      "symbol": "SPCX",
+      "decimals": 18,
+      "synthetic": true,
+      "pool": "0x1d285a27509Fa8eeC6ab8eac73635F4b270afB81",
+      "pool_fee": 3000,
+      "ref_price_usd": "141.18",
+      "liquidity_range_ticks": [
+        -56460,
+        -49500
+      ]
+    }
+  ]
+}

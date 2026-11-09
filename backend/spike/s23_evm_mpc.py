@@ -6,8 +6,9 @@ on Base Sepolia and Robinhood Chain testnet (moving a real testnet Stock Token t
 3. assemble r, s, y-parity; check that the signer recovers to the treasury; broadcast
 
 Sends testnet transactions (NEAR testnet + target chain). Signs with SIGNER's NEAR keychain.
-Run: python3 backend/spike/s23_evm_mpc.py base-sepolia | hood-testnet [swap]
-(swap: 0.001 ETH -> TSLA on the testnet Uniswap v3 SwapRouter02, min out = simulation - 1%)
+Run: python3 backend/spike/s23_evm_mpc.py base-sepolia | hood-testnet [swap | send <to> <wei> | call <to> <wei> <calldata>]
+(swap: 0.001 ETH -> TSLA on the testnet Uniswap v3 SwapRouter02, min out = simulation - 1%;
+ send <to> <wei>: ETH transfer, e.g. to fund the testnet deployer)
 """
 import json, subprocess, sys, time
 
@@ -71,7 +72,11 @@ assert derived.lower() == TREASURY.lower(), derived
 print(f"chain {chain_id}: treasury {TREASURY} (MPC {PATH} of {SIGNER})")
 
 # 2. the transaction: on Robinhood testnet move 1 TSLA Stock Token, on Base Sepolia send 0.0001 ETH
-if net == "hood-testnet" and sys.argv[2:] == ["swap"]:
+if sys.argv[2:3] == ["send"]:  # send <to> <wei>: plain ETH transfer from the treasury
+    to, value, data = sys.argv[3], int(sys.argv[4]), "0x"
+elif sys.argv[2:3] == ["call"]:  # call <to> <wei> <calldata>: any transaction from the treasury
+    to, value, data = sys.argv[3], int(sys.argv[4]), sys.argv[5]
+elif net == "hood-testnet" and sys.argv[2:] == ["swap"]:
     to, value = HOOD_ROUTER, 10 ** 15
     swap = lambda min_out: cast("calldata", "exactInputSingle((address,address,uint24,address,uint256,uint256,uint160))",
                                 f"({HOOD_WETH},{HOOD_TSLA},3000,{TREASURY},{value},{min_out},0)")

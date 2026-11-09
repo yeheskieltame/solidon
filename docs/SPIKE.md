@@ -315,3 +315,21 @@ The script checks that `derived_public_key(evm-treasury, creator.solidon.testnet
 Robinhood testnet has its own Uniswap v3 deployment (not at the mainnet addresses), found from TSLA transfer history (`alchemy_getAssetTransfers`): factory `0x911b4000d3422f482f4062a913885f7b035382df`, SwapRouter02 `0x3ce954107b1a675826b33bf23060dd655e3758fe` (its `factory()` returns that factory; `WETH9()` = `0x33e4191705c386532ba27cbf171db86919200b94`), TSLA pools vs WETH `0x593e2e0e…b69b` and vs testnet USDC (`0xbf4479c0…275f`, 18 decimals) `0xffef1147…2da9`, both 0.3%. Testnet prices are arbitrary (about $0.07 per TSLA in the USDC pool).
 
 The test network's ISP (XL Axiata) blocks `*.robinhood.com`: DNS answers with `blockpage.xlaxiata.id` and TLS to the real IP is reset on the SNI. Alchemy's Robinhood endpoints are not affected.
+
+## S24 · Testnet stock venues and a synthetic stock buy (`contracts/evm/deploy-testnet-stocks.py`)
+
+What exists on each testnet (checked on-chain and in the explorers):
+
+| | Base Sepolia | Solana devnet | Robinhood testnet |
+| --- | --- | --- | --- |
+| DEX | Uniswap v3 (official; router `factory()` checked) | Raydium CLMM devnet `devi51…EAtH`, Orca Whirlpool | Uniswap v3 fork (S23) |
+| USDC | Circle `0x036C…CF7e` | Circle `4zMM…ncDU` | `0xbf44…275F` (18 decimals, owner mint; buy via WETH/USDC pool) |
+| Official stock tokens | none (only third-party mocks) | none (no xStocks) | TSLA, AMZN, PLTR, NFLX, AMD from the faucet; Robinhood's asset API (`api.robinhood.com/rhj/assets`) lists mainnet only |
+
+So synthetic tokens are needed for all 8 on Base Sepolia and Solana devnet, and for NVDA, AAPL, MSFT, GOOGL, META, SPCX on Robinhood testnet. The official TSLA/AMZN testnet pools trade at about $0.07 (arbitrary testnet prices), so on testnet a stock's price is per venue, not one global price.
+
+Synthetic pools hold one-sided liquidity (stock only) from the reference price up to 2×, so buys fill near the reference without the deployer holding USDC. Quotes on an anvil fork of Base Sepolia: $100 buys fill −0.06% to +0.35% from the reference for all 8.
+
+**Robinhood testnet quirk:** its Uniswap v3 fork pays a 0.1% protocol fee in the input token to `0x6063…e305` (the USDC owner) *before* the swap callback, so a pool with no USDC reverts with `TF`. Each synthetic pool there got ~0.0106 USDC of float. Base Sepolia's official Uniswap has no such step.
+
+End to end on Robinhood testnet, signed by MPC: ETH → USDC, approve, then 0.1 USDC → 0.000562 synthetic NVDA at $177.82 (ref $177.56). Links in [DEPLOYMENTS.md](DEPLOYMENTS.md).
