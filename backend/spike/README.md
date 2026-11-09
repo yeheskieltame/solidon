@@ -17,3 +17,4 @@ Scripts behind [docs/SPIKE.md](../../docs/SPIKE.md): each one calls the real ser
 | `s15_robinhood_tokens.py` | Robinhood Chain stock tokens: on-chain metadata |
 | `s16_hood_chainlink.py [hours]` | Chainlink feeds on Robinhood Chain, found from on-chain events |
 | `s17_costs.py` | Minimum cost of one full cycle per chain |
+| `s19_hood_feeds.py` | Official Chainlink proxies on Robinhood Chain, checked on-chain |

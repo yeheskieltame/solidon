@@ -220,3 +220,32 @@ AAPL did not update in the window. Unlike every other chain checked, these feeds
 | Base Sepolia, Arbitrum Sepolia | txs only 4–30 min old | Finalized | timed out (L2 finality on L1 not reached yet) |
 
 So the treasury chain (Base) and the price chain (Arbitrum) are both verifiable on testnet. `Finalized` on an L2 needs the transaction to be finalized on Ethereum first (tens of minutes); `Latest` answers in seconds.
+
+## S19 · Official Robinhood Chain feeds and token rules (`backend/spike/s19_hood_feeds.py`)
+
+Chainlink's directory for the chain is `https://reference-data-directory.vercel.app/feeds-robinhood-mainnet.json` (62 feeds). Every proxy below resolves on-chain (`aggregator()`) to the same aggregator found independently from `AnswerUpdated` events in S16:
+
+| Feed | Proxy | Aggregator | Hours |
+| --- | --- | --- | --- |
+| NVDA / USD | `0x379EC4f7C378F34a1B47E4F3cbeBCbAC3E8E9F15` | `0xc9d16e4f…c2a2` | 24/5 |
+| NVDA (24/7) | `0x321A36e441DfBadA01Aa6f9884F14a344E133D1F` | `0x1c28973b…72cc` | 24/7 |
+| AAPL / USD | `0x6B22A786bAa607d76728168703a39Ea9C99f2cD0` | `0xbb11a212…4acb` | 24/5 |
+| MSFT / USD | `0x45C3C877C15E6BA2EBB19eA114Ea508d14C1Af2E` | `0xc3b117f5…4e30` | 24/5 |
+| GOOGL / USD | `0xF6f373a037c30F0e5010d854385cA89185AE638b` | `0x11ed6d59…b6bd` | 24/5 |
+| GOOGL (24/7) | `0x53e040D2C8c9278cBc4b702328aC652068a0E063` | `0x22d3ac0c…3c32` | 24/7 |
+| AMZN / USD | `0xD5a1508ceD74c084eBf3cBe853e2C968fB2a651C` | `0x93503dfc…fdeb` | 24/5 |
+| META / USD | `0x7C38C00C30BEe9378381E7B6135d7283356D71b1` | `0xc190b616…738e` | 24/5 |
+| TSLA / USD | `0x4A1166a659A55625345e9515b32adECea5547C38` | `0x7a6b81ba…33b1` | 24/5 |
+| TSLA (24/7) | `0x39eDf5ef54150A30d2C4F1b982FbB8f93050BC37` | `0x06701b41…2c01` | 24/7 |
+| SPCX / USD | `0xB265810950ba6c5C0Ff821c9963014a56fD8Bffb` | `0x5eaa223c…5631` | 24/5 |
+| SPY / USD | `0x319724394D3A0e3669269846abE664Cd621f9f6A` | `0x78bcb218…bfac` | 24/5 |
+
+All: 8 decimals, heartbeat 86,400 s, deviation 0.5%, last update 5–62 min before the check.
+
+From Robinhood's Stock Tokens and Oracles pages (provided by the maintainer; the site is unreachable from the test network), checked on-chain where possible:
+
+- The feed price is per token (share price × multiplier); `uiMultiplier()`, `newUIMultiplier()`, `effectiveAt()` exist on-chain (NVDA 1.000775, AAPL 1.000566, TSLA and SPCX 1.0).
+- `oraclePaused()` exists and is `false` for NVDA, AAPL, TSLA, SPCX. During corporate actions it turns `true`; advisory only, so a staleness check stays the main guard.
+- Stock Tokens are standard transferable ERC-20s (a fresh-address transfer succeeds, S15). Minting and burning are only for Authorised Participants; holders buy on-chain.
+- **Legal:** Stock Tokens may not be offered, sold or delivered to U.S. persons; offers are also restricted in Canada, the UK, Switzerland and others. Not enforced on-chain, but the product needs a matching disclaimer and access policy.
+- Recommended for L2: check Chainlink's sequencer uptime feed before trusting a price.
