@@ -46,8 +46,18 @@ export async function housekeeping(ctx, meme) {
     log.info(scope, "rebalance skipped: oracle price is stale");
     return;
   }
+  // A young pool (TWAP window not filled) answers `no_market` without using the cooldown, so
+  // the view keeps saying "due": retry at most every REBALANCE_RETRY_SECS instead of every cycle.
+  const tried = rebalanceTries.get(meme.id);
+  if (tried && tried.last === meme.treasury.last_rebalance && now - tried.at < REBALANCE_RETRY_SECS) return;
+  rebalanceTries.set(meme.id, { at: now, last: meme.treasury.last_rebalance });
   await step(ctx, meme, "rebalance", {}, 100);
 }
+
+// ponytail: in-memory only; a restart retries once immediately, which is harmless.
+const REBALANCE_RETRY_SECS = 600;
+const rebalanceTries = new Map();
+export const resetRebalanceTries = () => rebalanceTries.clear(); // tests
 
 async function chainSteps(ctx, meme, scope) {
   if (!meme.tc.address) {

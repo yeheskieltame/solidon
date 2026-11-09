@@ -1,12 +1,14 @@
 // Housekeeping and bridge flows against fake NEAR / EVM endpoints: which contract calls the keeper
 // makes, with which arguments. No network.
-import { test } from "node:test";
+import { beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
-import { housekeeping } from "../src/treasury.js";
+import { housekeeping, resetRebalanceTries } from "../src/treasury.js";
 import { processTransfers } from "../src/bridge.js";
 import { keeperWallet } from "../src/evm.js";
 import { State } from "../src/state.js";
 import { TRANSFER_TOPIC } from "../src/logic.js";
+
+beforeEach(() => resetRebalanceTries());
 
 const MEME = "nvda.solidon.testnet";
 const TREASURY = "0x680bcf5a2e3c07118991adb3976d3df077ed96ee";

@@ -19,7 +19,7 @@ export const NEAR_RPCS = (
   process.env.NEXT_PUBLIC_NEAR_RPC ||
   (NETWORK === "mainnet"
     ? "https://rpc.mainnet.near.org,https://free.rpc.fastnear.com"
-    : "https://rpc.testnet.near.org,https://test.rpc.fastnear.com")
+    : "https://test.rpc.fastnear.com,https://rpc.testnet.near.org")
 )
   .split(",")
   .map((s) => s.trim())
