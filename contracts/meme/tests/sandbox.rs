@@ -13,6 +13,13 @@ pub fn nvda() -> serde_json::Value {
            "bsc_token": "0x0000000000000000000000000000000000000001", "decimals": 18})
 }
 
+pub fn bsc() -> serde_json::Value {
+    json!({"chain_id": 97, "usdt": "0x8f13563130684478E617C1797308A081Cb2c2654",
+           "swap_router": "0x1b81D678ffb9C0263b24A97847620C99d213eB14", "pool_fee": 2500,
+           "mpc": "v1.signer-prod.testnet", "max_fee_per_gas": "1000000000",
+           "max_swap_usdt": "500000000000000000000"})
+}
+
 fn wasm(name: &str) -> Vec<u8> {
     let path = format!(
         "{}/../target/near/{name}/{name}.wasm",
@@ -104,7 +111,7 @@ async fn seed_buy_sell_claim() -> anyhow::Result<()> {
         .into_result()?;
     meme.call("new")
         .args_json(json!({
-            "creator": creator.id(), "usdc": usdc.id(), "oracle": "pyth.test.near", "stock": nvda(),
+            "creator": creator.id(), "usdc": usdc.id(), "oracle": "pyth.test.near", "stock": nvda(), "bsc": bsc(),
             "name": "Nvidia Meme", "symbol": "NVDA", "icon": null
         }))
         .transact()
@@ -125,7 +132,7 @@ async fn seed_buy_sell_claim() -> anyhow::Result<()> {
     let again = meme
         .call("new")
         .args_json(json!({
-            "creator": bob.id(), "usdc": usdc.id(), "oracle": "pyth.test.near", "stock": nvda(),
+            "creator": bob.id(), "usdc": usdc.id(), "oracle": "pyth.test.near", "stock": nvda(), "bsc": bsc(),
             "name": "X", "symbol": "X", "icon": null
         }))
         .transact()
@@ -274,7 +281,7 @@ async fn rebalance_issue_then_redeem() -> anyhow::Result<()> {
         .into_result()?;
     meme.call("new")
         .args_json(json!({
-            "creator": creator.id(), "usdc": usdc.id(), "oracle": pyth.id(), "stock": nvda(),
+            "creator": creator.id(), "usdc": usdc.id(), "oracle": pyth.id(), "stock": nvda(), "bsc": bsc(),
             "name": "Nvidia Meme", "symbol": "NVDA", "icon": null
         }))
         .transact()

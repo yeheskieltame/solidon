@@ -36,6 +36,10 @@ cargo test          # unit tests + sandbox integration tests
 | `rebalance()`, 100 TGas | anyone, once per hour | Reads Pyth, then issuance (mNAV > 2.0), buyback (< 1.0), redemption window (< 0.9); 0.05% tip to the caller |
 | `redeem(amount, min_usdc)` + 1 yocto, 100 TGas | holder, window open | Burns and pays NAV per token in USDC from cash; refunds on any failure |
 | `claim_usdc()` | creator, callers, failed payouts | Withdraws claimable USDC |
+| `init_treasury()` | anyone, once | Reads the MPC-derived key (`bsc-treasury` path) and stores the BSC treasury address |
+| `approve_router()`, 300 TGas | anyone, once | MPC-signs `approve(router, max)` on USDT for the treasury |
+| `buy_stock()`, 300 TGas | anyone | Fresh Pyth price, then MPC-signs a PancakeSwap v3 swap of up to `max_swap_usdt` into the stock (`minOut` = oracle − 1%) |
+| `get_bsc_treasury`, `get_signed_tx(nonce)` | view | Treasury address, nonce, ledger; signed raw transactions for any relayer |
 | `get_params`, `get_info`, `get_pool`, `get_treasury`, `quote_buy`, `quote_sell`, `claimable_of` | view | Locked parameters, stock config, reserves and TWAP, NAV/mNAV state |
 
-There is no owner method. Prices are USDC raw units per meme raw unit, scaled by 1e30.
+Every BSC transaction is built inside the contract from locked config and checked with `ecrecover` against the treasury address before it is stored. There is no owner method. Prices are USDC raw units per meme raw unit, scaled by 1e30.

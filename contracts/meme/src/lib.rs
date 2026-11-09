@@ -8,6 +8,7 @@
 
 mod mnav;
 mod pool;
+mod treasury;
 mod twap;
 
 use near_contract_standards::fungible_token::events::FtMint;
@@ -27,6 +28,7 @@ use near_sdk::{
 };
 
 use crate::mnav::Engine;
+use crate::treasury::{BscConfig, Treasury};
 use crate::twap::Twap;
 
 pub const DECIMALS: u8 = 18;
@@ -122,9 +124,10 @@ pub struct MemeInfo {
 
 #[derive(BorshStorageKey)]
 #[near]
-enum StorageKey {
+pub(crate) enum StorageKey {
     Token,
     Claimable,
+    SignedTxs,
 }
 
 #[near(contract_state)]
@@ -146,6 +149,8 @@ pub struct Meme {
     claimable: LookupMap<AccountId, u128>,
     twap: Twap,
     engine: Engine,
+    bsc: BscConfig,
+    treasury: Treasury,
 }
 
 #[near]
@@ -157,11 +162,13 @@ impl Meme {
         usdc: AccountId,
         oracle: AccountId,
         stock: Stock,
+        bsc: BscConfig,
         name: String,
         symbol: String,
         icon: Option<String>,
     ) -> Self {
         stock.assert_valid();
+        bsc.assert_valid();
         let metadata = FungibleTokenMetadata {
             spec: FT_METADATA_SPEC.to_string(),
             name,
@@ -186,6 +193,8 @@ impl Meme {
             claimable: LookupMap::new(StorageKey::Claimable),
             twap: Twap::default(),
             engine: Engine::default(),
+            bsc,
+            treasury: Treasury::new(),
         };
         let pool = env::current_account_id();
         this.token.internal_register_account(&pool);
@@ -305,12 +314,26 @@ pub(crate) fn nvda() -> Stock {
 }
 
 #[cfg(test)]
+pub(crate) fn test_bsc() -> BscConfig {
+    BscConfig {
+        chain_id: 97,
+        usdt: "0x8f13563130684478E617C1797308A081Cb2c2654".into(),
+        swap_router: "0x1b81D678ffb9C0263b24A97847620C99d213eB14".into(),
+        pool_fee: 2500,
+        mpc: "v1.signer-prod.testnet".parse().unwrap(),
+        max_fee_per_gas: U128(1_000_000_000),
+        max_swap_usdt: U128(500 * 10u128.pow(18)),
+    }
+}
+
+#[cfg(test)]
 pub(crate) fn test_meme(creator: AccountId) -> Meme {
     Meme::new(
         creator,
         "usdc.near".parse().unwrap(),
         "pyth-oracle.near".parse().unwrap(),
         nvda(),
+        test_bsc(),
         "Nvidia Meme".into(),
         "NVDA".into(),
         None,
@@ -363,6 +386,7 @@ mod tests {
             "usdc.near".parse().unwrap(),
             "pyth-oracle.near".parse().unwrap(),
             stock,
+            test_bsc(),
             "X".into(),
             "X".into(),
             None,

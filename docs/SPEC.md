@@ -134,6 +134,7 @@ Every parameter is set at launch, readable by anyone, and there is no admin func
 | Oracle staleness limit | 15 minutes | If the Pyth feed is older than this, all mNAV actions stop |
 | Rebalance cooldown | 1 hour | One mNAV action per hour, triggered by anyone via `rebalance()` |
 | Caller tip | 0.05% of the action value | Incentive for anyone who calls `rebalance()` |
+| Max swap per BSC transaction | 500 USDT on testnet; sized to the thinnest listed pool on mainnet | Pool fee (0.25%) + price impact must stay below the 1% slippage allowed against Pyth, or the swap reverts. Larger balances are swapped over several transactions |
 | Target leverage | 1.0× (MVP), 1.5–2.0× (roadmap) | Exposure to the stock per unit of NAV; above 1.0× requires borrowing on Venus |
 
 **Cash ordering rule.** Redemptions use the USDC buffer on NEAR. If the buffer falls below 10% of NAV, the contract schedules a partial stock sale on BSC to refill it to 20%. Buybacks only spend cash above the 20% buffer and never trigger a stock sale: bought-back tokens come from the pool's inventory, so circulating supply does not fall and each buyback lowers NAV per token (finding #12, `simulation/RESULTS.md`).
@@ -189,7 +190,9 @@ The MVP knowingly accepts one trust assumption: the NEAR contract cannot read BS
 | bStock issuer blocks the treasury, pauses the token, or upgrades it | Accepted trust assumption (bStocks are regulated securities tokens with a blocklist, a pause switch, and an upgradeable beacon; no allowlist today). Stock sales stop, the stock is still valued at the Pyth price, and redemptions use the USDC cash buffer on NEAR. Evidence: docs/STOCKS.md |
 | Fake token with a bStock symbol | The factory's stock list is immutable and verified by `contracts/stocks/verify.py`, which binds each token to its official PancakeSwap v3 USDT pool |
 | Relayer withholds transactions | Anyone can broadcast a signed transaction. The official relayer is a convenience, not a trust point |
-| Front-running the swap on BSC | `minAmountOut` is computed from the Pyth price with at most 1% slippage |
+| Front-running the swap on BSC | `minAmountOut` is computed from the Pyth price with at most 1% slippage. Each swap is capped (`max_swap_usdt`) so fee + impact fit inside that 1%; a fork simulation showed a 1,000 USDT swap into a 100k-USDT pool costs 1.25% and would revert |
+| The MPC network returns a wrong or malicious signature | The contract runs `ecrecover` on every signature and stores the transaction only if it recovers to its own treasury address |
+| Nobody pays BSC gas for the treasury | Liveness only: the treasury address needs a little BNB for gas. Anyone can top it up; on mainnet Intents can deliver BNB with the cash |
 | Premium bubble then crash | The floor only defends NAV: buyback below 1.0×, redemption below 0.9×. Issuance is accretive, so a bubble leaves holders with more stock per token, not less |
 | Users read the floor as a price guarantee | UI and README state that the floor is a NAV floor: if the stock falls, NAV falls with it |
 | Liquidation of a leveraged treasury (roadmap) | Automatic deleveraging: repay debt when loan-to-value rises above a locked limit, borrow more only below a lower limit. Not part of the MVP |

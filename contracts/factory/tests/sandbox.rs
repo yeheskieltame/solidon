@@ -12,6 +12,13 @@ fn wasm(name: &str) -> Vec<u8> {
     std::fs::read(&path).unwrap_or_else(|_| panic!("{path} missing, run ./build.sh"))
 }
 
+pub fn bsc() -> serde_json::Value {
+    json!({"chain_id": 97, "usdt": "0x8f13563130684478E617C1797308A081Cb2c2654",
+           "swap_router": "0x1b81D678ffb9C0263b24A97847620C99d213eB14", "pool_fee": 2500,
+           "mpc": "v1.signer-prod.testnet", "max_fee_per_gas": "1000000000",
+           "max_swap_usdt": "500000000000000000000"})
+}
+
 #[allow(non_snake_case)]
 fn NVDA() -> serde_json::Value {
     json!({"ticker": "NVDA",
@@ -35,7 +42,7 @@ async fn launch_meme_as_subaccount() -> anyhow::Result<()> {
     factory
         .call("new")
         .args_json(
-            json!({"usdc": "usdc.test.near", "oracle": "pyth.test.near", "stocks": [NVDA()]}),
+            json!({"usdc": "usdc.test.near", "oracle": "pyth.test.near", "bsc": bsc(), "stocks": [NVDA()]}),
         )
         .transact()
         .await?
