@@ -6,6 +6,7 @@ import {
   chainlinkToPyth,
   decodeLatestRoundData,
   findTransferLog,
+  fundTarget,
   noncesToBroadcast,
   owedToChain,
   parseFundMemo,
@@ -200,4 +201,19 @@ test("Chainlink proxies match contracts/evm/deploy-testnet-stocks.py", () => {
   assert.deepEqual(fromPy, CHAINLINK_PROXIES);
   const feeds = JSON.parse(fs.readFileSync(path.join(REPO, "contracts/stocks/feeds.json"), "utf8")).feeds;
   assert.deepEqual(Object.keys(feeds).sort(), Object.keys(CHAINLINK_PROXIES).sort());
+});
+
+test("fundTarget picks the chain holding the fewest shares (e2e: Base had stock, Robinhood none)", () => {
+  const price = { price: "17958000000", expo: -8 };
+  const evm = (name, dec, stock, usdc = "0", inTransit = "0") => ({
+    config: { name, usdc_decimals: dec }, venue: { decimals: name === "base" ? 8 : 18 }, stock, usdc, in_transit: inTransit,
+  });
+  const tc = {
+    chains: [evm("base", 6, "1764120"), evm("robinhood", 18, "0")],
+    solana: { config: { name: "solana", max_swap_usdc: "5000000" }, venue: { decimals: 8 }, stock: "2770371", usdc: "0", in_transit: "0" },
+  };
+  assert.equal(fundTarget(tc, price), "robinhood");
+  // Cash already headed somewhere counts as the shares it will buy.
+  tc.chains[1] = evm("robinhood", 18, "0", "0", "9000000");
+  assert.equal(fundTarget(tc, price), "base");
 });

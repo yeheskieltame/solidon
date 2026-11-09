@@ -85,7 +85,38 @@ MPC treasury `GXhnfvC6yYEXgYEtSwEZNfKF2tcCd7vFn5onqEyK2UH5` (`solana-treasury` o
 | --- | --- | --- |
 | Buy synthetic NVDAx with 1 USDC (hand-built Raydium `swap_v2`, 715-byte message, MPC-signed in 9 s) | [`EwX4QEFx…`](https://explorer.solana.com/tx/EwX4QEFxQ1g3UiUQn5vbH5WnVWecK4xFMzJ3UTP5A4xK4k9tDVtvLyCEuKvVfF5hRBmoKVNoosXSJ9wr3JdU4a9?cluster=devnet) | 0.00566387 NVDAx, effective $176.56 (ref $176.59) |
 
-## NEAR testnet
+## NEAR testnet: multichain factory (10 Nov 2026)
+
+`solidon.testnet` was deleted ([`HAfX5mqe…`](https://testnet.nearblocks.io/txns/HAfX5mqeQvYd6uGgZRnshKpqM8tmCGmXFFxYs7KD4WEL), balance to `creator.solidon.testnet`), recreated from the faucet ([`3DnM6oEM…`](https://testnet.nearblocks.io/txns/3DnM6oEMkNZPnUHQ7J7z3ej6DyqkCnWhitmZWDsL2K1F)) and redeployed with `contracts/deploy-testnet.sh` ([`CYi1g5sa…`](https://testnet.nearblocks.io/txns/CYi1g5sauKmN9SGxX6hLrjtxqsTNU2iwvaZqsYpvzvZ5)): 3 treasury chains (Base Sepolia, Robinhood testnet, Solana devnet), 8 stocks with one venue per chain, MPC `v1.signer-prod.testnet`, bridge and relayer `keeper.solidon.testnet` (created [`6MjksnEj…`](https://testnet.nearblocks.io/txns/6MjksnEjnTxs8FVXKh6qNGUaYqiiBGFy9QAF7qzmKPEu)). The mock oracle is fed live Chainlink prices by the keeper (`backend/keeper`). `launch_cost` = 4.46 NEAR.
+
+### End to end: one meme holds NVDA on all three chains
+
+Test meme [`e2etest.solidon.testnet`](https://testnet.nearblocks.io/address/e2etest.solidon.testnet) ("Solidon E2E Test", thesis NVDA), launched by `creator.solidon.testnet` ([`3xMXCNqH…`](https://testnet.nearblocks.io/txns/3xMXCNqHddRwByJHD9wtsEBZm6URKZfz6dABriZ3b2gm)), seeded with 1,000 mock USDC and bought with 500 + 200 + 300 USDC. Every treasury step below was signed by the NEAR MPC at the meme contract's request; the keeper only broadcast and bridged. EVM treasury `0x582be22a62a466284817298848be90bf8a6f37e4` (Base and Robinhood), Solana treasury `BnhYneFsvh45UDJy7B7CVwvdAev1p1gNzGjWdf9KERNV`.
+
+| Step | NEAR | Chain |
+| --- | --- | --- |
+| Open EVM and Solana treasuries | [`ACKb8X38…`](https://testnet.nearblocks.io/txns/ACKb8X38J1r2occJX6YCEtEN7B4q5i2mzxr5rFGJhyUj), [`8WkCbKH7…`](https://testnet.nearblocks.io/txns/8WkCbKH7skVrWu4NqUZB5kuDA9MghPLArZeq9V9dZqAv) | |
+| Approve the router (MPC-signed) | [`GJwBEA4t…`](https://testnet.nearblocks.io/txns/GJwBEA4tHxXfWiDsyYkexHgDjRo3i8SmbXeQKh9kgtiL), [`3xxp3oeN…`](https://testnet.nearblocks.io/txns/3xxp3oeNTVwncAzNvfXsRq37zm8MvddWr3YDJRhSdvxF) | Base [`0x9767…5422`](https://sepolia.basescan.org/tx/0x9767640d0e827681166a18336bc7848b5ea8f4a4fbb3aa77f21ce61bae2f5422), Robinhood [`0xe896…0d0e`](https://explorer.testnet.chain.robinhood.com/tx/0xe896f9b33aa2d06b51c65cbaefc2a7ca012781ad54aabb62f36b9e96acf30d0e) |
+| Set Solana token accounts (relayer bumps) | [`4GHb8Atk…`](https://testnet.nearblocks.io/txns/4GHb8AtkhenLGFCEUxWoC3U6pyVnrpo3zAT5zLW7Lict) | |
+| **Base:** `fund_chain` 3.20 USDC → delivered → `credit_cash` **proven by MPC** | [`3uZr2wpV…`](https://testnet.nearblocks.io/txns/3uZr2wpVcW74KP8kqiE8VPpcoi3TtrA2c29KDXVCLvAH) → [`6KTHwQQa…`](https://testnet.nearblocks.io/txns/6KTHwQQaXs5HDHWpSydzju3fZtkugfVk5QWxzLGetgZq) | [`0x462c…ded0`](https://sepolia.basescan.org/tx/0x462c7fad80615b3bafd3036e2f4c58ac5d1480c65a7f72a6c02cea005c61ded0) |
+| **Base:** `buy_stock` (MPC-signed swap) | [`GEQh2tUm…`](https://testnet.nearblocks.io/txns/GEQh2tUmUWxAn1z81j9sm4BXZcAVxEgGk64BvmNqMnX3) | [`0x7787…b8ab`](https://sepolia.basescan.org/tx/0x77870bf3db1c60b097e23e259f7d502ccd4fb30ce4ea46775af8085319bab8ab) |
+| `rebalance`: mNAV far above 2.0× → issued 1% of circulating, +7.36 USDC cash | [`7eMpY8QM…`](https://testnet.nearblocks.io/txns/7eMpY8QMwLDkQjWTmCdxNUtJrsPFvRh93Nc21ybYmu7J) | |
+| **Solana:** `fund_chain` 5 USDC → delivered → `report_cash` (relayer) | [`89Lvxf1P…`](https://testnet.nearblocks.io/txns/89Lvxf1PxzskydNssC5vxgaNn7u8YJaa87dTfLGMehDd) → [`GU1qQvri…`](https://testnet.nearblocks.io/txns/GU1qQvriGcc5DBUmYrxz32uAWzkZgNDe1d2R3jvsAXMn) | [`V4oUeGyE…`](https://explorer.solana.com/tx/V4oUeGyEdXpzoVToc1tMo8pzd8jeZo9BU4xD8RVrEX6Ji912MUePEuSy8i3VrA6xjhRqtgJXsp5cyGwGdsY8UBs?cluster=devnet) |
+| **Solana:** `buy_stock_solana` (contract-built Raydium swap, MPC EdDSA); its blockhash expired unsent, so `resign_solana` signed the same buy again (ledger booked once) and it landed | [`GHKi22pg…`](https://testnet.nearblocks.io/txns/GHKi22pgb1Lcz4qxjwwLRDGdn6Doy96s6L3FoqVjKbDn), [`2VSpq8vD…`](https://testnet.nearblocks.io/txns/2VSpq8vDKy9c7KMwF1ALQGZuA7ujyKhNYpsk94tbc1xS) | [`65dxp65E…`](https://explorer.solana.com/tx/65dxp65EdGL1SoEqES9FXrvNwDWU6XacFAxgVEEXGnWp8oG15fPikkJwTbnxpcRNZtSA7CrYkGH2zvC8zDo5wukH?cluster=devnet) |
+| **Base** again: 2.18 USDC funded, proven, bought | [`HHTUkfpS…`](https://testnet.nearblocks.io/txns/HHTUkfpSkbfvgASbkxeTrbTc2MAr2oGHL3xPmWdDQqKd), [`7MQW8aAg…`](https://testnet.nearblocks.io/txns/7MQW8aAgaeYjb3WcYyJENHR9FuBUymZub7rSEsAiJoZj), [`EBq9Qwn4…`](https://testnet.nearblocks.io/txns/EBq9Qwn4DG7V2MLTorbSECQJ6bd19YdNJ4x8U6RrQhDV) | [`0x76cc…e4e6`](https://sepolia.basescan.org/tx/0x76cc94e2177d2777b28ac738294e74eb13b31bff621431e5ff4fb6288575e4e6), [`0x777d…c073`](https://sepolia.basescan.org/tx/0x777d24ddbb9320c1fa5bb43edea5225bfd7ce3e0165cc2c6510e4f59745dc073) |
+| **Robinhood:** `fund_chain` 1.92 USDC → delivered → `report_cash` (relayer) → `buy_stock` | [`5bGzpEJs…`](https://testnet.nearblocks.io/txns/5bGzpEJsBsY6Cf1eGccNkEeYu1aUSPEQCaSnSEwkYMeT), [`2QW3Egvw…`](https://testnet.nearblocks.io/txns/2QW3EgvwMm5n8jcdarvxBk7mV7vfvGXz6sruqbozVqMm), [`D3BE3LYc…`](https://testnet.nearblocks.io/txns/D3BE3LYcb9RkuruxJqJUfFMiY1m8a9q3hZfesVa7oXsy) | [`0xb46e…eb8f`](https://explorer.testnet.chain.robinhood.com/tx/0xb46ed8019665d8f5130b4fcbc821bd8f45a3e2ddfe60560aa1938b171e62eb8f), [`0x954e…e8c4`](https://explorer.testnet.chain.robinhood.com/tx/0x954e48bc42473ab47af750d15066ee57baff9e8d23de1fefff0d37deba1fe8c4) |
+
+Holdings after the run (ledger = minOut booked at signing; on-chain = the token's `balanceOf` / token account):
+
+| Chain | Ledger NVDA | On-chain NVDA |
+| --- | --- | --- |
+| Base Sepolia | 0.02965417 | 0.03032966 |
+| Robinhood testnet | 0.01060760 | 0.01082210 |
+| Solana devnet | 0.02770371 | 0.02831835 |
+
+The ledger is below the on-chain balance on every chain, as designed (it never overstates NAV).
+
+## NEAR testnet (history)
 
 ### Current factory (9 Nov 2026, second deploy)
 

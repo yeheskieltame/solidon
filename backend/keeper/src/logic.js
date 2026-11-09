@@ -202,6 +202,24 @@ export function ledgerChains(tc) {
   return out;
 }
 
+/**
+ * The chain the next `fund_chain` should go to: the one holding the fewest shares (USDC already
+ * there or in transit counts as shares it will buy), so the treasury spreads over all chains
+ * instead of always topping up the first one in config order. Ties keep config order. EVM chains
+ * whose router is not approved yet are skipped.
+ */
+export function fundTarget(tc, price) {
+  const p = price ? Number(price.price) * 10 ** price.expo : 0;
+  let best = null;
+  for (const c of ledgerChains(tc)) {
+    if (!c.venue || c.approved === false) continue; // an EVM chain can't buy before its approval
+    const shares = Number(c.stock) / 10 ** c.venue.decimals
+      + (p > 0 ? (Number(c.usdc) / 10 ** c.config.usdc_decimals + Number(c.in_transit) / 1e6) / p : 0);
+    if (!best || shares < best.shares) best = { name: c.config.name, shares };
+  }
+  return best?.name ?? null;
+}
+
 // --- Solana -------------------------------------------------------------------------------
 
 export const SOLANA = {

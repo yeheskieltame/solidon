@@ -4,7 +4,7 @@
 //   rebalance() whenever the cooldown allows and the price is fresh.
 // The Solana chain has its own steps (solana.js).
 // One MPC signature is in flight at a time per meme (`signing`), so signing steps wait for it.
-import { ledgerChains, rebalanceDue, scaleAmount, sendableEstimate, USDC_DECIMALS } from "./logic.js";
+import { fundTarget, ledgerChains, rebalanceDue, scaleAmount, sendableEstimate, USDC_DECIMALS } from "./logic.js";
 import { log, errMsg } from "./log.js";
 import { readMeme } from "./world.js";
 
@@ -89,7 +89,7 @@ async function chainSteps(ctx, meme, scope) {
     // Send more cash only once the last lot has arrived and been spent.
     const cur = meme.tc.chains[i];
     const curUsdc6 = scaleAmount(cur.usdc, cur.config.usdc_decimals, USDC_DECIMALS);
-    if (BigInt(cur.in_transit) === 0n && curUsdc6 < ctx.cfg.fundMin6 && meme.price) {
+    if (BigInt(cur.in_transit) === 0n && curUsdc6 < ctx.cfg.fundMin6 && meme.price && fundTarget(meme.tc, meme.price) === name) {
       const est = sendableEstimate({
         treasuryUsdc: meme.treasury.treasury_usdc,
         chains: ledgerChains(meme.tc), // NAV counts the Solana ledger too
