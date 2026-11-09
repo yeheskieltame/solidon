@@ -3,6 +3,7 @@
 // then signed with a raw ed25519 key (the MPC EdDSA domain signs the same bytes, see S21).
 // web3.js is used only for base58/PDA math here and for funding the throwaway treasury.
 import crypto from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { PublicKey, SystemProgram, Transaction, sendAndConfirmTransaction } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync, getOrCreateAssociatedTokenAccount, transfer, TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { conn, CLMM, keypair, payer, readState, writeState, explorer } from "./rpc.js";
@@ -17,20 +18,27 @@ const pool = new PublicKey(st.pool), usdc = new PublicKey(st.usdc), nvdax = new 
 const pda = (...seeds) => PublicKey.findProgramAddressSync(seeds, CLMM)[0];
 const i32be = (n) => { const b = Buffer.alloc(4); b.writeInt32BE(n); return b; };
 
-// --- 0. Throwaway "treasury": one key = fee payer = token owner, like the MPC-derived address. No NVDAx account yet.
-const tre = keypair("treasury");
-const T = tre.publicKey;
+// --- 0. Treasury: one key = fee payer = token owner. MPC_SIGNER=<near account> uses the NEAR MPC-derived
+// address (path "solana-treasury", EdDSA domain 1) and has v1.signer-prod.testnet sign; otherwise a throwaway key.
+const MPC = "v1.signer-prod.testnet", MPC_PATH = "solana-treasury", MPC_SIGNER = process.env.MPC_SIGNER;
+const near = (...args) => execFileSync("near", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+const tre = MPC_SIGNER ? null : keypair("treasury");
+const T = MPC_SIGNER
+  ? new PublicKey(JSON.parse(near("contract", "call-function", "as-read-only", MPC, "derived_public_key", "json-args",
+      JSON.stringify({ path: MPC_PATH, predecessor: MPC_SIGNER, domain_id: 1 }), "network-config", "testnet", "now")).split(":")[1])
+  : tre.publicKey;
+const fundedKey = MPC_SIGNER ? `mpcFunded:${T.toBase58()}` : "treasuryFunded";
 const inAta = getAssociatedTokenAddressSync(usdc, T, false, TOKEN_PROGRAM_ID);
 const outAta = getAssociatedTokenAddressSync(nvdax, T, false, TOKEN_2022_PROGRAM_ID);
-if (!st.treasuryFunded) {
+if (!st[fundedKey]) {
   const kp = payer();
   const tx = new Transaction().add(SystemProgram.transfer({ fromPubkey: kp.publicKey, toPubkey: T, lamports: 50_000_000 }));
   st.fundSolTx = await sendAndConfirmTransaction(conn, tx, [kp]);
   const src = getAssociatedTokenAddressSync(usdc, kp.publicKey, false, TOKEN_PROGRAM_ID);
   await getOrCreateAssociatedTokenAccount(conn, kp, usdc, T, false, "confirmed", undefined, TOKEN_PROGRAM_ID);
   st.fundUsdcTx = await transfer(conn, kp, src, inAta, kp, 1_000_000_000n, [], undefined, TOKEN_PROGRAM_ID);
-  st.treasury = T.toBase58();
-  st.treasuryFunded = true;
+  if (!MPC_SIGNER) st.treasury = T.toBase58();
+  st[fundedKey] = true;
   writeState(st);
 }
 console.log("treasury", T.toBase58());
@@ -132,9 +140,24 @@ const message = Buffer.concat([
 console.log(`message: ${message.length} bytes, ${keys.length} account keys, header [${[...header]}]; swap_v2 data ${swapData.length} bytes`);
 console.log("swap_v2 data hex", swapData.toString("hex"));
 
-// --- 4. Sign the raw message bytes (ed25519, as the MPC EdDSA domain would) and send.
-const pkcs8 = Buffer.concat([Buffer.from("302e020100300506032b657004220420", "hex"), Buffer.from(tre.secretKey.subarray(0, 32))]);
-const sig = crypto.sign(null, message, crypto.createPrivateKey({ key: pkcs8, format: "der", type: "pkcs8" }));
+// --- 4. Sign the raw message bytes (ed25519) and send: by the NEAR MPC, or by the throwaway key.
+let sig;
+if (MPC_SIGNER) {
+  const t0 = Date.now();
+  const out = near("contract", "call-function", "as-transaction", MPC, "sign", "json-args",
+    JSON.stringify({ request: { path: MPC_PATH, payload_v2: { Eddsa: message.toString("hex") }, domain_id: 1 } }),
+    "prepaid-gas", "300.0 Tgas", "attached-deposit", "1 yoctoNEAR", "sign-as", MPC_SIGNER,
+    "network-config", "testnet", "sign-with-keychain", "send");
+  const s = JSON.parse(out.trim()).signature;
+  sig = Buffer.from(Array.isArray(s) ? s : Buffer.from(s, "hex"));
+  if (sig.length !== 64) throw new Error(`unexpected MPC signature: ${out.slice(0, 200)}`);
+  if (!crypto.verify(null, message, crypto.createPublicKey({ key: Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), T.toBuffer()]), format: "der", type: "spki" }), sig))
+    throw new Error("MPC signature does not verify against the treasury key");
+  console.log(`MPC EdDSA signature in ${((Date.now() - t0) / 1000).toFixed(0)} s, verified against ${T.toBase58()}`);
+} else {
+  const pkcs8 = Buffer.concat([Buffer.from("302e020100300506032b657004220420", "hex"), Buffer.from(tre.secretKey.subarray(0, 32))]);
+  sig = crypto.sign(null, message, crypto.createPrivateKey({ key: pkcs8, format: "der", type: "pkcs8" }));
+}
 const wire = Buffer.concat([shortvec(1), sig, message]);
 console.log(`signed tx: ${wire.length} bytes (limit 1232)`);
 
@@ -161,7 +184,7 @@ for (let i = 0; i < 60; i++) {
 console.log("status", status?.confirmationStatus, "err", status?.err);
 const after = [await bal(inAta), await bal(outAta)];
 console.log(`USDC ${before[0]} -> ${after[0]} | NVDAx ${before[1]} -> ${after[1]} (raw); min out ${minOut}`);
-st.swap = {
+st[MPC_SIGNER ? "mpcSwap" : "swap"] = {
   tx: txid, status: status?.confirmationStatus, err: status?.err, messageBytes: message.length, txBytes: wire.length,
   accountKeys: keys.length, computeUnits: s.value.unitsConsumed, amountIn: AMOUNT_IN.toString(), minOut: minOut.toString(),
   usdc: [before[0], after[0]], nvdax: [before[1], after[1]], tickArrayStart: start, tickArray: tickArray.toBase58(),
