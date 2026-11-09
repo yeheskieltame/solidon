@@ -333,3 +333,17 @@ Synthetic pools hold one-sided liquidity (stock only) from the reference price u
 **Robinhood testnet quirk:** its Uniswap v3 fork pays a 0.1% protocol fee in the input token to `0x6063…e305` (the USDC owner) *before* the swap callback, so a pool with no USDC reverts with `TF`. Each synthetic pool there got ~0.0106 USDC of float. Base Sepolia's official Uniswap has no such step.
 
 End to end on Robinhood testnet, signed by MPC: ETH → USDC, approve, then 0.1 USDC → 0.000562 synthetic NVDA at $177.82 (ref $177.56). Links in [DEPLOYMENTS.md](DEPLOYMENTS.md).
+
+## S25 · MPC-signed Raydium CLMM swap on Solana devnet (`backend/solana-spike/`) ✅
+
+Devnet has no xStocks, so `1_setup.js` creates a synthetic NVDAx (Token-2022, 8 decimals, like the real one) and a pool on the Raydium CLMM devnet program `devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH` (AMM config `GVSw…qKof`, 0.05%, tick spacing 10). For this spike the quote token is a mock USDC mint (`4MUp…bzpd`); Circle's devnet USDC (`4zMM…ncDU`) is only available through a captcha faucet.
+
+`2_swap.js` builds the transaction **by hand, as the NEAR contract must**: a legacy message with `CreateIdempotent` for the Token-2022 output account and Raydium `swap_v2` (41-byte data: discriminator `2b04ed0b1ac91e62`, amount in, minimum out, sqrt price limit, base-input flag). Every account except the tick arrays derives from the AMM config and the two mints (PDAs checked against the pool account); tick arrays come from the pool's live bitmap. Message 682 bytes, 18 keys, 88k compute units, no lookup table. Full spec in [`backend/solana-spike/README.md`](../backend/solana-spike/README.md).
+
+| Step | Signer | Transaction | Result |
+| --- | --- | --- | --- |
+| Hand-built swap, 100 USDC → NVDAx | throwaway key | [`U2ZaaZpZ…`](https://explorer.solana.com/tx/U2ZaaZpZwi7xLg85eJbuiNwYP1gx6BKSh5JSnFuG4B6cVZsNoTvcih7DYyJT9AP6GzbYZAw171ox59yzmnmPPvV?cluster=devnet) | finalized, 0.55437615 NVDAx |
+| Same message for the **MPC treasury** `GXhn…UH5` | `v1.signer-prod.testnet` EdDSA, 9 s, signature verified locally | [`5d39mkWi…`](https://explorer.solana.com/tx/5d39mkWiDXK6Zed4xk3BUagkxwvtaBwzGPx8S8BUvJDjC4HyaK72xYMeMcCgxba5fnr5nkUUgrXa2uuFCSwYxZoJ?cluster=devnet) | finalized, 0.55257875 NVDAx |
+| `verify_foreign_transaction` `Solana` / `AccountState` of the treasury's NVDAx account, Finalized | `creator.solidon.testnet` | ✅ signed payload hash `381ad942…` | proof of holdings after the swap |
+
+Open: the exact `AccountState` value encoding the contract must hash (as S8 did for EVM logs), and a mainnet test against a real xStocks pool (scaled UI amount, compute-budget instruction).
