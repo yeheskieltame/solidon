@@ -1,4 +1,5 @@
-// A small JSON state file so each bridge transfer is processed once across restarts.
+// A small JSON state file so each bridge transfer is processed once across restarts, plus the
+// last landed Solana buy per meme.
 // Written atomically (tmp + rename) after every change; never written under --dry-run.
 import fs from "node:fs";
 
@@ -8,6 +9,7 @@ export class State {
     this.readOnly = readOnly;
     this.data = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {};
     this.data.transfers ??= {};
+    this.data.solana ??= {};
   }
 
   get transfers() {

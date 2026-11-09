@@ -62,6 +62,12 @@ export class Near {
     }
   }
 
+  /** Height of the latest final NEAR block. */
+  async blockHeight() {
+    const b = await jsonRpc(this.cfg.nearRpc, "block", { finality: "final" }, "block");
+    return b.header.height;
+  }
+
   /** An action receipt by id (`EXPERIMENTAL_receipt`). */
   receipt(id) {
     return jsonRpc(this.cfg.nearRpc, "EXPERIMENTAL_receipt", { receipt_id: id }, `receipt ${id}`);

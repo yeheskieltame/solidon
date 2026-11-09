@@ -2,8 +2,9 @@
 // the contract; the keeper only decides *when*, from the views, so most calls are not wasted:
 //   init_treasury -> approve_router(chain) -> fund_chain(chain) -> [bridge] -> buy_stock(chain)
 //   rebalance() whenever the cooldown allows and the price is fresh.
+// The Solana chain has its own steps (solana.js).
 // One MPC signature is in flight at a time per meme (`signing`), so signing steps wait for it.
-import { rebalanceDue, scaleAmount, sendableEstimate, USDC_DECIMALS } from "./logic.js";
+import { ledgerChains, rebalanceDue, scaleAmount, sendableEstimate, USDC_DECIMALS } from "./logic.js";
 import { log, errMsg } from "./log.js";
 import { readMeme } from "./world.js";
 
@@ -81,7 +82,7 @@ async function chainSteps(ctx, meme, scope) {
     if (BigInt(cur.in_transit) === 0n && curUsdc6 < ctx.cfg.fundMin6 && meme.price) {
       const est = sendableEstimate({
         treasuryUsdc: meme.treasury.treasury_usdc,
-        chains: meme.tc.chains,
+        chains: ledgerChains(meme.tc), // NAV counts the Solana ledger too
         chain: name,
         price: meme.price,
         cashBufferBps: meme.params.cash_buffer_bps,

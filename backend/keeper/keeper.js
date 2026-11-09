@@ -2,9 +2,10 @@
 // Solidon keeper (testnet). One cycle:
 //   oracle     Chainlink (Robinhood Chain mainnet) -> mock Pyth on NEAR testnet, every ORACLE_INTERVAL_SECS
 //   broadcast  signed treasury transactions -> Base Sepolia / Robinhood testnet
-//   bridge     USDC sent by fund_chain to the keeper -> delivered to the treasury, then credited
+//   bridge     USDC sent by fund_chain to the keeper -> delivered to the treasury (EVM or Solana), then credited
 //   treasury   init_treasury, approve_router, fund_chain, buy_stock, rebalance when due
-//   solana     TODO (PR B2)
+//   solana     init_solana_treasury, set_solana_accounts, treasury SOL, buy_stock_solana + broadcast,
+//              resign_solana for an expired buy, fund_chain("solana")
 // Usage: node keeper.js [--once] [--dry-run] [--meme=...] [--only=...]   (see --help)
 import { HELP, loadConfig, parseFlags } from "./src/config.js";
 import { log, errMsg, setSecrets } from "./src/log.js";
@@ -16,7 +17,8 @@ import { pushPrices } from "./src/oracle.js";
 import { broadcast } from "./src/broadcaster.js";
 import { processTransfers, scanIncoming } from "./src/bridge.js";
 import { housekeeping } from "./src/treasury.js";
-import { solanaStep } from "./src/solana.js";
+import { solanaHousekeeping, solanaWalletReport } from "./src/solana.js";
+import { SolanaRpc, keeperKeypair } from "./src/sol.js";
 import { sleep } from "./src/net.js";
 
 const flags = parseFlags(process.argv.slice(2));
@@ -29,7 +31,15 @@ setSecrets(cfg.secrets);
 const runs = (name) => !flags.only || flags.only.includes(name);
 const near = new Near(cfg);
 const wallet = cfg.evmKey ? keeperWallet(cfg.evmKey) : null;
-const ctx = { cfg, near, wallet, state: new State(cfg.statePath, { readOnly: cfg.dryRun }), world: null };
+const solKey = keeperKeypair(cfg.solana.keypairPath);
+const ctx = {
+  cfg,
+  near,
+  wallet,
+  sol: { rpc: new SolanaRpc(cfg.solana), keypair: solKey.keypair },
+  state: new State(cfg.statePath, { readOnly: cfg.dryRun }),
+  world: null,
+};
 
 let stopping = false;
 process.on("SIGINT", () => {
@@ -43,6 +53,7 @@ async function startup() {
     factory: cfg.factory,
     keeper: cfg.keeperAccount,
     near_rpc: new URL(cfg.nearRpc).host,
+    solana_rpc: new URL(cfg.solana.url).host,
     near_key: cfg.nearKey ? cfg.nearKeySource : "none",
     env: `backend:${cfg.envFiles.backend ? "loaded" : "missing"} contracts:${cfg.envFiles.contracts ? "loaded" : "missing"}`,
   });
@@ -69,6 +80,7 @@ async function walletReport() {
       .call("keeper", ctx.world.usdc, { method: "storage_deposit", args: { account_id: cfg.keeperAccount }, tgas: 30, deposit: 1_250_000_000_000_000_000_000n })
       .catch((e) => log.error("keeper", `storage_deposit failed: ${errMsg(e)}`));
   }
+  await solanaWalletReport(ctx, solKey.created);
   if (!wallet) return;
   for (const evm of Object.values(ctx.world.evm)) {
     try {
@@ -128,8 +140,14 @@ async function cycle(first) {
     }
     // Land what housekeeping just signed without waiting a full cycle.
     if (runs("broadcast") && !cfg.dryRun) await broadcast(ctx, await readMeme(near, meme.id));
+    if (runs("solana") && meme.tc?.solana) {
+      try {
+        await solanaHousekeeping(ctx, cfg.dryRun ? meme : await readMeme(near, meme.id));
+      } catch (e) {
+        log.error(`solana:${meme.id}`, errMsg(e));
+      }
+    }
   }
-  if (runs("solana")) await solanaStep(ctx);
 }
 
 await startup();
