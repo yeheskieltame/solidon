@@ -24,3 +24,8 @@ coverage/
 
 # Python
 __pycache__/
+
+# Foundry
+contracts/evm/out/
+contracts/evm/cache/
+contracts/evm/broadcast/

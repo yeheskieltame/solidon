@@ -1,0 +1,99 @@
+{
+  "_comment": "BSC testnet (chain 97) mocks for the Chain Signatures flow, written by contracts/evm/deploy-bsc-testnet.sh. Mock tokens: owner-only mint by the deployer. Not bStocks.",
+  "chain_id": 97,
+  "usdt": "0x8f13563130684478E617C1797308A081Cb2c2654",
+  "pancake_v3_factory": "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865",
+  "pancake_v3_position_manager": "0x427bF5b37357632377eCbEC9de3626C71A5396c1",
+  "pancake_v3_swap_router": "0x1b81D678ffb9C0263b24A97847620C99d213eB14",
+  "deployer": "0xcF1ED498f96d272c949CB6b8FcD67c137F766D28",
+  "stocks": [
+    {
+      "ticker": "NVDA",
+      "name": "NVIDIA",
+      "bsc_token": "0xDaeD2B60dFB4131fae08b0093AE583F672FaA142",
+      "bsc_symbol": "NVDAB",
+      "decimals": 18,
+      "ref_price_usd": "187.56",
+      "pancake_v3_pool": "0x7a48FF1Dbd57db070F026bbA61294Fd579791185",
+      "pool_fee": 2500,
+      "price_id": "b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593"
+    },
+    {
+      "ticker": "AAPL",
+      "name": "Apple",
+      "bsc_token": "0x04eC0775F4faF1fC61cbaA9AEfe7D72159fb729f",
+      "bsc_symbol": "AAPLB",
+      "decimals": 18,
+      "ref_price_usd": "342.24",
+      "pancake_v3_pool": "0x757BfA777A5824A41028D189a56C4C361Cc76336",
+      "pool_fee": 2500,
+      "price_id": "49f6b65cb1de6b10eaf75e7c03ca029c306d0357e91b5311b175084a5ad55688"
+    },
+    {
+      "ticker": "MSFT",
+      "name": "Microsoft",
+      "bsc_token": "0xa9e45392aA5722f82603765C0D1f7ACfA632C123",
+      "bsc_symbol": "MSFTB",
+      "decimals": 18,
+      "ref_price_usd": "531.60",
+      "pancake_v3_pool": "0xf33d886A1180B8E5f63Fd6eCb5671611B6cb3525",
+      "pool_fee": 2500,
+      "price_id": "d0ca23c1cc005e004ccf1db5bf76aeb6a49218f43dac3d4b275e92de12ded4d1"
+    },
+    {
+      "ticker": "GOOGL",
+      "name": "Alphabet",
+      "bsc_token": "0x690FAC364cbd86CeeE231432c280E6C77fD74DbA",
+      "bsc_symbol": "GOOGLB",
+      "decimals": 18,
+      "ref_price_usd": "285.44",
+      "pancake_v3_pool": "0x8E2c819Bb3D5B9B8e5F6915B6d63AeCCca436c11",
+      "pool_fee": 2500,
+      "price_id": "5a48c03e9b9cb337801073ed9d166817473697efff0d138874e0f6a33d6d5aa6"
+    },
+    {
+      "ticker": "AMZN",
+      "name": "Amazon",
+      "bsc_token": "0xed3158aa4eAd25b94E13f5C7ef91a63B74ECfE9D",
+      "bsc_symbol": "AMZNB",
+      "decimals": 18,
+      "ref_price_usd": "260.30",
+      "pancake_v3_pool": "0xd433bA0189F6115C4FE1045fdf0AC98731683394",
+      "pool_fee": 2500,
+      "price_id": "b5d0e0fa58a1f8b81498ae670ce93c872d14434b72c364885d4fa1b257cbb07a"
+    },
+    {
+      "ticker": "META",
+      "name": "Meta Platforms",
+      "bsc_token": "0x2758008061E34a026193e8B7C8135b036C7b9E5A",
+      "bsc_symbol": "METAB",
+      "decimals": 18,
+      "ref_price_usd": "612.26",
+      "pancake_v3_pool": "0xdE22310EB0d29d680e13c54df5e2a11A0Ea5F99C",
+      "pool_fee": 2500,
+      "price_id": "78a3e3b8e676a8f73c439f5d749737034b139bbbe899ba5775216fba596607fe"
+    },
+    {
+      "ticker": "TSLA",
+      "name": "Tesla",
+      "bsc_token": "0xEf3FF65eD4aAe385E302f5a2F16EA5355CfF4f69",
+      "bsc_symbol": "TSLAB",
+      "decimals": 18,
+      "ref_price_usd": "358.25",
+      "pancake_v3_pool": "0xDaE376875d42B828ED63E64278911CDdE5EbEc4E",
+      "pool_fee": 2500,
+      "price_id": "16dad506d7db8da01c87581c87ca897a012a153557d4d578c3b9c9e1bc0632f1"
+    },
+    {
+      "ticker": "SPCX",
+      "name": "SpaceX",
+      "bsc_token": "0x730B750E15F08B9596C8c2bc3240856c4714e08b",
+      "bsc_symbol": "SPCXB",
+      "decimals": 18,
+      "ref_price_usd": "135.32",
+      "pancake_v3_pool": "0xF6ACaD0919417bfE82B61E4e756A430804078394",
+      "pool_fee": 2500,
+      "price_id": "8a593d6edde7a3095213c88116d8840d01e93c2ddeb800bc891772eb8b93bb94"
+    }
+  ]
+}

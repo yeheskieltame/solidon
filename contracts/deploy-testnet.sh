@@ -6,7 +6,7 @@
 #   usdc.<factory>     mock-ft, open-mint USDC stand-in (6 decimals)
 #   pyth.<factory>     mock-pyth, Pyth read interface with settable prices
 #   creator.<factory>  demo creator account
-#   <factory>          factory listing every stock in stocks/bsc-mainnet.json
+#   <factory>          factory listing every stock in stocks/bsc-testnet.json
 # No meme is launched: launch one from the launchpad (or `create_meme`).
 #
 # Signs with keys in the macOS keychain (near-cli-rs). No key is stored in the repo.
@@ -56,35 +56,27 @@ create "$CREATOR" '3.5 NEAR'
 deploy_once "$USDC" mock_ft '{"name":"USD Coin (Solidon testnet mock)","symbol":"USDC","decimals":6}'
 deploy_once "$PYTH" mock_pyth '{}'
 
-# Stock list: tickers, Pyth feeds, decimals from the verified mainnet registry.
-# ponytail: BSC testnet has no bStocks, so token addresses are placeholders 0x…01-0x…08
-# until the Chain Signatures milestone deploys a mock token per ticker (and redeploys).
+# Stock list: BSC testnet mock tokens with the real Pyth feed IDs, written by
+# evm/deploy-bsc-testnet.sh (BSC testnet has no bStocks).
+REGISTRY=stocks/bsc-testnet.json
 STOCKS=$(python3 -c "
 import json
-reg = json.load(open('stocks/bsc-mainnet.json'))
-print(json.dumps([{'ticker': s['ticker'], 'price_id': s['price_id'], 'decimals': s['decimals'],
-                   'bsc_token': '0x' + format(i + 1, '040x')} for i, s in enumerate(reg['stocks'])]))")
+print(json.dumps([{k: s[k] for k in ('ticker', 'price_id', 'bsc_token', 'decimals')}
+                  for s in json.load(open('$REGISTRY'))['stocks']]))")
 if [ "$(rpc_view_account "$FACTORY")" != 11111111111111111111111111111111 ]; then
   echo "$FACTORY already has code: delete and recreate the account to redeploy the factory" >&2
   exit 1
 fi
 deploy "$FACTORY" factory "{\"usdc\":\"$USDC\",\"oracle\":\"$PYTH\",\"stocks\":$STOCKS}"
 
-# Mock prices (USD, Pyth style expo -8), from the PancakeSwap USDT pools on 9 Nov 2026.
-while read -r ticker usd; do
-  id=$(python3 -c "import json;print(next(s['price_id'] for s in json.load(open('stocks/bsc-mainnet.json'))['stocks'] if s['ticker']=='$ticker'))")
-  price=$(python3 -c "print(round($usd * 10**8))")
+# Mock Pyth prices = the reference prices the BSC testnet pools were created at.
+python3 -c "
+import json
+for s in json.load(open('$REGISTRY'))['stocks']:
+    print(s['price_id'], round(float(s['ref_price_usd']) * 10**8))" |
+while read -r id price; do
   call "$CREATOR" "$PYTH" set_price "{\"price_id\":\"$id\",\"price\":\"$price\",\"expo\":-8}" '0 NEAR'
-done <<'EOF'
-NVDA 187.56
-AAPL 342.24
-MSFT 531.60
-GOOGL 285.44
-AMZN 260.30
-META 612.26
-TSLA 358.25
-SPCX 135.32
-EOF
+done
 
 view "$FACTORY" get_stocks '{}'
 view "$FACTORY" launch_cost '{}'

@@ -5,7 +5,8 @@ created by the official factory, holds exactly {bStock, USDT}, and has the
 listed fee; the Pyth feed ID is the Hermes listing for Equity.US.<ticker>/USD.
 Also checks the USDT token and that the swap router points at the same factory.
 
-Run:  python3 contracts/stocks/verify.py      (BSC_RPC overrides the RPC URL)
+Run:  python3 contracts/stocks/verify.py [registry.json]   (default bsc-mainnet.json;
+      BSC_RPC overrides the RPC URL, e.g. a BSC testnet RPC for bsc-testnet.json)
 Exits non-zero on any mismatch. Python 3.10+, standard library only.
 """
 
@@ -17,7 +18,7 @@ from pathlib import Path
 
 RPC = os.environ.get("BSC_RPC", "https://bsc-rpc.publicnode.com")
 HERMES = "https://hermes.pyth.network/v2/price_feeds?asset_type=equity"
-REGISTRY = Path(__file__).with_name("bsc-mainnet.json")
+REGISTRY = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).with_name("bsc-mainnet.json")
 
 
 def fetch(url, body=None):

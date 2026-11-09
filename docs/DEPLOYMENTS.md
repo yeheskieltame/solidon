@@ -1,5 +1,24 @@
 # Deployments
 
+## BSC testnet (chain 97, 9 Nov 2026)
+
+Mock bStocks and PancakeSwap v3 pools for testing the Chain Signatures flow, deployed with [`contracts/evm/deploy-bsc-testnet.sh`](../contracts/evm/deploy-bsc-testnet.sh) (dry-run first on an anvil fork of BSC testnet). Registry: [`contracts/stocks/bsc-testnet.json`](../contracts/stocks/bsc-testnet.json); re-check with `BSC_RPC=https://bsc-testnet-rpc.publicnode.com python3 contracts/stocks/verify.py contracts/stocks/bsc-testnet.json`.
+
+Deployer [`0xcF1E…6D28`](https://testnet.bscscan.com/address/0xcF1ED498f96d272c949CB6b8FcD67c137F766D28) (testnet only; key in the gitignored `contracts/.env`). Mock USDT [`0x8f13…2654`](https://testnet.bscscan.com/address/0x8f13563130684478E617C1797308A081Cb2c2654). Each pool: fee 0.25% (as on mainnet), full-range liquidity of 100,000 mock USDT, created through the official testnet NonfungiblePositionManager `0x427bF5b37357632377eCbEC9de3626C71A5396c1`. Total cost: 0.0049 tBNB.
+
+| Ticker | Mock token | Pool | Initial price |
+| --- | --- | --- | --- |
+| NVDA | [`NVDAB` 0xDaeD…A142](https://testnet.bscscan.com/address/0xDaeD2B60dFB4131fae08b0093AE583F672FaA142) | [0x7a48…1185](https://testnet.bscscan.com/address/0x7a48FF1Dbd57db070F026bbA61294Fd579791185) | $187.56 |
+| AAPL | [`AAPLB` 0x04eC…729f](https://testnet.bscscan.com/address/0x04eC0775F4faF1fC61cbaA9AEfe7D72159fb729f) | [0x757B…6336](https://testnet.bscscan.com/address/0x757BfA777A5824A41028D189a56C4C361Cc76336) | $342.24 |
+| MSFT | [`MSFTB` 0xa9e4…C123](https://testnet.bscscan.com/address/0xa9e45392aA5722f82603765C0D1f7ACfA632C123) | [0xf33d…3525](https://testnet.bscscan.com/address/0xf33d886A1180B8E5f63Fd6eCb5671611B6cb3525) | $531.60 |
+| GOOGL | [`GOOGLB` 0x690F…4DbA](https://testnet.bscscan.com/address/0x690FAC364cbd86CeeE231432c280E6C77fD74DbA) | [0x8E2c…6c11](https://testnet.bscscan.com/address/0x8E2c819Bb3D5B9B8e5F6915B6d63AeCCca436c11) | $285.44 |
+| AMZN | [`AMZNB` 0xed31…fE9D](https://testnet.bscscan.com/address/0xed3158aa4eAd25b94E13f5C7ef91a63B74ECfE9D) | [0xd433…3394](https://testnet.bscscan.com/address/0xd433bA0189F6115C4FE1045fdf0AC98731683394) | $260.30 |
+| META | [`METAB` 0x2758…9E5A](https://testnet.bscscan.com/address/0x2758008061E34a026193e8B7C8135b036C7b9E5A) | [0xdE22…F99C](https://testnet.bscscan.com/address/0xdE22310EB0d29d680e13c54df5e2a11A0Ea5F99C) | $612.26 |
+| TSLA | [`TSLAB` 0xEf3F…4f69](https://testnet.bscscan.com/address/0xEf3FF65eD4aAe385E302f5a2F16EA5355CfF4f69) | [0xDaE3…Ec4E](https://testnet.bscscan.com/address/0xDaE376875d42B828ED63E64278911CDdE5EbEc4E) | $358.25 |
+| SPCX | [`SPCXB` 0x730B…e08b](https://testnet.bscscan.com/address/0x730B750E15F08B9596C8c2bc3240856c4714e08b) | [0xF6AC…8394](https://testnet.bscscan.com/address/0xF6ACaD0919417bfE82B61E4e756A430804078394) | $135.32 |
+
+Mock tokens can only be minted by the deployer. They are **not** bStocks and have no value.
+
 ## NEAR testnet
 
 ### Current factory (9 Nov 2026, second deploy)

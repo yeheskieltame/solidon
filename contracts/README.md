@@ -8,6 +8,7 @@ Rust smart contracts for NEAR, one cargo workspace.
 | `factory` | Deploys each meme as a sub-account, e.g. `nvda.solidon.near` |
 | `mock-ft` | Minimal NEP-141 used as USDC in sandbox tests and on testnet |
 | `mock-pyth` | Pyth read interface with settable prices, for sandbox tests and testnet |
+| `evm/` | Foundry project: `MockERC20` and `deploy-bsc-testnet.sh` for mock bStocks and PancakeSwap v3 pools on BSC testnet (not a NEAR crate) |
 
 `stocks/bsc-mainnet.json` is the verified list of stocks the factory lists; `python3 stocks/verify.py` re-checks it on-chain ([docs/STOCKS.md](../docs/STOCKS.md)).
 
