@@ -14,3 +14,6 @@ Scripts behind [docs/SPIKE.md](../../docs/SPIKE.md): each one calls the real ser
 | `s11_oneclick_routes.py` | Tokenized stocks in 1Click; minimum size of USDC on NEAR → stablecoin per chain |
 | `s12_base_stocks.py` | Coinbase tokenized stocks on Base: cost by size, gap to Chainlink |
 | `solana-mints.json` | Verified Solana mints (xStocks, Backpack, Ondo) |
+| `s15_robinhood_tokens.py` | Robinhood Chain stock tokens: on-chain metadata |
+| `s16_hood_chainlink.py [hours]` | Chainlink feeds on Robinhood Chain, found from on-chain events |
+| `s17_costs.py` | Minimum cost of one full cycle per chain |
