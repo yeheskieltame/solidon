@@ -67,7 +67,16 @@ if [ "$(rpc_view_account "$FACTORY")" != 11111111111111111111111111111111 ]; the
   echo "$FACTORY already has code: delete and recreate the account to redeploy the factory" >&2
   exit 1
 fi
-deploy "$FACTORY" factory "{\"usdc\":\"$USDC\",\"oracle\":\"$PYTH\",\"stocks\":$STOCKS}"
+# BSC side: testnet chain id, mock USDT, PancakeSwap v3 SwapRouter, the testnet MPC
+# signer, 1 gwei gas, and swaps capped at 500 USDT (0.5% of a 100k-USDT pool, so
+# fee + impact stays under the 1% slippage allowed against Pyth).
+BSC=$(python3 -c "
+import json
+r = json.load(open('$REGISTRY'))
+print(json.dumps({'chain_id': r['chain_id'], 'usdt': r['usdt'], 'swap_router': r['pancake_v3_swap_router'],
+                  'pool_fee': r['stocks'][0]['pool_fee'], 'mpc': 'v1.signer-prod.testnet',
+                  'max_fee_per_gas': str(10**9), 'max_swap_usdt': str(500 * 10**18)}))")
+deploy "$FACTORY" factory "{\"usdc\":\"$USDC\",\"oracle\":\"$PYTH\",\"bsc\":$BSC,\"stocks\":$STOCKS}"
 
 # Mock Pyth prices = the reference prices the BSC testnet pools were created at.
 python3 -c "

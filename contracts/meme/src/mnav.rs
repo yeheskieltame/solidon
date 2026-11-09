@@ -116,7 +116,13 @@ impl Meme {
 
     /// Treasury value in USDC raw units at price `p`.
     fn assets(&self, p: &PythPrice) -> Option<u128> {
-        Some(stock_value(self.engine.stock_units, p, self.stock.decimals)? + self.treasury_usdc)
+        let bsc_usdt =
+            self.treasury.bsc_usdt / 10u128.pow(crate::treasury::USDT_DECIMALS - USDC_DECIMALS);
+        Some(
+            stock_value(self.engine.stock_units, p, self.stock.decimals)?
+                + self.treasury_usdc
+                + bsc_usdt,
+        )
     }
 
     /// NAV per token (scaled by 1e30) at price `p`, with `extra` tokens counted as circulating.
@@ -126,7 +132,7 @@ impl Meme {
         (circ > 0 && assets > 0).then(|| mul_div(assets, PRICE_SCALE, circ))
     }
 
-    fn read_price(&self) -> ext_pyth::PythExt {
+    pub(crate) fn read_price(&self) -> ext_pyth::PythExt {
         ext_pyth::ext(self.oracle.clone()).with_static_gas(GAS_PYTH)
     }
 

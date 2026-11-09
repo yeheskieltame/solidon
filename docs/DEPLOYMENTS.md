@@ -57,6 +57,17 @@ Listed stocks: NVDA, AAPL, MSFT, GOOGL, AMZN, META, TSLA, SPCX. Pyth feed IDs ar
 
 All three were checked final through RPC with no failed receipts.
 
+### Chain Signatures end-to-end (9 Nov 2026)
+
+New meme code deployed to a test account [`chainsig-e2e.solidon.testnet`](https://testnet.nearblocks.io/address/chainsig-e2e.solidon.testnet) (not through the factory, so no ticker is consumed), stock SPCX, MPC `v1.signer-prod.testnet`.
+
+| Step | Where | Result |
+| --- | --- | --- |
+| `init_treasury` | [`DHPHdX5…`](https://testnet.nearblocks.io/txns/DHPHdX5D4eM857VLqQjudipLas2nTvbH9E9HrEoyv4dq) | Treasury [`0xe150…d7e2`](https://testnet.bscscan.com/address/0xe15043b65217a97b43b81307e3fea2d51ec2d7e2), equal to the off-chain derivation from `derived_public_key` |
+| Fund treasury gas, 0.005 tBNB | [`0x406f…5c4b`](https://testnet.bscscan.com/tx/0x406f6f39454d114ae91fa1c530047049dbabeef373477124d54da13dd9b05c4b) | from the testnet deployer |
+| `approve_router` (MPC signature) | [`5M9Qxkr…`](https://testnet.nearblocks.io/txns/5M9QxkrbZjSDVhWaKuc3AGpjNjEmyGANJLPT3Djdg4H3) | `bsc_tx_signed` nonce 0, signature passed the in-contract `ecrecover` check |
+| Relayer broadcast | [`0xf76f…9475`](https://testnet.bscscan.com/tx/0xf76fd30e239dc4c87cb4c1aa929458cd80dd39050b4160c6e692c03101bd9475) | status 1, `from` = treasury, USDT allowance to the router = max |
+
 ### Launch a meme
 
 ```bash

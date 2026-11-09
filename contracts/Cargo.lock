@@ -1639,6 +1639,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "k256"
+version = "0.13.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f6e3919bbaa2945715f0bb6d3934a173d1e9a59ac23767fbaaef277265a7411b"
+dependencies = [
+ "cfg-if 1.0.5",
+ "ecdsa",
+ "elliptic-curve",
+ "once_cell",
+ "sha2 0.10.9",
+ "signature",
+]
+
+[[package]]
 name = "keccak"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1732,9 +1746,11 @@ name = "meme"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "k256",
  "near-contract-standards",
  "near-sdk",
  "near-workspaces",
+ "omni-transaction",
  "serde_json",
  "tokio",
  "uint 0.10.2",
@@ -2445,6 +2461,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "omni-transaction"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c29e3e53ff14dff841ad4bd83616ebb328009333fc90a6b8cb71450b351c665"
+dependencies = [
+ "hex",
+ "rlp",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2973,6 +2999,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bd124222d17ad93a644ed9d011a40f4fb64aa54275c08cc216524a9ea82fb09f"
 dependencies = [
  "digest 0.10.7",
+]
+
+[[package]]
+name = "rlp"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa24e92bb2a83198bb76d661a71df9f7076b8c420b8696e4d3d97d50d94479e3"
+dependencies = [
+ "bytes",
+ "rustc-hex",
 ]
 
 [[package]]

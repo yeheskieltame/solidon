@@ -29,11 +29,25 @@ pub struct Stock {
     pub decimals: u8,
 }
 
+/// Same shape as `meme::treasury::BscConfig`; the meme contract validates it.
+#[near(serializers = [borsh, json])]
+#[derive(Clone)]
+pub struct BscConfig {
+    pub chain_id: u64,
+    pub usdt: String,
+    pub swap_router: String,
+    pub pool_fee: u32,
+    pub mpc: AccountId,
+    pub max_fee_per_gas: U128,
+    pub max_swap_usdt: U128,
+}
+
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
 pub struct Factory {
     usdc: AccountId,
     oracle: AccountId,
+    bsc: BscConfig,
     stocks: Vec<Stock>,
     memes: IterableSet<AccountId>,
 }
@@ -41,11 +55,12 @@ pub struct Factory {
 #[near]
 impl Factory {
     #[init]
-    pub fn new(usdc: AccountId, oracle: AccountId, stocks: Vec<Stock>) -> Self {
+    pub fn new(usdc: AccountId, oracle: AccountId, bsc: BscConfig, stocks: Vec<Stock>) -> Self {
         require!(!stocks.is_empty(), "List at least one stock");
         Self {
             usdc,
             oracle,
+            bsc,
             stocks,
             memes: IterableSet::new(b"m"),
         }
@@ -92,7 +107,7 @@ impl Factory {
 
         let creator = env::predecessor_account_id();
         let args = json!({
-            "creator": creator, "usdc": self.usdc, "oracle": self.oracle,
+            "creator": creator, "usdc": self.usdc, "oracle": self.oracle, "bsc": self.bsc,
             "stock": stock, "name": name, "symbol": symbol, "icon": icon,
         });
         Promise::new(meme.clone())
@@ -146,6 +161,10 @@ impl Factory {
 
     pub fn get_oracle(&self) -> AccountId {
         self.oracle.clone()
+    }
+
+    pub fn get_bsc(&self) -> BscConfig {
+        self.bsc.clone()
     }
 
     pub fn get_stocks(&self) -> Vec<Stock> {
