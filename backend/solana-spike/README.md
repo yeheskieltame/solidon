@@ -4,13 +4,37 @@ Goal: prove the bytes a NEAR contract must produce (no Solana SDK, no network) t
 
 ```bash
 cd backend/solana-spike && npm install --legacy-peer-deps
-SOLIDON_ENV=/path/to/backend/.env node 1_setup.js   # mints, pool, position (idempotent, writes state.json)
-SOLIDON_ENV=/path/to/backend/.env node 2_swap.js    # hand-built swap from a fresh "treasury" keypair
+SOLIDON_ENV=/path/to/backend/.env node 1_setup.js   # 8 stock mints + pools (resumable, state.json) -> contracts/stocks/solana-devnet.json
+SOLIDON_ENV=/path/to/backend/.env MPC_SIGNER=creator.solidon.testnet TICKER=NVDA AMOUNT_USDC=1 node 2_swap.js
+#   hand-built buy, Circle USDC -> stock, signed by the NEAR MPC (DRY_RUN=1: simulate only, no MPC call)
 ```
 
-Throwaway devnet keys live in `.secrets/` (git-ignored). `ALCHEMY_API_KEY` is read from `backend/.env` and never printed.
+Throwaway devnet keys (payer, mint keypairs) live in `.secrets/` (git-ignored). `ALCHEMY_API_KEY` is read from `backend/.env` and never printed.
 
-## Devnet results
+## Stock venues (Circle devnet USDC, current)
+
+Mirror of `contracts/evm/deploy-testnet-stocks.py`. Quote token: **Circle devnet USDC** `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU` (SPL Token, 6 dp). Each stock is a synthetic Token-2022 mint (8 dp, `MetadataPointer` + `TokenMetadata` only, name "<Company> (Solidon synthetic, devnet)", symbol `<TICKER>x`, payer is mint authority). Reference price: Chainlink proxy on Robinhood Chain mainnet, fixed in `state.json` at creation. Pools: same CLMM program and AMM config as below (0.05%, tick spacing 10). Liquidity is **one-sided**: $50,000 of stock, range from the reference to ~2× (6,940 ticks), pool initialised half a spacing outside it, so a USDC buy moves into the range and the payer needs no USDC. The range edge is at most one spacing (0.1%) below the reference. Venue file: [`contracts/stocks/solana-devnet.json`](../../contracts/stocks/solana-devnet.json).
+
+| Ticker | Mint (`<T>x`) | Pool | Stock is | Ref | Range ticks | Edge | Stock in pool |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| NVDA | `88Bseqdd57C3sD5E8SaLPfwQ18e47RvzCXsRApiwSqbB` | `FEstNywAgrVXixWbLkFaqqMjT7jbdjwmkoPdmudtRCqU` | mint1 | $176.59 | -12620 .. -5680 | $176.47 | 283.1437 |
+| AAPL | `FtYHpjhYBFVrUE1inx7w48Wp1s7AzxnsFptvpgZcGkW5` | `8HtcC4dszMQcnrPvow8iYF6aNDTigtFsZ8PP4BiRypsV` | mint1 | $350.44 | -19480 .. -12540 | $350.41 | 142.6781 |
+| MSFT | `Bah7NyVk64eL7ADuHuJYwqKeG6vQTD5YRPQKLMtzG4SP` | `EhyAxindqL3HiK6VPXjpJtrxKHgh2kJkePML3r5cXsdv` | mint1 | $544.15 | -23880 .. -16940 | $544.07 | 91.8864 |
+| GOOGL | `XLYZw9YeVrUNsp4dAVVYayMdT5jWrmk6wFjUNWu8AnH` | `5dRjF2Zpc7crjrqp8NzrpntYnhGTVcLFN5QumB2iftu9` | mint0 | $290.38 | 10660 .. 17600 | $290.36 | 172.1866 |
+| AMZN | `D4GVCzUpbJRkqQ4ymbpXxKTC5jCxWK1gRvDXwRAHERZk` | `6pRZ79bnqssPy3HhyN3TijrCjXoqzZ4auD77kcM5mVhK` | mint1 | $268.14 | -16800 .. -9860 | $268.04 | 186.4696 |
+| META | `66aQ8CyXmgYkvreikf76EzETQC4oVgv9bbdxbPgFrKj8` | `EgV8KMGkUbzpLZUru3ivLi9Cx7YgxxhtopxcDFQC6JLA` | mint1 | $642.58 | -25540 .. -18600 | $642.31 | 77.8109 |
+| TSLA | `229y3sTgdfFBEWGxmuvQ4yvpj8puVrpmeSFNp7ZRkmSq` | `8cZfaL77SdxBZPc3SVPe7mrmNpqPJa61ixqqjsBqqm2o` | mint0 | $376.77 | 13260 .. 20200 | $376.57 | 132.7055 |
+| SPCX | `8mdbWErQneCkM6jpE5epezYrk8W6uhjjG9nnPwxLQDKp` | `3uwogu11qDBBw7mSVFHdTFq1YXnMrgaah1bYjuAJCF5K` | mint1 | $141.18 | -10380 .. -3440 | $141.06 | 354.1578 |
+
+Ticks are Raydium ticks of the mint1-per-mint0 raw price. When the stock is mint0 the range sits above the current tick and a buy pushes the price up; when it is mint1 the range sits below and a buy is `zeroForOne`. All transactions per stock (mint, `createPool`, `openPositionV2`) are in `state.json` under `stocks`; NVDA: [mint `36oNGeUh…`](https://explorer.solana.com/tx/36oNGeUhCGnrgofJV5wGLKas1NsAY1MLLoUSHJBKiaCJ4hicjD6GbkT5YjYFKHTg5eNkMY9S9TUhna9gvn3paepU?cluster=devnet), [pool `5cnxP5Hk…`](https://explorer.solana.com/tx/5cnxP5HkPSqn5YvfVngrdaHaf3sEqo2KS6Ursn4ohnjTB5ycADpCWhZJysLPBM1rGbGzJfks7ab8LQx2D46wUGLe?cluster=devnet), [position `2DJpxC8W…`](https://explorer.solana.com/tx/2DJpxC8WtYVGvVgWaF6dPrXZgDtEGCVThYY8B6HaHiFVjkCtu9mwahwevfcha69VQJ8fy643vp2umCb1tpxanbVq?cluster=devnet). Cost: about 0.18 SOL of rent per stock (pool, observation, bitmap extension, two tick arrays, position).
+
+**MPC buy, 1 Circle USDC → NVDAx** (treasury `GXhnfvC6yYEXgYEtSwEZNfKF2tcCd7vFn5onqEyK2UH5`, `v1.signer-prod.testnet` EdDSA, 9 s): [`EwX4QEFx…`](https://explorer.solana.com/tx/EwX4QEFxQ1g3UiUQn5vbH5WnVWecK4xFMzJ3UTP5A4xK4k9tDVtvLyCEuKvVfF5hRBmoKVNoosXSJ9wr3JdU4a9?cluster=devnet), finalized, err null. 0.00566387 NVDAx for 1 USDC = **$176.56 vs ref $176.59 (−0.02%)**; min out (ref − fee − 1%) 0.00560337. Message 715 bytes, 19 keys, signed tx 780 bytes, 99,672 CU.
+
+**One-sided pools need two tick arrays.** The price starts outside the range, so the first initialized array holds only the near range edge. After crossing it the program loads the *next initialized* array (the far edge, ~7,000 ticks away) before it takes the step, even for a tiny amount; with one array the swap fails with `NotEnoughTickArrayAccount` (6027, simulated). `2_swap.js` passes up to 3 initialized arrays in the swap direction (2 exist per pool, +33 bytes over the single-array message).
+
+## Mock-USDC spike (superseded, pool left in place)
+
+The first run used a mock USDC mint; its pool still exists but is no longer used. Its state is under `mock_usdc_nvdax` in `state.json`.
 
 | Item | Value |
 | --- | --- |
@@ -35,7 +59,7 @@ Legacy message, one signer (treasury = fee payer = token owner), two instruction
 1. Associated Token Account `CreateIdempotent` for the Token-2022 output account (no-op if it exists).
 2. Raydium CLMM `swap_v2`.
 
-**Size:** message **682 bytes** (18 keys), signed tx **747 bytes** (limit 1232). Formula: `3 + 1 + 32·keys + 32 + 1 + ATA ix (10) + swap ix (1 + 1 + n_accounts + 1 + 41)`. Each extra tick array adds 33 bytes, so room remains for about 14 more accounts.
+**Size:** message **682 bytes** (18 keys), signed tx **747 bytes** (limit 1232). Formula: `3 + 1 + 32·keys + 32 + 1 + ATA ix (10) + swap ix (1 + 1 + n_accounts + 1 + 41)`. Each extra tick array adds 33 bytes, so room remains for about 14 more accounts. The one-sided stock pools need 2 tick arrays: message 715 bytes, 19 keys, signed tx 780 bytes.
 
 **Header** `[1, 0, 9]`. Key order: treasury | writable: output ATA, pool, input ATA, input vault, output vault, observation, bitmap extension, tick array | read-only: NVDAx mint, System, Token-2022, ATA program, AMM config, Token, Memo, USDC mint, CLMM program.
 
@@ -77,7 +101,7 @@ Sent bytes: `2b04ed0b1ac91e62 00e1f50500000000 3dcf460300000000 0000000000000000
 
 All PDAs above are derived under the CLMM program. The script checks that pool, both vaults and observation derive from `(amm_config, mint0, mint1)` and match the pool account.
 
-**What needs live pool state.** Only the tick arrays (and `other_amount_threshold`, which the contract should derive from its own oracle price). The first tick array must be the first *initialized* one in the swap direction: start from `floor(tick_current / (60·tickSpacing)) · 60·tickSpacing` and walk down (zero_for_one) or up until the bit is set in `pool.tick_array_bitmap` (bit `i` ↔ start `(i − 512)·60·tickSpacing`). Here the current array −6000 was empty and the swap needed −13200. Uninitialized (non-existent) tick arrays cannot be passed. Large swaps that cross into further arrays need the next initialized arrays appended (+33 bytes each). Arrays beyond ±512 slots (|tick| > 307,200 at tickSpacing 10) live in the bitmap extension account's data.
+**What needs live pool state.** Only the tick arrays (and `other_amount_threshold`, which the contract should derive from its own oracle price). The first tick array must be the first *initialized* one in the swap direction: start from `floor(tick_current / (60·tickSpacing)) · 60·tickSpacing` and walk down (zero_for_one) or up until the bit is set in `pool.tick_array_bitmap` (bit `i` ↔ start `(i − 512)·60·tickSpacing`). Here the current array −6000 was empty and the swap needed −13200. Uninitialized (non-existent) tick arrays cannot be passed. Large swaps that cross into further arrays need the next initialized arrays appended (+33 bytes each); one-sided pools always need the second one (see above). Arrays beyond ±512 slots (|tick| > 307,200 at tickSpacing 10) live in the bitmap extension account's data.
 
 PoolState offsets read (devnet-verified): `amm_config` 9, `mint0` 73, `mint1` 105, `vault0` 137, `vault1` 169, `observation` 201, `tick_spacing` u16 235, `sqrt_price_x64` u128 253, `tick_current` i32 269, `tick_array_bitmap` [u64; 16] 904.
 
@@ -92,4 +116,4 @@ PoolState offsets read (devnet-verified): `amm_config` 9, `mint0` 73, `mint1` 10
 - **npm.** Peer-dependency resolution loops forever without `--legacy-peer-deps`.
 - **Compute.** 88,552 CU for ATA creation and the swap, within the default 200k per instruction. Mainnet should add `SetComputeUnitLimit` and a priority fee (+1 key and 2 instructions, about 30 bytes).
 - **Blockhash.** The message embeds a recent blockhash (valid about 60–90 s), which the caller must supply before the MPC sign. A durable nonce is the alternative (+1 `AdvanceNonceAccount` instruction, +2 keys).
-- **Not yet tested:** MPC EdDSA signing of a 682-byte payload (S21 signed 150 bytes), and the same message on mainnet against a real xStocks pool.
+- **Not yet tested:** the same message on mainnet against a real xStocks pool. (MPC EdDSA signing of 682- and 715-byte messages works, ~9 s.)
