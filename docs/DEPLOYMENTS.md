@@ -45,9 +45,9 @@ Same treasury on Base Sepolia, with 20 Circle USDC from the faucet:
 | Approve SwapRouter02 for 2 USDC | [`0xa594…5f93`](https://sepolia.basescan.org/tx/0xa594c733e4a575436017feea32171f8a587bcb87cf539f47fc0b1b0f57815f93) | status 1 |
 | Buy synthetic NVDAc with 1 USDC | [`0xfd4b…1a18`](https://sepolia.basescan.org/tx/0xfd4b8d4ff855dad4d6c64d27190327eb29eebf1a0a9931ca4c2827d4c3d21a18) | 0.00563841 NVDAc, effective $177.35 (ref $177.56) |
 
-## BSC testnet (chain 97, 9 Nov 2026)
+## BSC testnet (chain 97, 9 Nov 2026) · historical
 
-Mock bStocks and PancakeSwap v3 pools for testing the Chain Signatures flow, deployed with [`contracts/evm/deploy-bsc-testnet.sh`](../contracts/evm/deploy-bsc-testnet.sh) (dry-run first on an anvil fork of BSC testnet). Registry: [`contracts/stocks/bsc-testnet.json`](../contracts/stocks/bsc-testnet.json); re-check with `BSC_RPC=https://bsc-testnet-rpc.publicnode.com python3 contracts/stocks/verify.py contracts/stocks/bsc-testnet.json`.
+BSC was eliminated on 10 Nov 2026; the deploy script, registry and verifier below were removed from the tree and remain in git history. Mock bStocks and PancakeSwap v3 pools for testing the Chain Signatures flow, deployed with `contracts/evm/deploy-bsc-testnet.sh` (dry-run first on an anvil fork of BSC testnet). Registry: `contracts/stocks/bsc-testnet.json`; it was re-checked with `contracts/stocks/verify.py`.
 
 Deployer [`0xcF1E…6D28`](https://testnet.bscscan.com/address/0xcF1ED498f96d272c949CB6b8FcD67c137F766D28) (testnet only; key in the gitignored `contracts/.env`). Mock USDT [`0x8f13…2654`](https://testnet.bscscan.com/address/0x8f13563130684478E617C1797308A081Cb2c2654). Each pool: fee 0.25% (as on mainnet), full-range liquidity of 100,000 mock USDT, created through the official testnet NonfungiblePositionManager `0x427bF5b37357632377eCbEC9de3626C71A5396c1`. Total cost: 0.0049 tBNB.
 
@@ -89,7 +89,7 @@ MPC treasury `GXhnfvC6yYEXgYEtSwEZNfKF2tcCd7vFn5onqEyK2UH5` (`solana-treasury` o
 
 ### Current factory (9 Nov 2026, second deploy)
 
-Deployed with [`contracts/deploy-testnet.sh`](../contracts/deploy-testnet.sh). The factory lists the 8 verified stocks from [`contracts/stocks/bsc-mainnet.json`](../contracts/stocks/bsc-mainnet.json). No meme is launched by the script: memes are launched from the launchpad.
+Deployed with the BSC version of [`contracts/deploy-testnet.sh`](../contracts/deploy-testnet.sh). The factory lists the 8 verified stocks from `contracts/stocks/bsc-mainnet.json` (now removed). No meme is launched by the script: memes are launched from the launchpad. The multichain contracts (Base + Robinhood Chain) take different init args (`chains` instead of `bsc`), so they need a fresh factory account; `DRY_RUN=1 contracts/deploy-testnet.sh` prints those args.
 
 | Account | Contract | Code hash |
 | --- | --- | --- |

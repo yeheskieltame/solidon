@@ -11,8 +11,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-REG = json.loads((Path(__file__).parents[2] / "contracts/stocks/bsc-mainnet.json").read_text())
-FEEDS = {s["ticker"]: s["price_id"] for s in REG["stocks"]}
+FEEDS = json.loads((Path(__file__).parents[2] / "contracts/stocks/feeds.json").read_text())["feeds"]
 NVDA = FEEDS["NVDA"]
 
 

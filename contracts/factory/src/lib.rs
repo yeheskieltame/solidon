@@ -1,8 +1,8 @@
 //! Solidon factory: anyone launches a meme as `<symbol>.<factory>`.
 //!
-//! The factory has no owner. It fixes the USDC token, the Pyth oracle, and the
-//! list of supported stocks at init, so a creator cannot launch a meme against
-//! a fake stablecoin or a wrong price feed.
+//! The factory has no owner. It fixes the USDC token, the oracle, the treasury
+//! chains, and the list of supported stocks at init, so a creator cannot launch a
+//! meme against a fake stablecoin, a wrong price feed, or a fake stock token.
 
 use near_sdk::json_types::U128;
 use near_sdk::serde_json::json;
@@ -19,27 +19,44 @@ const GAS_ON_CREATE: Gas = Gas::from_tgas(10);
 /// Bytes reserved for the meme's own state on top of its code.
 const STATE_BYTES: u128 = 20_000;
 
-/// Same shape as `meme::Stock`; the meme contract validates it in `new`.
+// The structs below have the same shape as the meme's (`meme::Stock`, `meme::Venue`,
+// `meme::treasury::{ChainsConfig, EvmChain}`); the meme contract validates them in `new`.
+
+#[near(serializers = [borsh, json])]
+#[derive(Clone)]
+pub struct Venue {
+    pub chain: String,
+    pub token: String,
+    pub decimals: u8,
+}
+
 #[near(serializers = [borsh, json])]
 #[derive(Clone)]
 pub struct Stock {
     pub ticker: String,
     pub price_id: String,
-    pub bsc_token: String,
-    pub decimals: u8,
+    pub venues: Vec<Venue>,
 }
 
-/// Same shape as `meme::treasury::BscConfig`; the meme contract validates it.
 #[near(serializers = [borsh, json])]
 #[derive(Clone)]
-pub struct BscConfig {
+pub struct EvmChain {
+    pub name: String,
     pub chain_id: u64,
-    pub usdt: String,
+    pub usdc: String,
+    pub usdc_decimals: u8,
     pub swap_router: String,
     pub pool_fee: u32,
-    pub mpc: AccountId,
     pub max_fee_per_gas: U128,
-    pub max_swap_usdt: U128,
+    pub max_priority_fee_per_gas: U128,
+    pub max_swap_usdc: U128,
+}
+
+#[near(serializers = [borsh, json])]
+#[derive(Clone)]
+pub struct ChainsConfig {
+    pub mpc: AccountId,
+    pub evm: Vec<EvmChain>,
 }
 
 #[near(contract_state)]
@@ -47,7 +64,7 @@ pub struct BscConfig {
 pub struct Factory {
     usdc: AccountId,
     oracle: AccountId,
-    bsc: BscConfig,
+    chains: ChainsConfig,
     stocks: Vec<Stock>,
     memes: IterableSet<AccountId>,
 }
@@ -55,12 +72,17 @@ pub struct Factory {
 #[near]
 impl Factory {
     #[init]
-    pub fn new(usdc: AccountId, oracle: AccountId, bsc: BscConfig, stocks: Vec<Stock>) -> Self {
+    pub fn new(
+        usdc: AccountId,
+        oracle: AccountId,
+        chains: ChainsConfig,
+        stocks: Vec<Stock>,
+    ) -> Self {
         require!(!stocks.is_empty(), "List at least one stock");
         Self {
             usdc,
             oracle,
-            bsc,
+            chains,
             stocks,
             memes: IterableSet::new(b"m"),
         }
@@ -107,7 +129,7 @@ impl Factory {
 
         let creator = env::predecessor_account_id();
         let args = json!({
-            "creator": creator, "usdc": self.usdc, "oracle": self.oracle, "bsc": self.bsc,
+            "creator": creator, "usdc": self.usdc, "oracle": self.oracle, "chains": self.chains,
             "stock": stock, "name": name, "symbol": symbol, "icon": icon,
         });
         Promise::new(meme.clone())
@@ -163,8 +185,8 @@ impl Factory {
         self.oracle.clone()
     }
 
-    pub fn get_bsc(&self) -> BscConfig {
-        self.bsc.clone()
+    pub fn get_chains(&self) -> ChainsConfig {
+        self.chains.clone()
     }
 
     pub fn get_stocks(&self) -> Vec<Stock> {

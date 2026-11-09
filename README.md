@@ -1,6 +1,6 @@
 # Solidon
 
-**Memes with a balance sheet.** A memecoin launchpad on NEAR where every meme is an on-chain treasury company holding real tokenized stocks (bStocks on BNB Smart Chain), controlled by the NEAR contract through Chain Signatures, with capital rules locked in code.
+**Memes with a balance sheet.** A memecoin launchpad on NEAR where every meme is an on-chain treasury company holding tokenized stocks on Base, Robinhood Chain and Solana at once, controlled by the NEAR contract through Chain Signatures, with capital rules locked in code.
 
 Built for NEAR HACKATHON 2026 · Tracks: `defi`, `memecoins` · Maintainer: [@yeheskieltame](https://github.com/yeheskieltame)
 

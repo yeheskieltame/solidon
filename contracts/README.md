@@ -4,13 +4,13 @@ Rust smart contracts for NEAR, one cargo workspace.
 
 | Crate | Purpose |
 | --- | --- |
-| `meme` | NEP-141 meme token, internal meme/USDC pool, mNAV engine, BSC treasury via Chain Signatures |
+| `meme` | NEP-141 meme token, internal meme/USDC pool, mNAV engine, multichain treasury via Chain Signatures (EVM: Base and Robinhood Chain; Solana follows) |
 | `factory` | Deploys each meme as a sub-account, e.g. `nvda.solidon.near` |
 | `mock-ft` | Minimal NEP-141 used as USDC in sandbox tests and on testnet |
 | `mock-pyth` | Pyth read interface with settable prices, for sandbox tests and testnet |
-| `evm/` | Foundry project: `MockERC20` and `deploy-bsc-testnet.sh` for mock bStocks and PancakeSwap v3 pools on BSC testnet (not a NEAR crate) |
+| `evm/` | Foundry project: `MockERC20` and `deploy-testnet-stocks.py` for synthetic stock tokens and Uniswap v3 pools on Base Sepolia and Robinhood Chain testnet (not a NEAR crate) |
 
-`stocks/bsc-mainnet.json` is the verified list of stocks the factory lists; `python3 stocks/verify.py` re-checks it on-chain ([docs/STOCKS.md](../docs/STOCKS.md)).
+`stocks/` holds what the factory lists: `feeds.json` (oracle feed id per stock) and one venue registry per chain (`base-sepolia.json`, `hood-testnet.json`: USDC, SwapRouter02, stock token, decimals, pool). `deploy-testnet.sh` builds the factory's init args from them; `DRY_RUN=1 ./deploy-testnet.sh` prints the args and sends nothing.
 
 ## Requirements
 
@@ -36,11 +36,15 @@ cargo test          # unit tests + sandbox integration tests
 | `rebalance()`, 100 TGas | anyone, once per hour | Reads Pyth, then issuance (mNAV > 2.0), buyback (< 1.0), redemption window (< 0.9); 0.05% tip to the caller |
 | `redeem(amount, min_usdc)` + 1 yocto, 100 TGas | holder, window open | Burns and pays NAV per token in USDC from cash; refunds on any failure |
 | `claim_usdc()` | creator, callers, failed payouts | Withdraws claimable USDC |
-| `init_treasury()` | anyone, once | Reads the MPC-derived key (`bsc-treasury` path) and stores the BSC treasury address |
-| `approve_router()`, 300 TGas | anyone, once | MPC-signs `approve(router, max)` on USDT for the treasury |
-| `buy_stock()`, 300 TGas | anyone | Fresh Pyth price, then MPC-signs a PancakeSwap v3 swap of up to `max_swap_usdt` into the stock (`minOut` = oracle − 1%) |
+| `init_treasury()` | anyone, once | Reads the MPC-derived key (`evm-treasury` path, domain 0) and stores the treasury's EVM address, the same on every EVM chain |
+| `approve_router(chain)`, 300 TGas | anyone, once per chain | MPC-signs `approve(router, max)` on that chain's USDC for the treasury |
+| `buy_stock(chain)`, 300 TGas | anyone | Fresh oracle price, then MPC-signs a Uniswap v3 SwapRouter02 `exactInputSingle` of up to `max_swap_usdc` of that chain's USDC into the stock (`minOut` = oracle value − 1%) |
 | `clear_stuck_signature()` | anyone, 300 blocks after a signature request | Frees a signing slot whose callback never completed; the nonce is not consumed |
-| `get_bsc_treasury`, `get_signed_tx(nonce)` | view | Treasury address, nonce, ledger; signed raw transactions for any relayer |
+| `get_treasury_chains`, `get_signed_tx(chain, nonce)` | view | Treasury address, signing flag, and per chain: config, stock venue, nonce, ledger; signed raw transactions for any relayer |
 | `get_params`, `get_info`, `get_pool`, `get_treasury`, `quote_buy`, `quote_sell`, `claimable_of` | view | Locked parameters, stock config, reserves and TWAP, NAV/mNAV state |
 
-Every BSC transaction is built inside the contract from locked config and checked with `ecrecover` against the treasury address before it is stored. There is no owner method. Prices are USDC raw units per meme raw unit, scaled by 1e30.
+`chain` is a name from the factory's chains config (`base`, `robinhood`). Each chain keeps its own nonce and ledger (USDC and stock, raw units); one signature is in flight at a time across all chains. NAV values the stock on every chain at one oracle price per stock and adds USDC on every chain (normalised to 6 decimals) to the NEAR cash.
+
+Every EVM transaction is built inside the contract from locked config and checked with `ecrecover` against the treasury address before it is stored. There is no owner method. Prices are USDC raw units per meme raw unit, scaled by 1e30.
+
+Factory: `new(usdc, oracle, chains, stocks)` with `chains = {mpc, evm: [{name, chain_id, usdc, usdc_decimals, swap_router, pool_fee, max_fee_per_gas, max_priority_fee_per_gas, max_swap_usdc}]}` and `stocks = [{ticker, price_id, venues: [{chain, token, decimals}]}]`; views `get_chains`, `get_stocks`, `get_memes`, `launch_cost`.

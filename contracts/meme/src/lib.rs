@@ -28,7 +28,7 @@ use near_sdk::{
 };
 
 use crate::mnav::Engine;
-use crate::treasury::{BscConfig, Treasury};
+use crate::treasury::{parse_address, ChainsConfig, Treasury};
 use crate::twap::Twap;
 
 pub const DECIMALS: u8 = 18;
@@ -79,38 +79,58 @@ impl Default for Params {
     }
 }
 
-/// The thesis stock: its Pyth feed on NEAR and its token on BNB Smart Chain.
+/// The thesis stock's token on one treasury chain.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq)]
+pub struct Venue {
+    /// An `EvmChain::name` from the chains config.
+    pub chain: String,
+    /// ERC-20 address, `0x` + 40 hex characters.
+    pub token: String,
+    pub decimals: u8,
+}
+
+/// The thesis stock: its oracle feed on NEAR and its token on each treasury chain.
 /// Fixed by the factory from its immutable list, never chosen freely by a creator.
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Debug, PartialEq)]
 pub struct Stock {
     /// e.g. "NVDA"
     pub ticker: String,
-    /// Pyth price feed ID, 64 lowercase hex characters without `0x`.
+    /// Oracle price feed ID, 64 lowercase hex characters without `0x`. One global
+    /// price per stock values the holdings on every chain.
     pub price_id: String,
-    /// BEP-20 token address on BSC, `0x` + 40 hex characters.
-    pub bsc_token: String,
-    pub decimals: u8,
+    pub venues: Vec<Venue>,
 }
 
 impl Stock {
-    pub fn assert_valid(&self) {
-        let hex = |s: &str, n: usize| {
-            s.len() == n && s.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
-        };
+    pub fn assert_valid(&self, chains: &ChainsConfig) {
         require!(
-            hex(&self.price_id, 64),
+            self.price_id.len() == 64
+                && self
+                    .price_id
+                    .bytes()
+                    .all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')),
             "price_id must be 64 lowercase hex characters"
-        );
-        let token = self.bsc_token.to_ascii_lowercase();
-        require!(
-            token.strip_prefix("0x").is_some_and(|t| hex(t, 40)),
-            "bsc_token must be 0x + 40 hex characters"
         );
         require!(
             !self.ticker.is_empty() && self.ticker.len() <= 10,
             "Invalid ticker"
         );
+        require!(!self.venues.is_empty(), "List at least one venue");
+        for (i, v) in self.venues.iter().enumerate() {
+            require!(
+                chains.index(&v.chain).is_some(),
+                "Venue chain is not in the chains config"
+            );
+            require!(
+                self.venues[..i].iter().all(|w| w.chain != v.chain),
+                "One venue per chain"
+            );
+            parse_address(&v.token);
+            // Keeps 10^(decimals + 18) inside u128 in the value math.
+            require!(v.decimals <= 18, "Stock decimals must be at most 18");
+        }
     }
 }
 
@@ -149,7 +169,7 @@ pub struct Meme {
     claimable: LookupMap<AccountId, u128>,
     twap: Twap,
     engine: Engine,
-    bsc: BscConfig,
+    chains: ChainsConfig,
     treasury: Treasury,
 }
 
@@ -162,13 +182,13 @@ impl Meme {
         usdc: AccountId,
         oracle: AccountId,
         stock: Stock,
-        bsc: BscConfig,
+        chains: ChainsConfig,
         name: String,
         symbol: String,
         icon: Option<String>,
     ) -> Self {
-        stock.assert_valid();
-        bsc.assert_valid();
+        chains.assert_valid();
+        stock.assert_valid(&chains);
         let metadata = FungibleTokenMetadata {
             spec: FT_METADATA_SPEC.to_string(),
             name,
@@ -193,8 +213,8 @@ impl Meme {
             claimable: LookupMap::new(StorageKey::Claimable),
             twap: Twap::default(),
             engine: Engine::default(),
-            bsc,
-            treasury: Treasury::new(),
+            treasury: Treasury::new(chains.evm.len()),
+            chains,
         };
         let pool = env::current_account_id();
         this.token.internal_register_account(&pool);
@@ -308,21 +328,52 @@ pub(crate) fn nvda() -> Stock {
     Stock {
         ticker: "NVDA".into(),
         price_id: "b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593".into(),
-        bsc_token: "0x0000000000000000000000000000000000000001".into(),
-        decimals: 18,
+        venues: vec![
+            Venue {
+                chain: "base".into(),
+                token: "0x8f13563130684478E617C1797308A081Cb2c2654".into(),
+                decimals: 8,
+            },
+            Venue {
+                chain: "robinhood".into(),
+                token: "0x82289af84B9a0faf598a4D2052E16c8D1619f7f4".into(),
+                decimals: 18,
+            },
+        ],
     }
 }
 
+/// The testnet config of contracts/deploy-testnet.sh: Base Sepolia (USDC 6 dp) and
+/// Robinhood Chain testnet (USDC 18 dp).
 #[cfg(test)]
-pub(crate) fn test_bsc() -> BscConfig {
-    BscConfig {
-        chain_id: 97,
-        usdt: "0x8f13563130684478E617C1797308A081Cb2c2654".into(),
-        swap_router: "0x1b81D678ffb9C0263b24A97847620C99d213eB14".into(),
-        pool_fee: 2500,
+pub(crate) fn test_chains() -> ChainsConfig {
+    use crate::treasury::EvmChain;
+    ChainsConfig {
         mpc: "v1.signer-prod.testnet".parse().unwrap(),
-        max_fee_per_gas: U128(1_000_000_000),
-        max_swap_usdt: U128(500 * 10u128.pow(18)),
+        evm: vec![
+            EvmChain {
+                name: "base".into(),
+                chain_id: 84532,
+                usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e".into(),
+                usdc_decimals: 6,
+                swap_router: "0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4".into(),
+                pool_fee: 3000,
+                max_fee_per_gas: U128(100_000_000),
+                max_priority_fee_per_gas: U128(1_000_000),
+                max_swap_usdc: U128(5 * 10u128.pow(6)),
+            },
+            EvmChain {
+                name: "robinhood".into(),
+                chain_id: 46630,
+                usdc: "0xbf4479C07Dc6fdc6dAa764A0ccA06969e894275F".into(),
+                usdc_decimals: 18,
+                swap_router: "0x3ce954107b1a675826b33bf23060dd655e3758fe".into(),
+                pool_fee: 3000,
+                max_fee_per_gas: U128(100_000_000),
+                max_priority_fee_per_gas: U128(10_000_000),
+                max_swap_usdc: U128(5 * 10u128.pow(18)),
+            },
+        ],
     }
 }
 
@@ -333,7 +384,7 @@ pub(crate) fn test_meme(creator: AccountId) -> Meme {
         "usdc.near".parse().unwrap(),
         "pyth-oracle.near".parse().unwrap(),
         nvda(),
-        test_bsc(),
+        test_chains(),
         "Nvidia Meme".into(),
         "NVDA".into(),
         None,
@@ -386,11 +437,29 @@ mod tests {
             "usdc.near".parse().unwrap(),
             "pyth-oracle.near".parse().unwrap(),
             stock,
-            test_bsc(),
+            test_chains(),
             "X".into(),
             "X".into(),
             None,
         );
+    }
+
+    #[test]
+    #[should_panic(expected = "Venue chain is not in the chains config")]
+    fn rejects_a_venue_on_an_unlisted_chain() {
+        let _ = setup();
+        let mut stock = nvda();
+        stock.venues[1].chain = "bsc".into();
+        stock.assert_valid(&test_chains());
+    }
+
+    #[test]
+    #[should_panic(expected = "One venue per chain")]
+    fn rejects_two_venues_on_one_chain() {
+        let _ = setup();
+        let mut stock = nvda();
+        stock.venues[1].chain = "base".into();
+        stock.assert_valid(&test_chains());
     }
 
     #[test]

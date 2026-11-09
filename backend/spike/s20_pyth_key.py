@@ -10,7 +10,7 @@ for line in (ROOT / "backend/.env").read_text().splitlines():
     if "=" in line and not line.startswith("#"):
         k, v = line.split("=", 1); os.environ.setdefault(k.strip(), v.strip())
 KEY = os.environ["PYTH_API_KEY"]
-FEEDS = {s["ticker"]: s["price_id"] for s in json.loads((ROOT / "contracts/stocks/bsc-mainnet.json").read_text())["stocks"]}
+FEEDS = json.loads((ROOT / "contracts/stocks/feeds.json").read_text())["feeds"]
 
 
 def get(url):
