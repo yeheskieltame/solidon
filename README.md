@@ -27,6 +27,7 @@ Each folder is self-contained, with its own README, manifest, and commands. Noth
 | [docs/SPEC.md](docs/SPEC.md) | Product and technical spec: mNAV, features, architecture, parameters, flows, threat model, plan |
 | [docs/REFERENCES.md](docs/REFERENCES.md) | Links: hackathon, NEAR, Chain Signatures, Intents, Pyth, BNB Chain, bStocks, PancakeSwap |
 | [docs/HACKATHON_RULES.md](docs/HACKATHON_RULES.md) | Summary of the official hackathon rules that affect Solidon |
+| [docs/SPIKE.md](docs/SPIKE.md) | What every external integration actually does, tested live |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Working rules: GitHub identity, branches, commits, severity, PR evidence |
 
 ## Working rules in one line
