@@ -94,7 +94,7 @@ print(f"   Chainlink {feed:.2f} (age {(time.time() - word(r, 3)) / 60:.0f} min),
 
 # 3. Pyth push accounts on Solana for the 8 equities
 print("== 3. Solana: Pyth push accounts for equities")
-feeds = {s["ticker"]: s["price_id"].removeprefix("0x") for s in json.loads((ROOT / "contracts/stocks/bsc-mainnet.json").read_text())["stocks"]}
+feeds = json.loads((ROOT / "contracts/stocks/feeds.json").read_text())["feeds"]
 assert pda([struct.pack("<H", 0), bytes.fromhex("ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d")], PYTH_PUSH) \
     == "7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE", "PDA derivation does not reproduce the known SOL/USD account"
 for ticker, fid in feeds.items():

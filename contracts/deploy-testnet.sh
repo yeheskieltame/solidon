@@ -6,11 +6,14 @@
 #   usdc.<factory>     mock-ft, open-mint USDC stand-in (6 decimals)
 #   pyth.<factory>     mock-pyth, Pyth read interface with settable prices
 #   creator.<factory>  demo creator account
-#   <factory>          factory listing every stock in stocks/bsc-testnet.json
+#   <factory>          factory listing the 8 stocks of stocks/feeds.json, each with a venue
+#                      on Base Sepolia (stocks/base-sepolia.json) and Robinhood Chain
+#                      testnet (stocks/hood-testnet.json)
 # No meme is launched: launch one from the launchpad (or `create_meme`).
 #
 # Signs with keys in the macOS keychain (near-cli-rs). No key is stored in the repo.
 # Usage: contracts/deploy-testnet.sh [factory-account]   (default: solidon.testnet)
+#        DRY_RUN=1 contracts/deploy-testnet.sh            prints the factory init args, sends nothing
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -47,6 +50,36 @@ view() { # contract, method, args
   near contract call-function as-read-only "$1" "$2" json-args "$3" "${NET[@]}" now
 }
 
+# Factory init args. Chains: the testnet MPC signer, then per chain its USDC, Uniswap v3
+# SwapRouter02 and pool fee from the venue registry. Gas caps: the base fee was
+# 0.005 gwei on Base Sepolia and 0.01 gwei on Robinhood testnet (10 Nov 2026), so a
+# 0.1 gwei cap leaves 10-20x headroom. Swaps are capped at 5 USDC per transaction.
+# Stocks: the oracle feed id from feeds.json and one venue per chain.
+FACTORY_ARGS=$(python3 -c "
+import json
+gwei = 10**9
+chains = [('base', 'stocks/base-sepolia.json', gwei // 1000), ('robinhood', 'stocks/hood-testnet.json', gwei // 100)]
+evm, venues = [], {}
+for name, path, priority in chains:
+    r = json.load(open(path))
+    fees = {s['pool_fee'] for s in r['stocks']}
+    assert len(fees) == 1, f'{path}: one pool fee per chain expected, got {fees}'
+    evm.append({'name': name, 'chain_id': r['chain_id'], 'usdc': r['usdc'], 'usdc_decimals': r['usdc_decimals'],
+                'swap_router': r['uniswap_v3']['swap_router02'], 'pool_fee': fees.pop(),
+                'max_fee_per_gas': str(gwei // 10), 'max_priority_fee_per_gas': str(priority),
+                'max_swap_usdc': str(5 * 10**r['usdc_decimals'])})
+    for s in r['stocks']:
+        venues.setdefault(s['ticker'], []).append({'chain': name, 'token': s['token'], 'decimals': s['decimals']})
+feeds = json.load(open('stocks/feeds.json'))['feeds']
+assert set(feeds) == set(venues), 'every listed stock needs a feed and venues'
+stocks = [{'ticker': t, 'price_id': f, 'venues': venues[t]} for t, f in feeds.items()]
+print(json.dumps({'usdc': '$USDC', 'oracle': '$PYTH',
+                  'chains': {'mpc': 'v1.signer-prod.testnet', 'evm': evm}, 'stocks': stocks}))")
+if [ -n "${DRY_RUN:-}" ]; then
+  echo "$FACTORY_ARGS"
+  exit 0
+fi
+
 ./build.sh
 
 create "$USDC" '2 NEAR'
@@ -56,33 +89,19 @@ create "$CREATOR" '3.5 NEAR'
 deploy_once "$USDC" mock_ft '{"name":"USD Coin (Solidon testnet mock)","symbol":"USDC","decimals":6}'
 deploy_once "$PYTH" mock_pyth '{}'
 
-# Stock list: BSC testnet mock tokens with the real Pyth feed IDs, written by
-# evm/deploy-bsc-testnet.sh (BSC testnet has no bStocks).
-REGISTRY=stocks/bsc-testnet.json
-STOCKS=$(python3 -c "
-import json
-print(json.dumps([{k: s[k] for k in ('ticker', 'price_id', 'bsc_token', 'decimals')}
-                  for s in json.load(open('$REGISTRY'))['stocks']]))")
 if [ "$(rpc_view_account "$FACTORY")" != 11111111111111111111111111111111 ]; then
   echo "$FACTORY already has code: delete and recreate the account to redeploy the factory" >&2
   exit 1
 fi
-# BSC side: testnet chain id, mock USDT, PancakeSwap v3 SwapRouter, the testnet MPC
-# signer, 1 gwei gas, and swaps capped at 500 USDT (0.5% of a 100k-USDT pool, so
-# fee + impact stays under the 1% slippage allowed against Pyth).
-BSC=$(python3 -c "
-import json
-r = json.load(open('$REGISTRY'))
-print(json.dumps({'chain_id': r['chain_id'], 'usdt': r['usdt'], 'swap_router': r['pancake_v3_swap_router'],
-                  'pool_fee': r['stocks'][0]['pool_fee'], 'mpc': 'v1.signer-prod.testnet',
-                  'max_fee_per_gas': str(10**9), 'max_swap_usdt': str(500 * 10**18)}))")
-deploy "$FACTORY" factory "{\"usdc\":\"$USDC\",\"oracle\":\"$PYTH\",\"bsc\":$BSC,\"stocks\":$STOCKS}"
+deploy "$FACTORY" factory "$FACTORY_ARGS"
 
-# Mock Pyth prices = the reference prices the BSC testnet pools were created at.
+# Mock oracle prices = the reference prices the synthetic pools were created at
+# (the same on both chains: one global price per stock).
 python3 -c "
 import json
-for s in json.load(open('$REGISTRY'))['stocks']:
-    print(s['price_id'], round(float(s['ref_price_usd']) * 10**8))" |
+feeds = json.load(open('stocks/feeds.json'))['feeds']
+for s in json.load(open('stocks/base-sepolia.json'))['stocks']:
+    print(feeds[s['ticker']], round(float(s['ref_price_usd']) * 10**8))" |
 while read -r id price; do
   call "$CREATOR" "$PYTH" set_price "{\"price_id\":\"$id\",\"price\":\"$price\",\"expo\":-8}" '0 NEAR'
 done

@@ -112,7 +112,7 @@ Every PR must include:
 | --- | --- |
 | UI | Screenshot before and after at the same viewport. Video or GIF when the change is an interaction |
 | Smart contract | Test output before (failing or missing) and after (passing). Gas or storage diff when it changes |
-| On-chain behaviour | Transaction links: NearBlocks for NEAR, BscScan for BSC, Intents explorer when relevant |
+| On-chain behaviour | Transaction links: NearBlocks for NEAR, Basescan / the Robinhood Chain explorer / Solana Explorer for the treasury chains, Intents explorer when relevant |
 | Economics (mNAV, fees, issuance) | Simulation output or chart before and after |
 | Docs or config only | Rendered diff or a short note why no visual evidence applies |
 
@@ -142,4 +142,4 @@ Evidence goes directly in the PR description (drag and drop into GitHub). Files 
 - Keys live in environment variables only. `.env` is git-ignored. Never commit a seed phrase or private key.
 - Mainnet transactions use a dedicated dev account and tiny amounts (rule Q-007).
 - Agents never sign mainnet transactions, push, make the repo public, or post on X without explicit confirmation from `@yeheskieltame`.
-- Contract addresses (PancakeSwap router, bStock tokens, Pyth feed IDs) are copied from official sources listed in `docs/REFERENCES.md` and linked in the PR.
+- Contract addresses (swap routers, stock tokens, oracle feed IDs) are copied from official sources listed in `docs/REFERENCES.md` and linked in the PR.

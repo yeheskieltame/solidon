@@ -1,6 +1,8 @@
 # Supported stocks
 
-The factory's stock list is immutable, so every entry is verified before it is deployed. Source of truth: [`contracts/stocks/bsc-mainnet.json`](../contracts/stocks/bsc-mainnet.json). Re-check at any time:
+> **Historical (BSC eliminated, 10 Nov 2026).** The treasury now lives on Base, Robinhood Chain and Solana; the factory lists stocks from `contracts/stocks/feeds.json` plus one venue registry per chain. This page records the bStocks verification of 9 Nov 2026. `bsc-mainnet.json` and `verify.py` were removed; they are in git history before the multichain migration.
+
+The factory's stock list was immutable, so every entry was verified before it was deployed. Source of truth was `contracts/stocks/bsc-mainnet.json`; re-check from a commit that still has it:
 
 ```bash
 python3 contracts/stocks/verify.py   # exits non-zero on any mismatch

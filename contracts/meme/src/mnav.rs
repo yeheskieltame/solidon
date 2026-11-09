@@ -2,7 +2,8 @@
 //! below 0.9x. Rules from docs/SPEC.md as amended by finding #12, and the same
 //! arithmetic as simulation/sim.py.
 //!
-//! NAV per token = (stock units * Pyth price + treasury USDC) / circulating,
+//! NAV per token = (stock on every chain * oracle price + USDC on every chain + NEAR
+//! treasury USDC) / circulating,
 //! circulating = total supply - pool inventory (+ tokens burned by a redemption
 //! still waiting for its price). mNAV = 30-minute TWAP / NAV per token.
 
@@ -39,11 +40,10 @@ pub trait Pyth {
     fn get_price_no_older_than(&self, price_id: String, age: u64) -> Option<PythPrice>;
 }
 
-/// Engine state. Stock units only change through the BSC treasury flow.
+/// Engine state. Stock holdings live per chain in the treasury ledger.
 #[near(serializers = [borsh])]
 #[derive(Default)]
 pub struct Engine {
-    pub stock_units: u128,
     pub redemption_open: bool,
     pub last_rebalance: u64,
     pub epoch_start: u64,
@@ -78,6 +78,8 @@ pub enum Outcome {
 
 #[near(serializers = [json])]
 pub struct TreasuryView {
+    /// Shares held across all chains, normalised to 18 decimals; per-chain raw
+    /// balances are in `get_treasury_chains`.
     pub stock_units: U128,
     pub treasury_usdc: U128,
     pub circulating: U128,
@@ -114,15 +116,30 @@ impl Meme {
         self.token.ft_total_supply().0 + self.engine.pending_redeem - self.meme_reserve()
     }
 
-    /// Treasury value in USDC raw units at price `p`.
-    fn assets(&self, p: &PythPrice) -> Option<u128> {
-        let bsc_usdt =
-            self.treasury.bsc_usdt / 10u128.pow(crate::treasury::USDT_DECIMALS - USDC_DECIMALS);
-        Some(
-            stock_value(self.engine.stock_units, p, self.stock.decimals)?
-                + self.treasury_usdc
-                + bsc_usdt,
-        )
+    /// Treasury value in USDC raw units (6 decimals) at price `p`: NEAR cash, plus USDC
+    /// and stock on every chain. One price values the stock on every chain.
+    pub(crate) fn assets(&self, p: &PythPrice) -> Option<u128> {
+        let mut total = self.treasury_usdc;
+        for (c, s) in self.chains.evm.iter().zip(&self.treasury.chains) {
+            total += s.usdc / 10u128.pow(u32::from(c.usdc_decimals) - USDC_DECIMALS);
+        }
+        for v in &self.stock.venues {
+            let units = self.treasury.chains[self.chain_index(&v.chain)].stock;
+            total += stock_value(units, p, v.decimals)?;
+        }
+        Some(total)
+    }
+
+    /// Shares held across all chains, at 18 decimals.
+    fn stock_units(&self) -> u128 {
+        self.stock
+            .venues
+            .iter()
+            .map(|v| {
+                self.treasury.chains[self.chain_index(&v.chain)].stock
+                    * 10u128.pow(18 - u32::from(v.decimals))
+            })
+            .sum()
     }
 
     /// NAV per token (scaled by 1e30) at price `p`, with `extra` tokens counted as circulating.
@@ -384,7 +401,7 @@ impl Meme {
 impl Meme {
     pub fn get_treasury(&self) -> TreasuryView {
         TreasuryView {
-            stock_units: U128(self.engine.stock_units),
+            stock_units: U128(self.stock_units()),
             treasury_usdc: U128(self.treasury_usdc),
             circulating: U128(self.circulating()),
             redemption_open: self.engine.redemption_open,
@@ -408,6 +425,10 @@ mod tests {
 
     const USDC: u128 = 1_000_000;
     const HOUR: u64 = 3_600;
+    /// Indexes into `crate::test_chains()`: Base (USDC 6 dp, NVDA 8 dp) and Robinhood
+    /// (USDC 18 dp, NVDA 18 dp).
+    const BASE: usize = 0;
+    const ROBINHOOD: usize = 1;
 
     fn at(secs: u64, predecessor: &str, deposit: u128) {
         testing_env!(VMContextBuilder::new()
@@ -464,6 +485,27 @@ mod tests {
         bad.price = I64(1);
         bad.expo = 2;
         assert_eq!(stock_value(1, &bad, 18), None);
+    }
+
+    #[test]
+    fn nav_sums_every_chain_at_one_price() {
+        let mut m = market();
+        let p = price(0).unwrap();
+        let cash = m.treasury_usdc;
+        m.treasury.chains[BASE].stock = 10u128.pow(8); // 1 NVDA, 8 dp: $180
+        m.treasury.chains[ROBINHOOD].stock = 2 * 10u128.pow(18); // 2 NVDA, 18 dp: $360
+        m.treasury.chains[BASE].usdc = 5 * USDC; // 6 dp
+        m.treasury.chains[ROBINHOOD].usdc = 7 * 10u128.pow(18); // 18 dp
+        assert_eq!(m.assets(&p), Some(cash + 552 * USDC));
+        assert_eq!(m.get_treasury().stock_units, U128(3 * 10u128.pow(18)));
+        assert_eq!(
+            nav(&m, 0),
+            mul_div(cash + 552 * USDC, PRICE_SCALE, m.circulating())
+        );
+        // A price the engine refuses values nothing, on every chain.
+        let mut bad = p;
+        bad.price = I64(0);
+        assert_eq!(m.assets(&bad), None);
     }
 
     #[test]
@@ -557,7 +599,7 @@ mod tests {
     #[test]
     fn redemption_pays_nav_per_token_and_refunds_on_failure() {
         let mut m = market();
-        m.engine.stock_units = 10u128.pow(18); // 1 NVDA = $180 on BSC
+        m.treasury.chains[ROBINHOOD].stock = 10u128.pow(18); // 1 NVDA = $180
         m.treasury_usdc = 100 * USDC;
         m.evaluate(price(HOUR), HOUR, &accounts(3));
         assert!(m.engine.redemption_open);
@@ -610,7 +652,7 @@ mod tests {
     #[test]
     fn a_malformed_oracle_response_refunds_instead_of_panicking() {
         let mut m = market();
-        m.engine.stock_units = 10u128.pow(18);
+        m.treasury.chains[ROBINHOOD].stock = 10u128.pow(18);
         m.treasury_usdc = 100 * USDC;
         m.evaluate(price(HOUR), HOUR, &accounts(3));
         let held = m.ft_balance_of(accounts(2)).0;
@@ -648,7 +690,7 @@ mod tests {
     #[test]
     fn redemption_cannot_pay_more_than_cash() {
         let mut m = market();
-        m.engine.stock_units = 10u128.pow(20); // $18,000 of stock, almost no cash
+        m.treasury.chains[ROBINHOOD].stock = 10u128.pow(20); // $18,000 of stock, almost no cash
         m.treasury_usdc = USDC;
         m.evaluate(price(HOUR), HOUR, &accounts(3));
         assert!(m.engine.redemption_open);

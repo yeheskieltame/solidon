@@ -12,18 +12,25 @@ fn wasm(name: &str) -> Vec<u8> {
     std::fs::read(&path).unwrap_or_else(|_| panic!("{path} missing, run ./build.sh"))
 }
 
-pub fn bsc() -> serde_json::Value {
-    json!({"chain_id": 97, "usdt": "0x8f13563130684478E617C1797308A081Cb2c2654",
-           "swap_router": "0x1b81D678ffb9C0263b24A97847620C99d213eB14", "pool_fee": 2500,
-           "mpc": "v1.signer-prod.testnet", "max_fee_per_gas": "1000000000",
-           "max_swap_usdt": "500000000000000000000"})
+pub fn chains() -> serde_json::Value {
+    json!({"mpc": "v1.signer-prod.testnet", "evm": [
+        {"name": "base", "chain_id": 84532, "usdc": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+         "usdc_decimals": 6, "swap_router": "0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4",
+         "pool_fee": 3000, "max_fee_per_gas": "100000000", "max_priority_fee_per_gas": "1000000",
+         "max_swap_usdc": "5000000"},
+        {"name": "robinhood", "chain_id": 46630, "usdc": "0xbf4479C07Dc6fdc6dAa764A0ccA06969e894275F",
+         "usdc_decimals": 18, "swap_router": "0x3ce954107b1a675826b33bf23060dd655e3758fe",
+         "pool_fee": 3000, "max_fee_per_gas": "100000000", "max_priority_fee_per_gas": "10000000",
+         "max_swap_usdc": "5000000000000000000"}]})
 }
 
 #[allow(non_snake_case)]
 fn NVDA() -> serde_json::Value {
     json!({"ticker": "NVDA",
            "price_id": "b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593",
-           "bsc_token": "0x0000000000000000000000000000000000000001", "decimals": 18})
+           "venues": [
+               {"chain": "base", "token": "0x8f13563130684478E617C1797308A081Cb2c2654", "decimals": 8},
+               {"chain": "robinhood", "token": "0x82289af84B9a0faf598a4D2052E16c8D1619f7f4", "decimals": 18}]})
 }
 
 #[tokio::test]
@@ -42,7 +49,7 @@ async fn launch_meme_as_subaccount() -> anyhow::Result<()> {
     factory
         .call("new")
         .args_json(
-            json!({"usdc": "usdc.test.near", "oracle": "pyth.test.near", "bsc": bsc(), "stocks": [NVDA()]}),
+            json!({"usdc": "usdc.test.near", "oracle": "pyth.test.near", "chains": chains(), "stocks": [NVDA()]}),
         )
         .transact()
         .await?
@@ -88,6 +95,20 @@ async fn launch_meme_as_subaccount() -> anyhow::Result<()> {
     assert_eq!(info["stock"], NVDA());
     let params: serde_json::Value = worker.view(&meme_id.parse()?, "get_params").await?.json()?;
     assert_eq!(params["issuance_mnav_bps"], 20_000);
+
+    // The meme got the factory's chains: one EVM treasury, a ledger per chain.
+    let got: serde_json::Value = factory.view("get_chains").await?.json()?;
+    assert_eq!(got, chains());
+    let t: serde_json::Value = worker
+        .view(&meme_id.parse()?, "get_treasury_chains")
+        .await?
+        .json()?;
+    assert_eq!(t["address"], serde_json::Value::Null);
+    assert_eq!(t["mpc"], "v1.signer-prod.testnet");
+    assert_eq!(t["chains"][0]["config"], chains()["evm"][0]);
+    assert_eq!(t["chains"][1]["venue"], NVDA()["venues"][1]);
+    assert_eq!(t["chains"][1]["nonce"], 0);
+    assert_eq!(t["chains"][1]["usdc"], "0");
 
     let memes: Vec<String> = factory
         .view("get_memes")
