@@ -8,6 +8,8 @@
 
 mod mnav;
 mod pool;
+#[allow(dead_code)] // Solana treasury builder; wired into the contract in the next phase.
+mod solana;
 mod treasury;
 mod twap;
 
