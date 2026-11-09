@@ -287,7 +287,7 @@ What a meme treasury needs, per chain. A: NEAR contract controls the address. B:
 | | Base | Solana | Robinhood Chain |
 | --- | --- | --- | --- |
 | **A** control | ✅ MPC-signed tx mined on Base Sepolia (S23) | ✅ MPC EdDSA, devnet tx finalized (S21) | ✅ MPC-signed transfer of a testnet TSLA Stock Token mined (S23) |
-| **B** swap | ✅ Aero CL from the treasury address, simulated (S22) | ⚠️ Raydium CLMM has all 8; instruction builder in Rust not written; mainnet only | ✅ SwapRouter02, simulated ETH → NVDA/SPCX/TSLA (S15); MSFT, AMZN, META only via v4 vs SPY |
+| **B** swap | ✅ Aero CL from the treasury address, simulated (S22) | ⚠️ Raydium CLMM has all 8; instruction builder in Rust not written; mainnet only | ✅ testnet: MPC-signed swap ETH → TSLA mined (S23); mainnet: SwapRouter02 simulated ETH → NVDA/SPCX/TSLA (S15), MSFT, AMZN, META only via v4 vs SPY |
 | **C** price | Chainlink Arbitrum logs for 7/8 + Aero SPCXc pool logs, both MPC-verifiable; ⏳ mainnet | same source (prices are per stock, not per chain) | same; its own Chainlink feeds (8/8, 24/7) are **not** MPC-verifiable |
 | **D** proof | ✅ MPC verifies Base logs (S18, testnet) | ✅ MPC verifies Solana AccountState (S21, devnet) | ❌ not in the MPC chain list: relayer-reported only |
 | **E** Intents | ✅ 1Click from $0.50 | ✅ 1Click from $0.50 | ✅ 1Click (ETH) from $0.50 |
@@ -310,5 +310,8 @@ The script checks that `derived_public_key(evm-treasury, creator.solidon.testnet
 | --- | --- | --- | --- | --- |
 | Base Sepolia (84532) | send 0.0001 ETH | [`DyXvT42G…`](https://testnet.nearblocks.io/txns/DyXvT42GRRVGAkPLgJVHkJcL45kFEWknGL23Y8axjKUS) | [`0x1e62…b5bc`](https://sepolia.basescan.org/tx/0x1e625381f112bbfb07c89710b192b034e00b74f688e8371ab2d04a2c10f9b5bc) | status 1, block 56,608,436 |
 | Robinhood testnet (46630) | transfer 1 TSLA Stock Token | [`Goq7rv6h…`](https://testnet.nearblocks.io/txns/Goq7rv6h47L1DZoJwERLzVkHtyfr39NZipMVCY2uBsPR) | [`0xc6e8…b3f4`](https://explorer.testnet.chain.robinhood.com/tx/0xc6e8afc35580141c1a5bf1baa1c0d09fd7536ab70fadda0622f2ff114f8db3f4) | status 1, TSLA 5 → 4 |
+| Robinhood testnet (46630) | swap 0.001 ETH → TSLA, `exactInputSingle` (`0x04e45aaf`), min out = simulation − 1% | [`8SQq67Bw…`](https://testnet.nearblocks.io/txns/8SQq67Bw7TksKDAPYqb5Hqemsp5T2pU2eJvdkBgYLCAT) | [`0x47a8…3634`](https://explorer.testnet.chain.robinhood.com/tx/0x47a84274f92124856e9b9343dd660b4c1116ccac8cc585649fb482e942eb3634) | status 1, gas 154,344, TSLA 4 → 5.1247 |
 
-No Uniswap deployment exists at the mainnet addresses on Robinhood testnet; whether any testnet DEX holds these tokens is not known yet (the testnet explorer and public RPC are unreachable from the test network, and Alchemy limits log queries).
+Robinhood testnet has its own Uniswap v3 deployment (not at the mainnet addresses), found from TSLA transfer history (`alchemy_getAssetTransfers`): factory `0x911b4000d3422f482f4062a913885f7b035382df`, SwapRouter02 `0x3ce954107b1a675826b33bf23060dd655e3758fe` (its `factory()` returns that factory; `WETH9()` = `0x33e4191705c386532ba27cbf171db86919200b94`), TSLA pools vs WETH `0x593e2e0e…b69b` and vs testnet USDC (`0xbf4479c0…275f`, 18 decimals) `0xffef1147…2da9`, both 0.3%. Testnet prices are arbitrary (about $0.07 per TSLA in the USDC pool).
+
+The test network's ISP (XL Axiata) blocks `*.robinhood.com`: DNS answers with `blockpage.xlaxiata.id` and TLS to the real IP is reset on the SNI. Alchemy's Robinhood endpoints are not affected.
