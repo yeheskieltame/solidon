@@ -22,6 +22,7 @@
 import {
   SOLANA,
   associatedTokenAccount,
+  fundTarget,
   ledgerChains,
   parseSolanaTx,
   planSolanaSwap,
@@ -46,11 +47,19 @@ function record(state, memeId) {
 }
 
 /** One write on the meme; the re-read meme, or null under --dry-run or on failure. */
-async function call(ctx, meme, scope, method, args, tgas) {
+// Views read `final` state, which trails the call's own result by a few blocks: a re-read right
+// after `buy_stock_solana` can still miss the new `last_buy` (seen live: the buy was signed but the
+// keeper skipped its broadcast). `until` polls the view until it shows the call's effect.
+async function call(ctx, meme, scope, method, args, tgas, until = () => true) {
   try {
     const r = await ctx.near.call(scope, meme.id, { method, args, tgas });
     if (r === null) return null;
-    return await readMeme(ctx.near, meme.id);
+    let m = await readMeme(ctx.near, meme.id);
+    for (let i = 0; i < 8 && !until(m); i++) {
+      await new Promise((ok) => setTimeout(ok, ctx.cfg.viewLagMs ?? 1500));
+      m = await readMeme(ctx.near, meme.id);
+    }
+    return m;
   } catch (e) {
     log.error(scope, `${method} failed (it may still be executing; re-read next cycle)`, { error: errMsg(e) });
     return null;
@@ -220,7 +229,8 @@ async function settleLastBuy(ctx, meme, scope, gasOk) {
   const plan = await swapPlan(ctx, s);
   const { blockhash } = await rpc.latestBlockhash();
   log.info(scope, `last buy ${why}: signing it again`, { ...fields, tick_arrays: plan.tickArrays });
-  const after = await call(ctx, meme, scope, "resign_solana", { blockhash, tick_arrays: plan.tickArrays }, 300);
+  const after = await call(ctx, meme, scope, "resign_solana", { blockhash, tick_arrays: plan.tickArrays }, 300,
+    (m) => m.tc?.solana?.last_buy?.seq !== lb.seq);
   if (!after) return false;
   rec.resigns += 1;
   ctx.state.save();
@@ -242,7 +252,8 @@ async function buy(ctx, meme, scope) {
     tick_arrays: plan.tickArrays,
     blockhash,
   });
-  const after = await call(ctx, meme, scope, "buy_stock_solana", { blockhash, tick_arrays: plan.tickArrays }, 300);
+  const after = await call(ctx, meme, scope, "buy_stock_solana", { blockhash, tick_arrays: plan.tickArrays }, 300,
+    (m) => (m.tc?.solana?.last_buy?.seq ?? -1) >= s.seq);
   if (!after) return null;
   const nb = after.tc.solana.last_buy;
   if (!nb || nb.seq < s.seq) {
@@ -311,7 +322,7 @@ export async function solanaHousekeeping(ctx, meme) {
     log.info(scope, `buy waits`, { price: meme.price ? "fresh" : "stale", signing: meme.tc.signing, gas: gasOk });
   }
 
-  if (BigInt(s.in_transit) === 0n && BigInt(s.usdc) < ctx.cfg.fundMin6 && meme.price) {
+  if (BigInt(s.in_transit) === 0n && BigInt(s.usdc) < ctx.cfg.fundMin6 && meme.price && fundTarget(meme.tc, meme.price) === s.config.name) {
     const est = sendableEstimate({
       treasuryUsdc: meme.treasury.treasury_usdc,
       chains: ledgerChains(meme.tc),
