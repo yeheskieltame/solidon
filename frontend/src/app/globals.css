@@ -1,0 +1,153 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Dark mode follows the system setting. */
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-archivo);
+  --font-heading: var(--font-archivo);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-graphite: var(--graphite);
+  --color-rule: var(--rule);
+  --color-wash: var(--wash);
+  --radius-sm: 1px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 3px;
+}
+
+/*
+ * Solidon palette: strictly black and white (docs/SPEC.md). State is carried by
+ * inversion and hatching, never by hue.
+ *   paper    #FFFFFF  page
+ *   ink      #000000  text, rules that matter, solid states
+ *   graphite #5C5C5C  secondary text
+ *   rule     #CFCFCF  hairlines
+ *   wash     #F2F2F2  quiet fills
+ */
+:root {
+  --paper: #ffffff;
+  --ink: #000000;
+  --graphite: #5c5c5c;
+  --rule: #cfcfcf;
+  --wash: #f2f2f2;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--paper);
+  --card-foreground: var(--ink);
+  --popover: var(--paper);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--paper);
+  --secondary: var(--wash);
+  --secondary-foreground: var(--ink);
+  --muted: var(--wash);
+  --muted-foreground: var(--graphite);
+  --accent: var(--wash);
+  --accent-foreground: var(--ink);
+  --destructive: var(--ink);
+  --border: var(--rule);
+  --input: var(--ink);
+  --ring: var(--ink);
+  --radius: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #000000;
+    --ink: #ffffff;
+    --graphite: #a3a3a3;
+    --rule: #3a3a3a;
+    --wash: #161616;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    font-variant-numeric: tabular-nums;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-stretch: 100%;
+  }
+  ::selection {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Archivo's width axis is the brand voice: tickers and headlines run wide. */
+  .type-display {
+    font-stretch: 125%;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 0.95;
+  }
+  .type-wide {
+    font-stretch: 118%;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .type-narrow {
+    font-stretch: 75%;
+  }
+  .hatch-dense {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      var(--ink) 0 1.5px,
+      transparent 1.5px 5px
+    );
+  }
+  .hatch-light {
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--ink) 0 1px,
+      transparent 1px 7px
+    );
+  }
+  .frame {
+    border: 1px solid var(--ink);
+    border-radius: 2px;
+  }
+}
