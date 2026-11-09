@@ -140,7 +140,7 @@ Question: on which chain can a NEAR-controlled treasury buy and hold the listed 
 
 ## S13 · Solana xStocks
 
-All 8 xStocks mints match the issuer API (`api.backed.fi`), Jupiter, and the on-chain metadata (list in `backend/spike/solana-mints.json`). Token-2022, `defaultAccountState=initialized`, no transfer hook program set, recent holders include System-owned wallets. Jupiter buy $5k: 0.00–0.24% impact. Ondo's Solana tokens are illiquid (24–95% impact at $1k). No fresh equity oracle on Solana without a key. Signing Solana transactions with the MPC EdDSA domain is not tested yet.
+All 8 xStocks mints match the issuer API (`api.backed.fi`), Jupiter, and the on-chain metadata (list in `backend/spike/solana-mints.json`). Token-2022, `defaultAccountState=initialized`, no transfer hook program set, recent holders include System-owned wallets. Jupiter buy $5k: 0.00–0.24% impact. Ondo's Solana tokens are illiquid (24–95% impact at $1k). No fresh equity oracle on Solana without a key. Signing Solana transactions with the MPC EdDSA domain: see S21 (works on devnet).
 
 ## S14 · Mantle
 
@@ -149,7 +149,7 @@ xStocks (incl. SPCXx) exist and a fork transfer to a fresh EOA succeeds, but the
 ## Still open
 
 1. Mainnet MPC verification of a Chainlink update on Arbitrum (price source).
-2. SPCX price: no Chainlink feed anywhere checked.
+2. SPCX price: no Chainlink feed anywhere checked. Update: Robinhood Chain has one (S19) and the Base Aero pool tracks it (S22).
 3. A contract-driven Intents swap (USDC on NEAR → USDC on Base to the treasury) without trusting whoever supplies the 1Click deposit address. Candidate: the meme registers an MPC-derived ed25519 key on `intents.near` and MPC-signs its own NEP-413 intents. Mainnet only.
 
 ## Correction (9 Nov 2026)
@@ -249,3 +249,53 @@ From Robinhood's Stock Tokens and Oracles pages (provided by the maintainer; the
 - Stock Tokens are standard transferable ERC-20s (a fresh-address transfer succeeds, S15). Minting and burning are only for Authorised Participants; holders buy on-chain.
 - **Legal:** Stock Tokens may not be offered, sold or delivered to U.S. persons; offers are also restricted in Canada, the UK, Switzerland and others. Not enforced on-chain, but the product needs a matching disclaimer and access policy.
 - Recommended for L2: check Chainlink's sequencer uptime feed before trusting a price.
+
+## S20 · Pyth with an API key (`backend/spike/s20_pyth_key.py`) ❌ for equities
+
+With the maintainer's key, Hermes serves crypto (BTC/USD fresh, 1 s old) but answers **HTTP 403 `Not entitled ... no grant accepts this feed (asset type 'equity')`** for all 7 listed equities, on both `hermes.pyth.network` and `pyth.dourolabs.app/hermes`. SPCX has no Pyth feed id at all. An equity grant is a paid plan; without it Pyth is not a price source.
+
+On Solana, the Pyth push accounts for the 8 equities exist (receiver `rec5EK…`, derived from push program `pythWSnsw…RsT`, shard 0; derivation checked against the known SOL/USD account) but were **last updated 42–87 days ago** (S22). Pushing a fresh update needs the same entitled Hermes data, so this is not a way around it.
+
+## S21 · MPC EdDSA controls a Solana address (`backend/spike/s21_solana_mpc.py`) ✅
+
+- `derived_public_key(path "solana-treasury", creator.solidon.testnet, domain 1)` → Solana address `GXhnfvC6yYEXgYEtSwEZNfKF2tcCd7vFn5onqEyK2UH5`.
+- A legacy System transfer message (150 bytes) built by hand, signed by `sign` with `payload_v2.Eddsa` ([NEAR tx `64ktkRy5…`](https://testnet.nearblocks.io/txns/64ktkRy5U2JQciffSf45BoW2wb3fk6owcBEDTkmJdFRG)); response `Ed25519`, 64 bytes.
+- Broadcast to devnet: [`2NFahebj…PmNMav`](https://explorer.solana.com/tx/2NFahebjJBz2jyqoXSa2RGLiwbG1YnCnzYk9o1ZtXet9yt7bZgpVUTaHgxdHMjT227sP711v96od1b7aw4PmNMav?cluster=devnet), **finalized, no error**.
+- `verify_foreign_transaction` with `Solana { tx_id, extractors: [AccountState { pubkey: treasury }], finality: Finalized }` signed in 9 s ([NEAR tx `2nqtEmZQ…`](https://testnet.nearblocks.io/txns/2nqtEmZQcGJ71nmq6JVe7G4He9wJzAybV1rBkXZRgf2b)). A contract can prove the treasury's account state after a Solana transaction.
+
+## S22 · Base swap from the MPC treasury, SPCX price, Solana pools (`backend/spike/s22_multichain.py`)
+
+**Base, Aero CL router.** The deep Coinbase-stock pools (NVDAc ~$284k, SPCXc ~$510k USDC) sit on CL factory `0x9CB220581b91b0C83223012FE69688b92aD07a76`; router `0x9ee35bf1bd69a03c6f0393582030fce8bb93d418` returns that factory from `factory()` and WETH `0x4200…0006`. Both are verified on Basescan and owned by a Gnosis Safe; they are the new Aero (Dromos Labs, launched on Base 21 Oct 2026), but **no official address list was found yet**. The older Aerodrome and Uniswap pools are thin ($0–49k).
+
+`eth_call` of `exactInputSingle((tokenIn, tokenOut, tickSpacing, recipient, deadline, amountIn, amountOutMinimum, sqrtPriceLimitX96))` (selector `0xa026383e`) **from the MPC treasury `0x680bcF5a…96EE`**, with a USDC state override (FiatToken balances slot 9, allowances slot 10) instead of real funds:
+
+| Swap | Out | Effective price |
+| --- | --- | --- |
+| 1,000 USDC → NVDAc (tickSpacing 10) | 5.6982 | $175.49 |
+| 1,000 USDC → SPCXc (tickSpacing 10) | 7.0462 | $141.92 |
+
+**SPCX price.** The Aero SPCXc pool tracks the official Chainlink SPCX/USD feed on Robinhood Chain: 141.86 vs 141.92 (0.04%). The pool emitted 1,000 `Swap` logs in 83 minutes (largest gap 2 min). Each log carries `sqrtPriceX96`, and MPC can verify Base logs (S18), so a pool log is a verifiable SPCX price on NEAR. A single log can be produced by a flash-loan sandwich, so it may only be used as a median over many blocks, capped per update, and cross-checked against Chainlink for the other 7.
+
+**Testnet MPC cannot verify mainnet.** `verify_foreign_transaction` on `v1.signer-prod.testnet` for that Base **mainnet** swap log timed out ([NEAR tx `HbM9cau6…`](https://testnet.nearblocks.io/txns/HbM9cau6pdMwQFzgcGW7mcJMBjSLNnufnws5SLHR5CBW)). Mainnet logs need `v1.signer` and a mainnet NEAR account.
+
+**Solana pools.** Jupiter finds a direct pool for all 8 xStocks at 1,000 USDC: best pool impact 0.00–0.21% (GoonFi, Raydium CLMM, Whirlpool, Hadron, Scorch). **Raydium CLMM alone has a pool for all 8** (impact 0.11–0.54%, SPCX 1.16%), so the contract needs to build swap instructions for one program only. xStocks do not exist on devnet, so that swap can only be tested on mainnet.
+
+## Multichain feasibility: Base + Solana + Robinhood Chain
+
+What a meme treasury needs, per chain. A: NEAR contract controls the address. B: it can buy the stock. C: stock price reaches NEAR without a trusted party. D: NEAR can prove what happened on the chain. E: cash moves from NEAR with Intents.
+
+| | Base | Solana | Robinhood Chain |
+| --- | --- | --- | --- |
+| **A** control | ✅ MPC ECDSA, same EIP-1559 code as S1 (BSC); broadcast needs Base Sepolia ETH | ✅ MPC EdDSA, devnet tx finalized (S21) | ✅ MPC ECDSA, same code; broadcast needs testnet ETH |
+| **B** swap | ✅ Aero CL from the treasury address, simulated (S22) | ⚠️ Raydium CLMM has all 8; instruction builder in Rust not written; mainnet only | ✅ SwapRouter02, simulated ETH → NVDA/SPCX/TSLA (S15); MSFT, AMZN, META only via v4 vs SPY |
+| **C** price | Chainlink Arbitrum logs for 7/8 + Aero SPCXc pool logs, both MPC-verifiable; ⏳ mainnet | same source (prices are per stock, not per chain) | same; its own Chainlink feeds (8/8, 24/7) are **not** MPC-verifiable |
+| **D** proof | ✅ MPC verifies Base logs (S18, testnet) | ✅ MPC verifies Solana AccountState (S21, devnet) | ❌ not in the MPC chain list: relayer-reported only |
+| **E** Intents | ✅ 1Click from $0.50 | ✅ 1Click from $0.50 | ✅ 1Click (ETH) from $0.50 |
+
+What is missing and whether it can be filled:
+
+1. **Price on NEAR (C), all chains.** Pyth is out (S20). Chainlink on Arbitrum covers 7/8 through MPC log verification; SPCX can come from Aero pool logs. Both need one mainnet run of `v1.signer` (about 0.5 NEAR). Fillable.
+2. **Robinhood Chain proof (D).** Not fillable trustlessly while MPC does not list the chain. Possible use: sign and swap trustlessly, but book holdings only from relayer reports, capped per swap, and marked as such in the threat model.
+3. **Solana swap (B).** Fillable: one Raydium CLMM `swap_v2` builder plus associated token accounts (Token-2022). Needs a mainnet test with a few dollars.
+4. **Testnet broadcasts (A).** Treasury `0x680bcF5a2E3C07118991Adb3976d3dF077ed96EE` needs Base Sepolia ETH and Robinhood testnet ETH from faucets.
+5. **Aero addresses.** Confirm against an official Aero/Dromos source before mainnet use.

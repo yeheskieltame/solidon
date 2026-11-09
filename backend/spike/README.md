@@ -18,3 +18,7 @@ Scripts behind [docs/SPIKE.md](../../docs/SPIKE.md): each one calls the real ser
 | `s16_hood_chainlink.py [hours]` | Chainlink feeds on Robinhood Chain, found from on-chain events |
 | `s17_costs.py` | Minimum cost of one full cycle per chain |
 | `s19_hood_feeds.py` | Official Chainlink proxies on Robinhood Chain, checked on-chain |
+| `s20_pyth_key.py` | Hermes with an API key: equity entitlement |
+| `s21_solana_mpc.py [signer]` | NEAR MPC EdDSA signs a Solana devnet transfer (**sends testnet transactions**) |
+| `s22_multichain.py` | Base swap from the MPC treasury (state override), SPCX pool vs Chainlink, Pyth push accounts and xStock pools on Solana |
+| `rpc.py` | Alchemy JSON-RPC helper; reads `ALCHEMY_API_KEY`, never prints it |
