@@ -19,8 +19,9 @@ const GAS_ON_CREATE: Gas = Gas::from_tgas(10);
 /// Bytes reserved for the meme's own state on top of its code.
 const STATE_BYTES: u128 = 20_000;
 
-// The structs below have the same shape as the meme's (`meme::Stock`, `meme::Venue`,
-// `meme::treasury::{ChainsConfig, EvmChain}`); the meme contract validates them in `new`.
+// The types below have the same shape as the meme's (`meme::Stock`, `meme::Venue`,
+// `meme::treasury::{ChainsConfig, EvmChain}`, `meme::cash::{CashProof, Finality}`); the
+// meme contract validates them in `new`.
 
 #[near(serializers = [borsh, json])]
 #[derive(Clone)]
@@ -40,6 +41,25 @@ pub struct Stock {
 
 #[near(serializers = [borsh, json])]
 #[derive(Clone)]
+pub enum Finality {
+    Latest,
+    Safe,
+    Finalized,
+}
+
+/// How a meme proves cash arrived on a chain: an MPC-verified log, or the relayer's report.
+#[near(serializers = [borsh, json])]
+#[derive(Clone)]
+pub enum CashProof {
+    Mpc {
+        foreign_chain: String,
+        finality: Finality,
+    },
+    Relayer,
+}
+
+#[near(serializers = [borsh, json])]
+#[derive(Clone)]
 pub struct EvmChain {
     pub name: String,
     pub chain_id: u64,
@@ -50,12 +70,17 @@ pub struct EvmChain {
     pub max_fee_per_gas: U128,
     pub max_priority_fee_per_gas: U128,
     pub max_swap_usdc: U128,
+    pub proof: CashProof,
 }
 
 #[near(serializers = [borsh, json])]
 #[derive(Clone)]
 pub struct ChainsConfig {
     pub mpc: AccountId,
+    /// Receives cash bound for the treasury chains (Intents/1Click leg; a keeper on testnet).
+    pub bridge: AccountId,
+    /// Reports cash arrivals on chains the MPC cannot verify.
+    pub relayer: AccountId,
     pub evm: Vec<EvmChain>,
 }
 

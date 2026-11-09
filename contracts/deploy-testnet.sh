@@ -21,6 +21,10 @@ FACTORY=${1:-solidon.testnet}
 USDC=usdc.$FACTORY
 PYTH=pyth.$FACTORY
 CREATOR=creator.$FACTORY
+# Bridge and relayer of every meme: a keeper account (not created here). On testnet it
+# stands in for Intents/1Click, delivering testnet USDC to the treasury, and reports
+# arrivals on Robinhood Chain, which the MPC cannot verify.
+KEEPER=keeper.$FACTORY
 NET=(network-config testnet)
 RPC=https://rpc.testnet.near.org
 
@@ -53,28 +57,33 @@ view() { # contract, method, args
 # Factory init args. Chains: the testnet MPC signer, then per chain its USDC, Uniswap v3
 # SwapRouter02 and pool fee from the venue registry. Gas caps: the base fee was
 # 0.005 gwei on Base Sepolia and 0.01 gwei on Robinhood testnet (10 Nov 2026), so a
-# 0.1 gwei cap leaves 10-20x headroom. Swaps are capped at 5 USDC per transaction.
+# 0.1 gwei cap leaves 10-20x headroom. Swaps (and each fund_chain transfer) are capped
+# at 5 USDC. Cash arriving on Base is proven by the MPC (`Latest`: Base Sepolia blocks
+# take tens of minutes to be `Finalized`, S18); Robinhood Chain is not in the MPC's
+# list, so the relayer reports it.
 # Stocks: the oracle feed id from feeds.json and one venue per chain.
 FACTORY_ARGS=$(python3 -c "
 import json
 gwei = 10**9
-chains = [('base', 'stocks/base-sepolia.json', gwei // 1000), ('robinhood', 'stocks/hood-testnet.json', gwei // 100)]
+chains = [('base', 'stocks/base-sepolia.json', gwei // 1000, {'Mpc': {'foreign_chain': 'Base', 'finality': 'Latest'}}),
+          ('robinhood', 'stocks/hood-testnet.json', gwei // 100, 'Relayer')]
 evm, venues = [], {}
-for name, path, priority in chains:
+for name, path, priority, proof in chains:
     r = json.load(open(path))
     fees = {s['pool_fee'] for s in r['stocks']}
     assert len(fees) == 1, f'{path}: one pool fee per chain expected, got {fees}'
     evm.append({'name': name, 'chain_id': r['chain_id'], 'usdc': r['usdc'], 'usdc_decimals': r['usdc_decimals'],
                 'swap_router': r['uniswap_v3']['swap_router02'], 'pool_fee': fees.pop(),
                 'max_fee_per_gas': str(gwei // 10), 'max_priority_fee_per_gas': str(priority),
-                'max_swap_usdc': str(5 * 10**r['usdc_decimals'])})
+                'max_swap_usdc': str(5 * 10**r['usdc_decimals']), 'proof': proof})
     for s in r['stocks']:
         venues.setdefault(s['ticker'], []).append({'chain': name, 'token': s['token'], 'decimals': s['decimals']})
 feeds = json.load(open('stocks/feeds.json'))['feeds']
 assert set(feeds) == set(venues), 'every listed stock needs a feed and venues'
 stocks = [{'ticker': t, 'price_id': f, 'venues': venues[t]} for t, f in feeds.items()]
 print(json.dumps({'usdc': '$USDC', 'oracle': '$PYTH',
-                  'chains': {'mpc': 'v1.signer-prod.testnet', 'evm': evm}, 'stocks': stocks}))")
+                  'chains': {'mpc': 'v1.signer-prod.testnet', 'bridge': '$KEEPER', 'relayer': '$KEEPER', 'evm': evm},
+                  'stocks': stocks}))")
 if [ -n "${DRY_RUN:-}" ]; then
   echo "$FACTORY_ARGS"
   exit 0

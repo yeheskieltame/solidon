@@ -10,7 +10,7 @@
 
 use near_sdk::json_types::U128;
 use near_sdk::serde_json::json;
-use near_sdk::store::LookupMap;
+use near_sdk::store::{LookupMap, LookupSet};
 use near_sdk::{
     env, ext_contract, near, require, AccountId, Gas, NearToken, Promise, PromiseError,
     PromiseOrValue,
@@ -18,6 +18,7 @@ use near_sdk::{
 use omni_transaction::evm::types::Signature;
 use omni_transaction::evm::EVMTransaction;
 
+use crate::cash::CashProof;
 use crate::mnav::PythPrice;
 use crate::pool::{emit, mul_div};
 use crate::{Meme, MemeExt, StorageKey, Venue};
@@ -56,7 +57,10 @@ pub struct EvmChain {
     /// Largest USDC amount (raw units of this chain's USDC) per swap. Fee + price impact
     /// must stay under the 1% slippage allowed against the oracle, so this is sized to
     /// the thinnest listed pool; larger balances are swapped over several calls.
+    /// Also caps each `fund_chain` transfer.
     pub max_swap_usdc: U128,
+    /// How cash arriving here is proven (MPC-verified log, or the relayer's report).
+    pub proof: CashProof,
 }
 
 /// Treasury chains, fixed by the factory for every meme it launches.
@@ -65,6 +69,12 @@ pub struct EvmChain {
 pub struct ChainsConfig {
     /// MPC signer contract, `v1.signer` or `v1.signer-prod.testnet`.
     pub mpc: AccountId,
+    /// NEAR account that receives cash bound for a treasury chain and delivers it there:
+    /// the Intents/1Click leg on mainnet, a keeper account on testnet. What it delivers is
+    /// only booked once proven, and never more than was sent.
+    pub bridge: AccountId,
+    /// Reports cash arriving on `CashProof::Relayer` chains (the MPC cannot read them).
+    pub relayer: AccountId,
     pub evm: Vec<EvmChain>,
 }
 
@@ -112,7 +122,12 @@ impl ChainsConfig {
                     && c.max_priority_fee_per_gas.0 <= c.max_fee_per_gas.0,
                 "Fees must be positive, the priority fee at most max_fee_per_gas"
             );
-            require!(c.max_swap_usdc.0 > 0, "max_swap_usdc must be positive");
+            // At least one 6-decimal unit, so fund_chain can move cash.
+            require!(
+                c.max_swap_usdc.0 >= 10u128.pow(u32::from(c.usdc_decimals) - 6),
+                "max_swap_usdc must be at least one USDC unit"
+            );
+            c.proof.assert_valid();
         }
     }
 
@@ -150,6 +165,9 @@ pub struct ChainState {
     pub approved: bool,
     pub usdc: u128,
     pub stock: u128,
+    /// USDC sent from NEAR toward this chain and not yet proven to have arrived, at 6
+    /// decimals. Counted in NAV; the cap on every credit to `usdc`.
+    pub in_transit: u128,
 }
 
 #[near(serializers = [borsh])]
@@ -160,6 +178,8 @@ pub struct Treasury {
     pending: Option<PendingTx>,
     /// (chain index, nonce) -> signed raw transaction.
     signed: LookupMap<(u32, u64), Vec<u8>>,
+    /// (chain index, tx hash, log index) of every cash arrival credited or being verified.
+    pub credited: LookupSet<(u32, [u8; 32], u64)>,
 }
 
 impl Treasury {
@@ -169,6 +189,7 @@ impl Treasury {
             chains: (0..chains).map(|_| ChainState::default()).collect(),
             pending: None,
             signed: LookupMap::new(StorageKey::SignedTxs),
+            credited: LookupSet::new(StorageKey::CreditedCash),
         }
     }
 }
@@ -217,7 +238,7 @@ pub trait Mpc {
 // --- Encoding -----------------------------------------------------------------
 
 /// `None` on any malformed input; never panics (it parses MPC responses in a callback).
-fn hex_decode(s: &str) -> Option<Vec<u8>> {
+pub(crate) fn hex_decode(s: &str) -> Option<Vec<u8>> {
     if !s.is_ascii() || !s.len().is_multiple_of(2) {
         return None;
     }
@@ -315,7 +336,7 @@ impl Meme {
         }
     }
 
-    fn treasury_address(&self) -> [u8; 20] {
+    pub(crate) fn treasury_address(&self) -> [u8; 20] {
         self.treasury
             .address
             .unwrap_or_else(|| env::panic_str("Call init_treasury first"))
@@ -417,7 +438,8 @@ impl Meme {
             } => {
                 // ponytail: the ledger assumes the swap lands and records minOut, the
                 // conservative amount. Drift (a reverted swap) shows against the explorer
-                // on the dashboard; a verified balance read (PR C) fixes it.
+                // on the dashboard; an MPC-verified read of the stock received is the
+                // follow-up (the cash side is proven in cash.rs).
                 state.usdc -= usdc_in.0;
                 state.stock += min_stock_out.0;
             }
@@ -447,6 +469,8 @@ pub struct ChainView {
     pub usdc: U128,
     /// Stock on this chain, raw units of the venue token.
     pub stock: U128,
+    /// USDC sent toward this chain, not yet proven arrived, 6 decimals.
+    pub in_transit: U128,
 }
 
 #[near(serializers = [json])]
@@ -649,6 +673,7 @@ impl Meme {
                     approved: s.approved,
                     usdc: U128(s.usdc),
                     stock: U128(s.stock),
+                    in_transit: U128(s.in_transit),
                 })
                 .collect(),
         }

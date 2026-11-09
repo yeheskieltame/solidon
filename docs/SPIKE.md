@@ -351,3 +351,10 @@ Open: the exact `AccountState` value encoding the contract must hash (as S8 did 
 ### S25 follow-up: 8 venues against Circle USDC
 
 All 8 synthetic xStocks now have Raydium CLMM devnet pools against Circle's devnet USDC (DEPLOYMENTS.md). The MPC treasury bought NVDAx with 1 USDC at $176.56 vs $176.59 reference. **One-sided pools need two tick arrays** (the near and far edge of the range): with one, `swap_v2` fails with `NotEnoughTickArrayAccount` (6027) even for a tiny buy, so the contract passes up to 3 (message 715 bytes, 19 accounts; signed 780 of 1232 bytes). Rent is about 0.18 SOL per venue.
+
+## S26 · The contract's expected payload hash, signed by the live MPC (`contracts/meme/src/cash.rs`) ✅
+
+`credit_cash` computes the MPC payload hash for a USDC `Transfer` log itself and sends it as `expected_payload_hash`, so the MPC answers only if its nodes see that exact log.
+
+- **S18 replayed in Rust:** Base Sepolia `0x96305fb3…5379` log 1 (`Base` = variant 6 of `ForeignChainRpcRequest`, one `Log` extractor, `Latest`) hashes to `2893632630187cd2…a918`, the hash the testnet MPC returned in S18 (unit test `payload_hash_matches_the_live_mpc_for_s18`).
+- **Live, with the contract's own args:** Circle's faucet transfer of 20 USDC to the treasury (Base Sepolia `0xb4a83dbf…e484`, log 0, block 56,635,495). The Rust code computes `32c88696112e135b4a8e08b2718ed82b0730c3eb01da07d5b9ca8ab81ece5309`; `verify_foreign_transaction` on `v1.signer-prod.testnet` with exactly the JSON `credit_cash` builds (domain 3, payload version 1, that expected hash), signed by `creator.solidon.testnet` with 1 yocto, **returned that payload hash with a signature** ([NEAR tx `Hs29dgyv…`](https://testnet.nearblocks.io/txns/Hs29dgyvvFYwBETB9EkGX2PaAbW3Jzuyd3jKtvXwqbP1), 8.8 TGas burnt).

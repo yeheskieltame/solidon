@@ -117,11 +117,11 @@ impl Meme {
     }
 
     /// Treasury value in USDC raw units (6 decimals) at price `p`: NEAR cash, plus USDC
-    /// and stock on every chain. One price values the stock on every chain.
+    /// (on the chain or in transit to it) and stock on every chain. One price values the stock on every chain.
     pub(crate) fn assets(&self, p: &PythPrice) -> Option<u128> {
         let mut total = self.treasury_usdc;
         for (c, s) in self.chains.evm.iter().zip(&self.treasury.chains) {
-            total += s.usdc / 10u128.pow(u32::from(c.usdc_decimals) - USDC_DECIMALS);
+            total += s.usdc / c.usdc_scale() + s.in_transit;
         }
         for v in &self.stock.venues {
             let units = self.treasury.chains[self.chain_index(&v.chain)].stock;

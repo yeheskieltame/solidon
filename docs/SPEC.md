@@ -27,7 +27,7 @@ Solidon is a memecoin launchpad on NEAR where every meme is an on-chain treasury
 The meme may trade above the value of its stocks (premium = hype), but it cannot stay below it for long, because the contract buys back or opens redemption.
 
 ```latex
-\text{NAV per token} = \frac{\sum_{\text{chains}} \left(\text{stock units}_c \times \text{oracle price} + \text{USDC}_c\right) + \text{USDC cash (NEAR)}}{\text{circulating supply}}
+\text{NAV per token} = \frac{\sum_{\text{chains}} \left(\text{stock units}_c \times \text{oracle price} + \text{USDC}_c + \text{USDC in transit}_c\right) + \text{USDC cash (NEAR)}}{\text{circulating supply}}
 ```
 
 ```latex
@@ -162,10 +162,13 @@ Users only see buy, sell, and redeem. All cross-chain work happens in the backgr
 
 **Fund the treasury (system)**
 
-1. When USDC cash on NEAR exceeds the 20% buffer, the surplus is sent via Intents as USDC to the treasury on Base, Robinhood Chain or Solana.
-2. Anyone calls `buy_stock(chain)`. The contract reads the oracle and builds the swap itself (USDC to the stock, Uniswap v3 SwapRouter02 `exactInputSingle` on the EVM chains) with `minAmountOut` = oracle value − 1%.
-3. The contract requests a signature from `v1.signer`. A relayer broadcasts the signed transaction to that chain.
-4. The stock ledger in the contract is updated.
+1. Anyone calls `fund_chain(chain)`. With a fresh oracle price, the contract sends the NEAR cash above the 20% buffer (at most one swap's worth) to the factory's bridge account, which delivers it as USDC to the treasury on that chain (mainnet: the Intents/1Click leg; testnet: a keeper account). The amount is booked as *in transit* for that chain and stays in NAV. A failed transfer returns it to NEAR cash.
+2. When the USDC arrives, its chain ledger is credited, never above the amount in transit and once per arrival, so no credit can create value:
+   - **Base (MPC-proven):** anyone calls `credit_cash(chain, tx_hash, log_index, log)` with the USDC `Transfer` log to the treasury. The contract checks token and recipient, computes the payload hash, and asks `v1.signer` `verify_foreign_transaction` to confirm it. The MPC answers only if its nodes see that exact log ([SPIKE.md S26](SPIKE.md)).
+   - **Robinhood Chain (relayer-reported):** the MPC cannot read this chain, so the factory's relayer account calls `report_cash(chain, tx_hash, amount)`.
+3. Anyone calls `buy_stock(chain)`. The contract reads the oracle and builds the swap itself (USDC to the stock, Uniswap v3 SwapRouter02 `exactInputSingle` on the EVM chains) with `minAmountOut` = oracle value − 1%.
+4. The contract requests a signature from `v1.signer`. A relayer broadcasts the signed transaction to that chain.
+5. The stock ledger in the contract is updated.
 
 **mNAV engine (system, every rebalance)**
 
@@ -180,12 +183,19 @@ Users only see buy, sell, and redeem. All cross-chain work happens in the backgr
 
 ## Trust assumptions & threat model
 
-The MVP knowingly accepts one trust assumption: the NEAR contract cannot read treasury balances on the other chains yet, so the stock ledger is recorded conservatively (verified cash-in and holdings proofs are the next step: MPC verifies Base logs and Solana account state, not Robinhood Chain, [SPIKE.md](SPIKE.md) feasibility table). This is stated openly in the README.
+The MVP knowingly accepts these trust assumptions, stated openly in the README:
+
+- **Stock holdings are booked, not read.** The stock ledger records each swap's `minAmountOut` (conservative). Verified holdings proofs are the next step: MPC verifies Base logs and Solana account state, not Robinhood Chain ([SPIKE.md](SPIKE.md) feasibility table).
+- **Cash on Robinhood Chain is relayer-reported.** Cash arriving on Base is proven by MPC log verification; Robinhood Chain is not in the MPC's foreign-chain list, so arrivals there are booked on the word of the factory's relayer account, capped by the cash in transit.
+- **The bridge delivers.** Cash in transit counts in NAV from the moment it leaves NEAR. On mainnet the bridge leg is Intents/1Click; on testnet it is a keeper account.
 
 | Threat | Mitigation |
 | --- | --- |
 | Creator or admin drains the treasury | No admin key. The treasury addresses can only be signed for by the meme contract via MPC, and the contract only signs an approve and a swap to each chain's locked router |
 | Stock ledger drifts from the on-chain balance | The ledger records `minAmountOut`, not an estimate. The dashboard shows the real explorer balance per chain next to the ledger. Upgrade: OutLayer TEE reads the balance and attests to it |
+| A fake or replayed cash arrival inflates a chain's USDC ledger | Every credit is capped by that chain's cash in transit, so it only moves value already counted in NAV and can never create any. Each (chain, tx, log) is credited once. On Base the log must be a `Transfer` from the chain's USDC to the treasury, and the MPC must confirm the contract's own payload hash (a wrong claim gets no answer, S8) |
+| The relayer misreports cash on Robinhood Chain | Only the factory's relayer can report, only for relayer chains, once per transaction, capped by the cash in transit. Worst case it books in-transit cash as arrived before it is: NAV is unchanged, and a swap signed against it reverts on-chain |
+| The bridge keeps or loses cash in transit | Bounded per transfer by `max_swap_usdc`, and only cash above the 20% buffer leaves NEAR, so redemptions are untouched. Mainnet uses Intents/1Click; the testnet keeper is a trusted stand-in |
 | Pool price manipulation to trigger issuance or buyback | mNAV uses a 30-minute TWAP, a 1-hour cooldown, and issuance capped at 1% of supply per day |
 | Stale oracle while the stock market is closed | All mNAV actions stop if the price is older than 15 minutes. Pool trading keeps working |
 | Bank run on redemptions | Redemptions only draw on the cash buffer. A queue forms if the buffer runs out, and a stock sale is scheduled to refill it |

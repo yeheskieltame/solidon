@@ -16,15 +16,16 @@ pub fn nvda() -> serde_json::Value {
 }
 
 pub fn chains() -> serde_json::Value {
-    json!({"mpc": "v1.signer-prod.testnet", "evm": [
+    json!({"mpc": "v1.signer-prod.testnet", "bridge": "keeper.solidon.testnet",
+           "relayer": "keeper.solidon.testnet", "evm": [
         {"name": "base", "chain_id": 84532, "usdc": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
          "usdc_decimals": 6, "swap_router": "0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4",
          "pool_fee": 3000, "max_fee_per_gas": "100000000", "max_priority_fee_per_gas": "1000000",
-         "max_swap_usdc": "5000000"},
+         "max_swap_usdc": "5000000", "proof": {"Mpc": {"foreign_chain": "Base", "finality": "Latest"}}},
         {"name": "robinhood", "chain_id": 46630, "usdc": "0xbf4479C07Dc6fdc6dAa764A0ccA06969e894275F",
          "usdc_decimals": 18, "swap_router": "0x3ce954107b1a675826b33bf23060dd655e3758fe",
          "pool_fee": 3000, "max_fee_per_gas": "100000000", "max_priority_fee_per_gas": "10000000",
-         "max_swap_usdc": "5000000000000000000"}]})
+         "max_swap_usdc": "5000000000000000000", "proof": "Relayer"}]})
 }
 
 fn wasm(name: &str) -> Vec<u8> {
