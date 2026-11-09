@@ -7,6 +7,7 @@ cd backend/solana-spike && npm install --legacy-peer-deps
 SOLIDON_ENV=/path/to/backend/.env node 1_setup.js   # 8 stock mints + pools (resumable, state.json) -> contracts/stocks/solana-devnet.json
 SOLIDON_ENV=/path/to/backend/.env MPC_SIGNER=creator.solidon.testnet TICKER=NVDA AMOUNT_USDC=1 node 2_swap.js
 #   hand-built buy, Circle USDC -> stock, signed by the NEAR MPC (DRY_RUN=1: simulate only, no MPC call)
+#   PRINT_INPUTS=1 prints every input, each PDA's bump and the message hex (test vectors of contracts/meme/src/solana.rs)
 ```
 
 Throwaway devnet keys (payer, mint keypairs) live in `.secrets/` (git-ignored). `ALCHEMY_API_KEY` is read from `backend/.env` and never printed.

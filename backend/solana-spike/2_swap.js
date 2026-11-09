@@ -149,6 +149,27 @@ const message = Buffer.concat([
 ]);
 console.log(`message: ${message.length} bytes, ${keys.length} account keys, header [${[...header]}]; swap_v2 data ${swapData.length} bytes`);
 console.log("swap_v2 data hex", swapData.toString("hex"), "| min out", minOut.toString(), "(ref out", refOut.toString() + ")");
+if (process.env.PRINT_INPUTS) { // test vectors for contracts/meme/src/solana.rs: every input, each PDA's bump, the message
+  const bump = (seeds, program = CLMM) => PublicKey.findProgramAddressSync(seeds, program)[1];
+  const ataBump = (tokenProgram, m) => bump([T.toBuffer(), tokenProgram.toBuffer(), m.toBuffer()], ATA_PROGRAM);
+  console.log("PRINT_INPUTS", JSON.stringify({
+    ticker: TICKER, treasury: T.toBase58(), usdc: usdc.toBase58(), stock: mint.toBase58(), clmm: CLMM.toBase58(),
+    ammConfig: P.ammConfig.toBase58(), mint0: P.mint0.toBase58(), mint1: P.mint1.toBase58(), zeroForOne,
+    pool: pool.toBase58(), vault0: P.vault0.toBase58(), vault1: P.vault1.toBase58(), observation: P.observation.toBase58(),
+    bitmapExt: derived.bitmapExt.toBase58(), tickArrayStarts: starts, tickArrays: tickArrays.map((t) => t.toBase58()),
+    inAta: inAta.toBase58(), outAta: outAta.toBase58(), blockhash, amountIn: AMOUNT_IN.toString(), minOut: minOut.toString(),
+    bumps: {
+      pool: bump([Buffer.from("pool"), P.ammConfig.toBuffer(), P.mint0.toBuffer(), P.mint1.toBuffer()]),
+      vault0: bump([Buffer.from("pool_vault"), pool.toBuffer(), P.mint0.toBuffer()]),
+      vault1: bump([Buffer.from("pool_vault"), pool.toBuffer(), P.mint1.toBuffer()]),
+      observation: bump([Buffer.from("observation"), pool.toBuffer()]),
+      bitmapExt: bump([Buffer.from("pool_tick_array_bitmap_extension"), pool.toBuffer()]),
+      tickArrays: starts.map((s) => bump([Buffer.from("tick_array"), pool.toBuffer(), i32be(s)])),
+      inAta: ataBump(TOKEN_PROGRAM_ID, usdc), outAta: ataBump(TOKEN_2022_PROGRAM_ID, mint),
+    },
+    message: message.toString("hex"),
+  }));
+}
 
 const rpcCall = async (method, params) => {
   const r = await fetch(conn.rpcEndpoint, { method: "POST", headers: { "content-type": "application/json" },
