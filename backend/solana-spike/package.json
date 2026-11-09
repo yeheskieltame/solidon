@@ -1,0 +1,13 @@
+{
+  "name": "solidon-solana-spike",
+  "private": true,
+  "type": "module",
+  "description": "Spike S24: Raydium CLMM swap_v2 on Solana devnet with a hand-built message",
+  "dependencies": {
+    "@raydium-io/raydium-sdk-v2": "^0.2.84-alpha",
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.4",
+    "bn.js": "^5.2.1",
+    "decimal.js": "^10.5.0"
+  }
+}

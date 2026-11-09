@@ -1,0 +1,95 @@
+# Spike S24 · Raydium CLMM `swap_v2` from a hand-built Solana message (devnet) ✅
+
+Goal: prove the bytes a NEAR contract must produce (no Solana SDK, no network) to buy a stock token on Raydium CLMM from a treasury address. The Raydium SDK is used only to create the pool and the position; the swap message is compiled by hand and signed with a raw ed25519 key over the message bytes, exactly what the MPC EdDSA domain signs (S21).
+
+```bash
+cd backend/solana-spike && npm install --legacy-peer-deps
+SOLIDON_ENV=/path/to/backend/.env node 1_setup.js   # mints, pool, position (idempotent, writes state.json)
+SOLIDON_ENV=/path/to/backend/.env node 2_swap.js    # hand-built swap from a fresh "treasury" keypair
+```
+
+Throwaway devnet keys live in `.secrets/` (git-ignored). `ALCHEMY_API_KEY` is read from `backend/.env` and never printed.
+
+## Devnet results
+
+| Item | Value |
+| --- | --- |
+| CLMM program | `devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH` (mainnet: `CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK`) |
+| AMM config | `GVSwm4smQBYcgAJU7qjFHLQBHTc4AdB3F2HbZp6KqKof` (index 2, fee 0.05%, tickSpacing 10) |
+| Mock USDC (SPL Token, 6 dp) | `4MUpSzmNTEqR9YwvGotwEMSFHCTWSiP9epnse7E7bzpd` |
+| Synthetic NVDAx (Token-2022, 8 dp, no extensions) | `GB6qjXZX5evbBEk6DCZTVCPySUfitcJSkpsHAodDbesU` |
+| Pool NVDAx/USDC (mint0 = USDC, mint1 = NVDAx) | `HCY7R4SEa4XAhRBpbvMPc4PrsmrHzWpBpqcMjsqeuXtK` |
+| Position | ticks −12810..1050 (90..360 USDC/NVDAx), 100 NVDAx + 17,992 USDC, NFT `HLhgN89fg5nGYLs8pLACnkq1qFJaaPfjw19Nvigt8QPi` |
+| Payer / treasury | `BhhpPESimqAvAzYsbuUHMmhRMNXPv25nGJ298biZGDGt` / `DtPStxpjk3PCyGSK7hGeiUArwQ89ECHsScC2cDQnT1Cr` |
+
+| Step | Transaction |
+| --- | --- |
+| createPool at 180 USDC/NVDAx (SDK) | [`58zA3zY4…`](https://explorer.solana.com/tx/58zA3zY49CFwMsyv82HrcvhyHM1jg5sTLuAvvUY4tYP94Wn36zbb6pyR1Q7tSNLw3jRYVna2ZzUArrPugyLPrq4j?cluster=devnet) |
+| openPositionV2 (SDK, one key patched) | [`64tb4Jjo…`](https://explorer.solana.com/tx/64tb4JjoomFHsf1XJoTKChs5t6mKuiwkV31dsYficMXYMjHLbhRZB6U7n1TxJjujP1FwbqHgtPBkK9skBipJmMCh?cluster=devnet) |
+| **Hand-built swap 100 USDC → NVDAx** | [`U2ZaaZpZ…`](https://explorer.solana.com/tx/U2ZaaZpZwi7xLg85eJbuiNwYP1gx6BKSh5JSnFuG4B6cVZsNoTvcih7DYyJT9AP6GzbYZAw171ox59yzmnmPPvV?cluster=devnet): **finalized, err null**, 88,552 CU. Treasury USDC 1000 → 900, NVDAx 0 → 0.55437615 (180.38 USDC/NVDAx after the 0.05% fee; min out was 0.54972221) |
+
+## What the contract must build
+
+Legacy message, one signer (treasury = fee payer = token owner), two instructions, no address lookup table, no compute-budget instruction:
+
+1. Associated Token Account `CreateIdempotent` for the Token-2022 output account (no-op if it exists).
+2. Raydium CLMM `swap_v2`.
+
+**Size:** message **682 bytes** (18 keys), signed tx **747 bytes** (limit 1232). Formula: `3 + 1 + 32·keys + 32 + 1 + ATA ix (10) + swap ix (1 + 1 + n_accounts + 1 + 41)`. Each extra tick array adds 33 bytes, so room remains for about 14 more accounts.
+
+**Header** `[1, 0, 9]`. Key order: treasury | writable: output ATA, pool, input ATA, input vault, output vault, observation, bitmap extension, tick array | read-only: NVDAx mint, System, Token-2022, ATA program, AMM config, Token, Memo, USDC mint, CLMM program.
+
+### `CreateIdempotent` (program `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`)
+
+Data `[0x01]`. Accounts: treasury (w, s), output ATA (w), owner = treasury, output mint, System program, **Token-2022** program.
+
+### `swap_v2` instruction data (41 bytes, little-endian)
+
+| Offset | Size | Field | Value used |
+| --- | --- | --- | --- |
+| 0 | 8 | discriminator `sha256("global:swap_v2")[..8]` | `2b04ed0b1ac91e62` |
+| 8 | 8 | `amount` u64 | 100,000,000 (100 USDC) |
+| 16 | 8 | `other_amount_threshold` u64 (min out when base input) | 54,972,221 |
+| 24 | 16 | `sqrt_price_limit_x64` u128 | 0 = no limit (program uses MIN+1 / MAX−1) |
+| 40 | 1 | `is_base_input` bool | 1 |
+
+Sent bytes: `2b04ed0b1ac91e62 00e1f50500000000 3dcf460300000000 00000000000000000000000000000000 01`
+
+### `swap_v2` accounts, in order
+
+| # | Account | Flags | Source |
+| --- | --- | --- | --- |
+| 0 | payer / owner of input account | signer (writable as fee payer) | treasury |
+| 1 | `amm_config` | r | static per pool; PDA `["amm_config", index u16 BE]` |
+| 2 | `pool_state` | w | PDA `["pool", amm_config, mint0, mint1]`, mint0 < mint1 bytewise |
+| 3 | input token account | w | ATA PDA `[owner, input token program, input mint]` under the ATA program |
+| 4 | output token account | w | ATA PDA `[owner, Token-2022, NVDAx mint]` |
+| 5 | input vault | w | PDA `["pool_vault", pool, input mint]` |
+| 6 | output vault | w | PDA `["pool_vault", pool, output mint]` |
+| 7 | observation | w | PDA `["observation", pool]` |
+| 8 | Token program `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA` | r | constant |
+| 9 | Token-2022 program `TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb` | r | constant |
+| 10 | Memo program `MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr` | r | constant |
+| 11 | input mint | r | config |
+| 12 | output mint | r | config |
+| 13 | tick array bitmap extension (remaining) | w | PDA `["pool_tick_array_bitmap_extension", pool]` (the SDK always passes it) |
+| 14+ | tick array(s) (remaining) | w | PDA `["tick_array", pool, start_index i32 BE]`, **start index needs live state** |
+
+All PDAs above are derived under the CLMM program. The script checks that pool, both vaults and observation derive from `(amm_config, mint0, mint1)` and match the pool account.
+
+**What needs live pool state.** Only the tick arrays (and `other_amount_threshold`, which the contract should derive from its own oracle price). The first tick array must be the first *initialized* one in the swap direction: start from `floor(tick_current / (60·tickSpacing)) · 60·tickSpacing` and walk down (zero_for_one) or up until the bit is set in `pool.tick_array_bitmap` (bit `i` ↔ start `(i − 512)·60·tickSpacing`). Here the current array −6000 was empty and the swap needed −13200. Uninitialized (non-existent) tick arrays cannot be passed. Large swaps that cross into further arrays need the next initialized arrays appended (+33 bytes each). Arrays beyond ±512 slots (|tick| > 307,200 at tickSpacing 10) live in the bitmap extension account's data.
+
+PoolState offsets read (devnet-verified): `amm_config` 9, `mint0` 73, `mint1` 105, `vault0` 137, `vault1` 169, `observation` 201, `tick_spacing` u16 235, `sqrt_price_x64` u128 253, `tick_current` i32 269, `tick_array_bitmap` [u64; 16] 904.
+
+**Safety.** The program validates every PDA and that tick arrays belong to the pool. If the contract derives the pool, vaults and its own ATAs itself and enforces `other_amount_threshold`, then wrong relayer-supplied live inputs (tick array, blockhash) can only make the swap fail; they cannot redirect funds.
+
+## Gotchas found
+
+- **Mainnet xStocks (NVDAx `Xsc9qv…`) Token-2022 extensions:** metadataPointer, permanentDelegate, defaultAccountState=initialized, scaledUiAmount (multiplier 1.00092, raw ≠ UI amount), pausable, confidentialTransferMint, transferHook with **no program**, tokenMetadata. There is **no transfer fee**, so the swap account list is the same as on devnet. Accounting must apply the scaledUiAmount multiplier. The issuer can pause transfers or move tokens (permanent delegate). The devnet NVDAx has none of these extensions.
+- **Two devnet CLMM programs.** SDK 0.2.84-alpha's `DEVNET_PROGRAM_ID.CLMM_PROGRAM_ID` is `DRayAUgENGQBKVaX8owNhgzkEDyoHTGVEGHVJT1E9pfH`. `devi51m…` was used here by passing `programId` explicitly.
+- **SDK bugs against `devi51m…`:** `getPoolInfoFromRpc` throws on a pool with no tick arrays. `openPositionFromBase` derives `protocol_position` with little-endian ticks and marks it read-only. The program expects `["position", pool, tickLower i32 BE, tickUpper i32 BE]`, writable (otherwise ConstraintSeeds 2006, then a privilege escalation error). `1_setup.js` patches that key.
+- **RPC.** The public devnet faucet is closed (HTTP 410); Alchemy's `requestAirdrop` works (1 SOL). Alchemy's free tier refuses `getProgramAccounts` (configs were listed through `api.devnet.solana.com`) and has no `signatureSubscribe` (`rpc.js` uses the public devnet websocket for confirmations).
+- **npm.** Peer-dependency resolution loops forever without `--legacy-peer-deps`.
+- **Compute.** 88,552 CU for ATA creation and the swap, within the default 200k per instruction. Mainnet should add `SetComputeUnitLimit` and a priority fee (+1 key and 2 instructions, about 30 bytes).
+- **Blockhash.** The message embeds a recent blockhash (valid about 60–90 s), which the caller must supply before the MPC sign. A durable nonce is the alternative (+1 `AdvanceNonceAccount` instruction, +2 keys).
+- **Not yet tested:** MPC EdDSA signing of a 682-byte payload (S21 signed 150 bytes), and the same message on mainnet against a real xStocks pool.
