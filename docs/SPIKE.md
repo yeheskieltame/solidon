@@ -286,7 +286,7 @@ What a meme treasury needs, per chain. A: NEAR contract controls the address. B:
 
 | | Base | Solana | Robinhood Chain |
 | --- | --- | --- | --- |
-| **A** control | ✅ MPC ECDSA, same EIP-1559 code as S1 (BSC); broadcast needs Base Sepolia ETH | ✅ MPC EdDSA, devnet tx finalized (S21) | ✅ MPC ECDSA, same code; broadcast needs testnet ETH |
+| **A** control | ✅ MPC-signed tx mined on Base Sepolia (S23) | ✅ MPC EdDSA, devnet tx finalized (S21) | ✅ MPC-signed transfer of a testnet TSLA Stock Token mined (S23) |
 | **B** swap | ✅ Aero CL from the treasury address, simulated (S22) | ⚠️ Raydium CLMM has all 8; instruction builder in Rust not written; mainnet only | ✅ SwapRouter02, simulated ETH → NVDA/SPCX/TSLA (S15); MSFT, AMZN, META only via v4 vs SPY |
 | **C** price | Chainlink Arbitrum logs for 7/8 + Aero SPCXc pool logs, both MPC-verifiable; ⏳ mainnet | same source (prices are per stock, not per chain) | same; its own Chainlink feeds (8/8, 24/7) are **not** MPC-verifiable |
 | **D** proof | ✅ MPC verifies Base logs (S18, testnet) | ✅ MPC verifies Solana AccountState (S21, devnet) | ❌ not in the MPC chain list: relayer-reported only |
@@ -295,7 +295,20 @@ What a meme treasury needs, per chain. A: NEAR contract controls the address. B:
 What is missing and whether it can be filled:
 
 1. **Price on NEAR (C), all chains.** Pyth is out (S20). Chainlink on Arbitrum covers 7/8 through MPC log verification; SPCX can come from Aero pool logs. Both need one mainnet run of `v1.signer` (about 0.5 NEAR). Fillable.
-2. **Robinhood Chain proof (D).** Not fillable trustlessly while MPC does not list the chain. Possible use: sign and swap trustlessly, but book holdings only from relayer reports, capped per swap, and marked as such in the threat model.
+2. **Robinhood Chain proof (D).** Not fillable trustlessly while MPC does not list the chain. The chain settles to Ethereum (block `l1BlockNumber` 26.4M mainnet, 12.1M Sepolia for testnet), which MPC does not list either, so there is no indirect route through a supported parent chain. Possible use: sign and swap trustlessly, but book holdings only from relayer reports, capped per swap, and marked as such in the threat model.
 3. **Solana swap (B).** Fillable: one Raydium CLMM `swap_v2` builder plus associated token accounts (Token-2022). Needs a mainnet test with a few dollars.
-4. **Testnet broadcasts (A).** Treasury `0x680bcF5a2E3C07118991Adb3976d3dF077ed96EE` needs Base Sepolia ETH and Robinhood testnet ETH from faucets.
+4. **Testnet broadcasts (A).** Done (S23).
 5. **Aero addresses.** Confirm against an official Aero/Dromos source before mainnet use.
+
+## S23 · MPC signs EVM transactions on Base Sepolia and Robinhood testnet (`backend/spike/s23_evm_mpc.py`) ✅
+
+The maintainer funded treasury `0x680bcF5a2E3C07118991Adb3976d3dF077ed96EE` from the faucets. The Robinhood testnet faucet ([tx `0x41a0…54fd`](https://explorer.testnet.chain.robinhood.com/tx/0x41a0e64e6704479ef18cb3a1ce845f9d154dfa46dddad13f731f1889f3ce54fd)) also sends **5 testnet Stock Tokens each of TSLA, AMZN, PLTR, NFLX, AMD** (18 decimals, `uiMultiplier` 1.0). TSLA testnet: `0xc9f9c86933092bbbfff3ccb4b105a4a94bf3bd4e`.
+
+The script checks that `derived_public_key(evm-treasury, creator.solidon.testnet, domain 0)` hashes to the treasury address, builds an EIP-1559 transaction (encoder checked byte for byte against `cast mktx`), has `v1.signer-prod.testnet` sign its hash, checks that the signature recovers to the treasury, and broadcasts:
+
+| Chain | Action | MPC sign (NEAR) | Transaction | Result |
+| --- | --- | --- | --- | --- |
+| Base Sepolia (84532) | send 0.0001 ETH | [`DyXvT42G…`](https://testnet.nearblocks.io/txns/DyXvT42GRRVGAkPLgJVHkJcL45kFEWknGL23Y8axjKUS) | [`0x1e62…b5bc`](https://sepolia.basescan.org/tx/0x1e625381f112bbfb07c89710b192b034e00b74f688e8371ab2d04a2c10f9b5bc) | status 1, block 56,608,436 |
+| Robinhood testnet (46630) | transfer 1 TSLA Stock Token | [`Goq7rv6h…`](https://testnet.nearblocks.io/txns/Goq7rv6h47L1DZoJwERLzVkHtyfr39NZipMVCY2uBsPR) | [`0xc6e8…b3f4`](https://explorer.testnet.chain.robinhood.com/tx/0xc6e8afc35580141c1a5bf1baa1c0d09fd7536ab70fadda0622f2ff114f8db3f4) | status 1, TSLA 5 → 4 |
+
+No Uniswap deployment exists at the mainnet addresses on Robinhood testnet; whether any testnet DEX holds these tokens is not known yet (the testnet explorer and public RPC are unreachable from the test network, and Alchemy limits log queries).
