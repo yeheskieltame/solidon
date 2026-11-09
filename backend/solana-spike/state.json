@@ -1,71 +1,382 @@
 {
   "payer": "BhhpPESimqAvAzYsbuUHMmhRMNXPv25nGJ298biZGDGt",
-  "usdc": "4MUpSzmNTEqR9YwvGotwEMSFHCTWSiP9epnse7E7bzpd",
-  "nvdax": "GB6qjXZX5evbBEk6DCZTVCPySUfitcJSkpsHAodDbesU",
-  "mintUsdcTx": "3D9aFzgb2tAZ5RUNH8tApBLiKVqjxzvqCJ6anRxgmAtsXa4wQ9vVZSxvWmtcGNi8FMqFCdY4Thsyc8SZrm3E8csc",
-  "mintNvdaxTx": "3gi4S7H7NpQHMP5LBbgL3VUS3XQSR4DoW5Bxjt7mBnAP3Pgm3kVXLZCzUojHAsdMQHomd15oL6uF2aKeLKa7wo1W",
-  "minted": true,
-  "pool": "HCY7R4SEa4XAhRBpbvMPc4PrsmrHzWpBpqcMjsqeuXtK",
-  "createPoolTx": "58zA3zY49CFwMsyv82HrcvhyHM1jg5sTLuAvvUY4tYP94Wn36zbb6pyR1Q7tSNLw3jRYVna2ZzUArrPugyLPrq4j",
-  "positionNft": "HLhgN89fg5nGYLs8pLACnkq1qFJaaPfjw19Nvigt8QPi",
-  "openPositionTx": "64tb4JjoomFHsf1XJoTKChs5t6mKuiwkV31dsYficMXYMjHLbhRZB6U7n1TxJjujP1FwbqHgtPBkK9skBipJmMCh",
-  "ticks": [
-    -12810,
-    1050
-  ],
-  "fundSolTx": "4o7BnVFn8HczP6v8UGUeLcMrF8vX48CJZk6qtPpCKEW8vqhPrpZm3537WWwF5FaQffBVMMRvV2HNkbxxNVDFHPek",
-  "fundUsdcTx": "55tMmfYWKMvrghbBBFNSTyVMH6DevbbKD9AHoKkc7uie6r1uMGM6FM9dUbYgW3obC9wqCrQz3gqDmJ8WTU4nWFYL",
-  "treasury": "DtPStxpjk3PCyGSK7hGeiUArwQ89ECHsScC2cDQnT1Cr",
-  "treasuryFunded": true,
-  "swap": {
-    "tx": "U2ZaaZpZwi7xLg85eJbuiNwYP1gx6BKSh5JSnFuG4B6cVZsNoTvcih7DYyJT9AP6GzbYZAw171ox59yzmnmPPvV",
-    "status": "finalized",
-    "err": null,
-    "messageBytes": 682,
-    "txBytes": 747,
-    "accountKeys": 18,
-    "computeUnits": 88552,
-    "amountIn": "100000000",
-    "minOut": "54972221",
-    "usdc": [
-      "1000000000",
-      "900000000"
+  "mock_usdc_nvdax": {
+    "usdc": "4MUpSzmNTEqR9YwvGotwEMSFHCTWSiP9epnse7E7bzpd",
+    "nvdax": "GB6qjXZX5evbBEk6DCZTVCPySUfitcJSkpsHAodDbesU",
+    "mintUsdcTx": "3D9aFzgb2tAZ5RUNH8tApBLiKVqjxzvqCJ6anRxgmAtsXa4wQ9vVZSxvWmtcGNi8FMqFCdY4Thsyc8SZrm3E8csc",
+    "mintNvdaxTx": "3gi4S7H7NpQHMP5LBbgL3VUS3XQSR4DoW5Bxjt7mBnAP3Pgm3kVXLZCzUojHAsdMQHomd15oL6uF2aKeLKa7wo1W",
+    "minted": true,
+    "pool": "HCY7R4SEa4XAhRBpbvMPc4PrsmrHzWpBpqcMjsqeuXtK",
+    "createPoolTx": "58zA3zY49CFwMsyv82HrcvhyHM1jg5sTLuAvvUY4tYP94Wn36zbb6pyR1Q7tSNLw3jRYVna2ZzUArrPugyLPrq4j",
+    "positionNft": "HLhgN89fg5nGYLs8pLACnkq1qFJaaPfjw19Nvigt8QPi",
+    "openPositionTx": "64tb4JjoomFHsf1XJoTKChs5t6mKuiwkV31dsYficMXYMjHLbhRZB6U7n1TxJjujP1FwbqHgtPBkK9skBipJmMCh",
+    "ticks": [
+      -12810,
+      1050
     ],
-    "nvdax": [
-      "0",
-      "55437615"
-    ],
-    "tickArrayStart": -13200,
-    "tickArray": "Da81y6oGSHBS3rCCci3YGz6jxjaPZvUv9TAGiP5ZWZ2A",
-    "bitmapExt": "HMMU9FTazn4vqKYgMGmLFWLozFBNxt1LWFfniWuLqjT1",
-    "observation": "CiYyiXxiupSiem5VHuxZceLb4rmjMkSqTPYh4g2JH82J",
-    "vault0": "FeuxKvcccYGfdyR9vHCGreyAnLpDUzwbdDX4Pce4ADhV",
-    "vault1": "97ZbMydugHdC7CBX29eFoifDWd3JJmCGyrkpgGuT9dDq"
+    "fundSolTx": "4o7BnVFn8HczP6v8UGUeLcMrF8vX48CJZk6qtPpCKEW8vqhPrpZm3537WWwF5FaQffBVMMRvV2HNkbxxNVDFHPek",
+    "fundUsdcTx": "55tMmfYWKMvrghbBBFNSTyVMH6DevbbKD9AHoKkc7uie6r1uMGM6FM9dUbYgW3obC9wqCrQz3gqDmJ8WTU4nWFYL",
+    "treasury": "DtPStxpjk3PCyGSK7hGeiUArwQ89ECHsScC2cDQnT1Cr",
+    "treasuryFunded": true,
+    "swap": {
+      "tx": "U2ZaaZpZwi7xLg85eJbuiNwYP1gx6BKSh5JSnFuG4B6cVZsNoTvcih7DYyJT9AP6GzbYZAw171ox59yzmnmPPvV",
+      "status": "finalized",
+      "err": null,
+      "messageBytes": 682,
+      "txBytes": 747,
+      "accountKeys": 18,
+      "computeUnits": 88552,
+      "amountIn": "100000000",
+      "minOut": "54972221",
+      "usdc": [
+        "1000000000",
+        "900000000"
+      ],
+      "nvdax": [
+        "0",
+        "55437615"
+      ],
+      "tickArrayStart": -13200,
+      "tickArray": "Da81y6oGSHBS3rCCci3YGz6jxjaPZvUv9TAGiP5ZWZ2A",
+      "bitmapExt": "HMMU9FTazn4vqKYgMGmLFWLozFBNxt1LWFfniWuLqjT1",
+      "observation": "CiYyiXxiupSiem5VHuxZceLb4rmjMkSqTPYh4g2JH82J",
+      "vault0": "FeuxKvcccYGfdyR9vHCGreyAnLpDUzwbdDX4Pce4ADhV",
+      "vault1": "97ZbMydugHdC7CBX29eFoifDWd3JJmCGyrkpgGuT9dDq"
+    },
+    "mpcFunded:GXhnfvC6yYEXgYEtSwEZNfKF2tcCd7vFn5onqEyK2UH5": true,
+    "mpcSwap": {
+      "tx": "5d39mkWiDXK6Zed4xk3BUagkxwvtaBwzGPx8S8BUvJDjC4HyaK72xYMeMcCgxba5fnr5nkUUgrXa2uuFCSwYxZoJ",
+      "status": "finalized",
+      "err": null,
+      "messageBytes": 682,
+      "txBytes": 747,
+      "accountKeys": 18,
+      "computeUnits": 85790,
+      "amountIn": "100000000",
+      "minOut": "54793846",
+      "usdc": [
+        "1000000000",
+        "900000000"
+      ],
+      "nvdax": [
+        "0",
+        "55257875"
+      ],
+      "tickArrayStart": -13200,
+      "tickArray": "Da81y6oGSHBS3rCCci3YGz6jxjaPZvUv9TAGiP5ZWZ2A",
+      "bitmapExt": "HMMU9FTazn4vqKYgMGmLFWLozFBNxt1LWFfniWuLqjT1",
+      "observation": "CiYyiXxiupSiem5VHuxZceLb4rmjMkSqTPYh4g2JH82J",
+      "vault0": "FeuxKvcccYGfdyR9vHCGreyAnLpDUzwbdDX4Pce4ADhV",
+      "vault1": "97ZbMydugHdC7CBX29eFoifDWd3JJmCGyrkpgGuT9dDq"
+    }
   },
-  "mpcFunded:GXhnfvC6yYEXgYEtSwEZNfKF2tcCd7vFn5onqEyK2UH5": true,
-  "mpcSwap": {
-    "tx": "5d39mkWiDXK6Zed4xk3BUagkxwvtaBwzGPx8S8BUvJDjC4HyaK72xYMeMcCgxba5fnr5nkUUgrXa2uuFCSwYxZoJ",
-    "status": "finalized",
-    "err": null,
-    "messageBytes": 682,
-    "txBytes": 747,
-    "accountKeys": 18,
-    "computeUnits": 85790,
-    "amountIn": "100000000",
-    "minOut": "54793846",
-    "usdc": [
-      "1000000000",
-      "900000000"
-    ],
-    "nvdax": [
-      "0",
-      "55257875"
-    ],
-    "tickArrayStart": -13200,
-    "tickArray": "Da81y6oGSHBS3rCCci3YGz6jxjaPZvUv9TAGiP5ZWZ2A",
-    "bitmapExt": "HMMU9FTazn4vqKYgMGmLFWLozFBNxt1LWFfniWuLqjT1",
-    "observation": "CiYyiXxiupSiem5VHuxZceLb4rmjMkSqTPYh4g2JH82J",
-    "vault0": "FeuxKvcccYGfdyR9vHCGreyAnLpDUzwbdDX4Pce4ADhV",
-    "vault1": "97ZbMydugHdC7CBX29eFoifDWd3JJmCGyrkpgGuT9dDq"
-  }
+  "stocks": {
+    "NVDA": {
+      "ref_price_usd": "176.58875336",
+      "createMintTx": "36oNGeUhCGnrgofJV5wGLKas1NsAY1MLLoUSHJBKiaCJ4hicjD6GbkT5YjYFKHTg5eNkMY9S9TUhna9gvn3paepU",
+      "mint": "88Bseqdd57C3sD5E8SaLPfwQ18e47RvzCXsRApiwSqbB",
+      "mintToTx": "4BSD6RXbTdzdZZd5haJEqApFjH5bn1u6tfFSFFBy5h5EQmFB2qZQeW36uebPgDuZXp1hPBpARhisvQxb9rWWHmAS",
+      "amount": "28314373961",
+      "stockIsMint0": false,
+      "ticks": [
+        -12620,
+        -5680
+      ],
+      "startTick": -5675,
+      "edgeUsd": "176.4684",
+      "createPoolTx": "5cnxP5HkPSqn5YvfVngrdaHaf3sEqo2KS6Ursn4ohnjTB5ycADpCWhZJysLPBM1rGbGzJfks7ab8LQx2D46wUGLe",
+      "pool": "FEstNywAgrVXixWbLkFaqqMjT7jbdjwmkoPdmudtRCqU",
+      "openPositionTx": "2DJpxC8WtYVGvVgWaF6dPrXZgDtEGCVThYY8B6HaHiFVjkCtu9mwahwevfcha69VQJ8fy643vp2umCb1tpxanbVq",
+      "positionNft": "44p3iPqw3yTZM684Der8MYDvJbDBzZJotohEXTJpwzJk",
+      "row": {
+        "ticker": "NVDA",
+        "name": "NVIDIA",
+        "token": "88Bseqdd57C3sD5E8SaLPfwQ18e47RvzCXsRApiwSqbB",
+        "symbol": "NVDAx",
+        "decimals": 8,
+        "synthetic": true,
+        "pool": "FEstNywAgrVXixWbLkFaqqMjT7jbdjwmkoPdmudtRCqU",
+        "pool_fee": 500,
+        "ref_price_usd": "176.59",
+        "liquidity_range_ticks": [
+          -12620,
+          -5680
+        ]
+      },
+      "done": true
+    },
+    "AAPL": {
+      "ref_price_usd": "350.43926444",
+      "createMintTx": "3a84bEEZe8XwejfakStipZfD8yPkTY5rqGju5L4mDsaKUu6H1YNUCsq7Kj2ePSH48r4eKoJ2fHsLz68VV3kxhZ7W",
+      "mint": "FtYHpjhYBFVrUE1inx7w48Wp1s7AzxnsFptvpgZcGkW5",
+      "mintToTx": "5H493bCXHV9yx4ez8a7vPKJNRBxaSjN7LYvdcFbB2LJwSXT2vMUHGzpoiEfbgx7hdqDPia4vvKxzjP8spFVPc93R",
+      "amount": "14267807598",
+      "stockIsMint0": false,
+      "ticks": [
+        -19480,
+        -12540
+      ],
+      "startTick": -12535,
+      "edgeUsd": "350.4113",
+      "createPoolTx": "3vAec4ETm3CgP2u49n2jzSByF47MJYHD46vdTceHndPVUJkjxo3oiM7km6GjGg5NMukRSmUdeovuqbKbShFHRBox",
+      "pool": "8HtcC4dszMQcnrPvow8iYF6aNDTigtFsZ8PP4BiRypsV",
+      "openPositionTx": "SEFFbyrggu1ifmVuyJixYu1M6n5x6VDiZz7vbtkLKwiKBHWqrrktq64PppAFv8UmZ1psU5tXkcN9mPVyxbsRhM3",
+      "positionNft": "5qjGGCci6zij5NtvL6pGTovnZgQxvikbkNJuMzrUMdS9",
+      "row": {
+        "ticker": "AAPL",
+        "name": "Apple",
+        "token": "FtYHpjhYBFVrUE1inx7w48Wp1s7AzxnsFptvpgZcGkW5",
+        "symbol": "AAPLx",
+        "decimals": 8,
+        "synthetic": true,
+        "pool": "8HtcC4dszMQcnrPvow8iYF6aNDTigtFsZ8PP4BiRypsV",
+        "pool_fee": 500,
+        "ref_price_usd": "350.44",
+        "liquidity_range_ticks": [
+          -19480,
+          -12540
+        ]
+      },
+      "done": true
+    },
+    "MSFT": {
+      "ref_price_usd": "544.15011543",
+      "createMintTx": "5uRW3y3LSkTWxDGrcrNUN9EkUtMFYHaY7vmPcrPEHuAEq2gNLw6vF9Cd1KHUhf2BiyE2Es9QDm7T9aio3SuAge2t",
+      "mint": "Bah7NyVk64eL7ADuHuJYwqKeG6vQTD5YRPQKLMtzG4SP",
+      "mintToTx": "FrbUp3JjCNMzk3AGnGoToLyb2GMc56GpgwiEEB8FSgQMJawBEbqumBBZkgHTLF2N1PPLPC7y7oFT14hDUD4ZsxM",
+      "amount": "9188640888",
+      "stockIsMint0": false,
+      "ticks": [
+        -23880,
+        -16940
+      ],
+      "startTick": -16935,
+      "edgeUsd": "544.0741",
+      "createPoolTx": "2HgRvRjRezUNdc6K2TeSBf3oxLxxrGy1kDvrbjSyjH3XqfoRYdYbA6PQ9JF1eX61YDVQSVgXKpkRV1fjKHawCJ4y",
+      "pool": "EhyAxindqL3HiK6VPXjpJtrxKHgh2kJkePML3r5cXsdv",
+      "openPositionTx": "4wdU4YHJMENczHpZQFCDsD6dKGsWaNoyWXgdQdPPGFEbT5gWGxRqodh8SnmSxA8w9G83bKzDAN3m7bFkZbihQ2tY",
+      "positionNft": "2pNWqZ1asWCkUsgoKkJCr8UqQExzcWvLjbRKXBc4XUTc",
+      "row": {
+        "ticker": "MSFT",
+        "name": "Microsoft",
+        "token": "Bah7NyVk64eL7ADuHuJYwqKeG6vQTD5YRPQKLMtzG4SP",
+        "symbol": "MSFTx",
+        "decimals": 8,
+        "synthetic": true,
+        "pool": "EhyAxindqL3HiK6VPXjpJtrxKHgh2kJkePML3r5cXsdv",
+        "pool_fee": 500,
+        "ref_price_usd": "544.15",
+        "liquidity_range_ticks": [
+          -23880,
+          -16940
+        ]
+      },
+      "done": true
+    },
+    "GOOGL": {
+      "ref_price_usd": "290.38272638",
+      "createMintTx": "5yaKHnFVAPyTzepUvhj5DL8v87mUzhFybDJwUr5tG3Ff2nMS2FmpQpqZA6wiYPtEhvm2ow39BpXwV8L3zgwLLXp2",
+      "mint": "XLYZw9YeVrUNsp4dAVVYayMdT5jWrmk6wFjUNWu8AnH",
+      "mintToTx": "2nbYisSShiXNZVN4Hr8Pt6L5hfTd6Hwve3gaWRBvmhLH4RhAQbX4ZeA5H9kcnKvmYNaXR1k748nNSriNgrnDBiAG",
+      "amount": "17218655056",
+      "stockIsMint0": true,
+      "ticks": [
+        10660,
+        17600
+      ],
+      "startTick": 10655,
+      "edgeUsd": "290.3587",
+      "createPoolTx": "3LAPNpL2oU8iALGfSTTHuGLemSnMFQjD8qMPXajDWRfgXkiQV1PcBRHauvwaP1pB3hVVXbnyL9y7fGuveKVJicU4",
+      "pool": "5dRjF2Zpc7crjrqp8NzrpntYnhGTVcLFN5QumB2iftu9",
+      "openPositionTx": "5jFLZAyoL5gCayLBub3Y2tPZbY79QUBErf1q6N7U6SH5Dvjk5WUtH4EAoMXFWpf93YRpnota1rQ3rpmYizeWTULh",
+      "positionNft": "H9sN7FxRkeVdFtHpXeKVi61hA3KPhECz8MUJyt6hWjFb",
+      "row": {
+        "ticker": "GOOGL",
+        "name": "Alphabet",
+        "token": "XLYZw9YeVrUNsp4dAVVYayMdT5jWrmk6wFjUNWu8AnH",
+        "symbol": "GOOGLx",
+        "decimals": 8,
+        "synthetic": true,
+        "pool": "5dRjF2Zpc7crjrqp8NzrpntYnhGTVcLFN5QumB2iftu9",
+        "pool_fee": 500,
+        "ref_price_usd": "290.38",
+        "liquidity_range_ticks": [
+          10660,
+          17600
+        ]
+      },
+      "done": true
+    },
+    "AMZN": {
+      "ref_price_usd": "268.14020000",
+      "createMintTx": "4BZv2Ykv5zXH2BLSeDhjPNAXD8h9bDSxS8MUdn5BBcMyVVkrta36NVTtRkhKkrVmdFuKHrwvBfU4Ug6FphoFdPPs",
+      "mint": "D4GVCzUpbJRkqQ4ymbpXxKTC5jCxWK1gRvDXwRAHERZk",
+      "mintToTx": "51Kf32NNkV3QDmHScuEYvDaFH5CVE1eYKCCW64FPu7cjcf3AJhWYfXk4rL2QHJksDCU9n7FLC42iUAbTGP9pQDbZ",
+      "amount": "18646961552",
+      "stockIsMint0": false,
+      "ticks": [
+        -16800,
+        -9860
+      ],
+      "startTick": -9855,
+      "edgeUsd": "268.0359",
+      "createPoolTx": "53fsspWY9zEMN1Bn5SF6iiKXuMGq3cPHMAqqaZdrFpNbhorJxKoi38QzZ6RH18Jj51Wu6TtJ9bvz3dmHBiQqtijo",
+      "pool": "6pRZ79bnqssPy3HhyN3TijrCjXoqzZ4auD77kcM5mVhK",
+      "openPositionTx": "uEaYiANhhGu4jLJgGsNxAovpXpYjqLu3Vbsh614uXLp8his5yMNj36p5pDbzRYanFBJNqcyy6LvpP3EBoqu42fQ",
+      "positionNft": "DUZsuZNuimz7CuRqDhtXfakFHtpLu3sUUAVAnCzFpQiC",
+      "row": {
+        "ticker": "AMZN",
+        "name": "Amazon",
+        "token": "D4GVCzUpbJRkqQ4ymbpXxKTC5jCxWK1gRvDXwRAHERZk",
+        "symbol": "AMZNx",
+        "decimals": 8,
+        "synthetic": true,
+        "pool": "6pRZ79bnqssPy3HhyN3TijrCjXoqzZ4auD77kcM5mVhK",
+        "pool_fee": 500,
+        "ref_price_usd": "268.14",
+        "liquidity_range_ticks": [
+          -16800,
+          -9860
+        ]
+      },
+      "done": true
+    },
+    "META": {
+      "ref_price_usd": "642.58366998",
+      "createMintTx": "4Wjgs5A8bVHSjpGzMT7eoS5HBMiomsD9ivcv4zzpi95uCa2o74tA24DLYLK29Lipcn6LqkC3wTRfBsTheJNSM5ud",
+      "mint": "66aQ8CyXmgYkvreikf76EzETQC4oVgv9bbdxbPgFrKj8",
+      "mintToTx": "3BwVSoBmrktYshJvX2VjyA1FbeQhy7k6rZzmYXqX583KQozFQZHU9wLxZUxaXZ4mHmQXXVN1ctGUpdX1UnpDKa42",
+      "amount": "7781087870",
+      "stockIsMint0": false,
+      "ticks": [
+        -25540,
+        -18600
+      ],
+      "startTick": -18595,
+      "edgeUsd": "642.3139",
+      "createPoolTx": "ir14ocQCHJERyW2ghCsp42riHBrETSfWnQfT1i79Tvj6i1A1k6EtAGhkurMuiRfEYwfRPHPrkWkm8K4MsTu1sgb",
+      "pool": "EgV8KMGkUbzpLZUru3ivLi9Cx7YgxxhtopxcDFQC6JLA",
+      "openPositionTx": "3xL7NpAwVZRGKjRPsoURsbUKgCXybL4t216Za5DvY3cP1HQB7ZCzk1KjegfBkuAGJZJc1yk68ezaM5mjm57YT5y3",
+      "positionNft": "EKX3v6GhbEFyvG6ZD3CKrG6qYEUvLToCfmpc6ecUP1QX",
+      "row": {
+        "ticker": "META",
+        "name": "Meta Platforms",
+        "token": "66aQ8CyXmgYkvreikf76EzETQC4oVgv9bbdxbPgFrKj8",
+        "symbol": "METAx",
+        "decimals": 8,
+        "synthetic": true,
+        "pool": "EgV8KMGkUbzpLZUru3ivLi9Cx7YgxxhtopxcDFQC6JLA",
+        "pool_fee": 500,
+        "ref_price_usd": "642.58",
+        "liquidity_range_ticks": [
+          -25540,
+          -18600
+        ]
+      },
+      "done": true
+    },
+    "TSLA": {
+      "ref_price_usd": "376.77400000",
+      "createMintTx": "64HxQCtRPdmdFLJKweQ7D9PgRGqoPyjrHbsxoM7vvQoNTdwamUym8WpECPQchf9v6kuA1usxADjuAcDwVGbB8U7k",
+      "mint": "229y3sTgdfFBEWGxmuvQ4yvpj8puVrpmeSFNp7ZRkmSq",
+      "mintToTx": "4fR8JDcD2Xm53tRe6yDGGbyJ3zhP8G5KjoMn9rUL98A2rz4QSuHXcHMTPkfZCko5GbhBUj6RhuHPsMuZ5jPHKbAi",
+      "amount": "13270554762",
+      "stockIsMint0": true,
+      "ticks": [
+        13260,
+        20200
+      ],
+      "startTick": 13255,
+      "edgeUsd": "376.5700",
+      "createPoolTx": "4UDtFmLj19WbKRJEuKR8jJF7izjAwwy8eE36AcNhEy1Qa6Wrb27P1vMNdmxm5eAh47SUjDe7mbwZH7cM9TBDgNsn",
+      "pool": "8cZfaL77SdxBZPc3SVPe7mrmNpqPJa61ixqqjsBqqm2o",
+      "openPositionTx": "4aggKy8Bs4waceW58ztznYArqksNfndQr4GJdNELc7KMbCmngW1r2gHpWKQFBo4d5GMrgEwrvLk7SRsSGPxCh1Mn",
+      "positionNft": "6eV4TeQdBBWL2Hvd3HRnidCfok8QgoaSUG6VBWUXJRbF",
+      "row": {
+        "ticker": "TSLA",
+        "name": "Tesla",
+        "token": "229y3sTgdfFBEWGxmuvQ4yvpj8puVrpmeSFNp7ZRkmSq",
+        "symbol": "TSLAx",
+        "decimals": 8,
+        "synthetic": true,
+        "pool": "8cZfaL77SdxBZPc3SVPe7mrmNpqPJa61ixqqjsBqqm2o",
+        "pool_fee": 500,
+        "ref_price_usd": "376.77",
+        "liquidity_range_ticks": [
+          13260,
+          20200
+        ]
+      },
+      "done": true
+    },
+    "SPCX": {
+      "ref_price_usd": "141.18000000",
+      "createMintTx": "5YcceRhMCAzCEARQiGSe1DGseXyoaEchRPFm4AKEv1nskkYBR8BAfuG3NmbjdZvWSWe2XKTktf18ssKCSji9q4Jd",
+      "mint": "8mdbWErQneCkM6jpE5epezYrk8W6uhjjG9nnPwxLQDKp",
+      "mintToTx": "2YeeKBQd32m43EUQmTLFa5h6fYG75AEgiybZ2iHxy2Lxn2JqMfQ7EqSWRRXV3zVmqLj5xQomV95VQtZ3C7WJUXQt",
+      "amount": "35415781272",
+      "stockIsMint0": false,
+      "ticks": [
+        -10380,
+        -3440
+      ],
+      "startTick": -3435,
+      "edgeUsd": "141.0554",
+      "createPoolTx": "udbCETxonT8j3BKN19AsbkRAvPC6VxYKFUSM7uRYNqYWJ1UkWD11mGoB9vbwNy4ihE4PSGuqScVBucX3osWj8kp",
+      "pool": "3uwogu11qDBBw7mSVFHdTFq1YXnMrgaah1bYjuAJCF5K",
+      "openPositionTx": "3UJjYuGEzdYTLZ3TdUoyogRmWYjFuku24EXfSMrkoyGrqGsHy15inrXHKARK9uWUeiPZJzuj7jN1dSabSfnQQ8XP",
+      "positionNft": "FJkiMeQeqSbVbzwDssVeKuAbP3REsKqD9ucVPNWeJCnM",
+      "row": {
+        "ticker": "SPCX",
+        "name": "SpaceX",
+        "token": "8mdbWErQneCkM6jpE5epezYrk8W6uhjjG9nnPwxLQDKp",
+        "symbol": "SPCXx",
+        "decimals": 8,
+        "synthetic": true,
+        "pool": "3uwogu11qDBBw7mSVFHdTFq1YXnMrgaah1bYjuAJCF5K",
+        "pool_fee": 500,
+        "ref_price_usd": "141.18",
+        "liquidity_range_ticks": [
+          -10380,
+          -3440
+        ]
+      },
+      "done": true
+    }
+  },
+  "buys": [
+    {
+      "ticker": "NVDA",
+      "signer": "mpc:creator.solidon.testnet",
+      "treasury": "GXhnfvC6yYEXgYEtSwEZNfKF2tcCd7vFn5onqEyK2UH5",
+      "tx": "EwX4QEFxQ1g3UiUQn5vbH5WnVWecK4xFMzJ3UTP5A4xK4k9tDVtvLyCEuKvVfF5hRBmoKVNoosXSJ9wr3JdU4a9",
+      "status": "finalized",
+      "err": null,
+      "messageBytes": 715,
+      "txBytes": 780,
+      "accountKeys": 19,
+      "computeUnits": 99672,
+      "amountIn": "1000000",
+      "minOut": "560337",
+      "usdc": [
+        "20000000",
+        "19000000"
+      ],
+      "stock": [
+        "0",
+        "566387"
+      ],
+      "effectivePriceUsd": "176.5577",
+      "refPriceUsd": "176.59",
+      "tickCurrent": -5676,
+      "tickArrayStarts": [
+        -6000,
+        -13200
+      ],
+      "tickArrays": [
+        "EWC4cMDc1LwSgE5YFNVAtU32ATh9bLrwrDtu6bgexrjt",
+        "ENQLLQvW9fjQhkGUkQghxofUmSkae7L3UxS46JcTkHA7"
+      ]
+    }
+  ]
 }

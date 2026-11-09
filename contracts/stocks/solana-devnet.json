@@ -1,0 +1,136 @@
+{
+  "_comment": "Testnet stock venues on Solana devnet, written by backend/solana-spike/1_setup.js. synthetic=true: Solidon Token-2022 mint (payer-only mint authority, metadata extension only), one-sided liquidity from the reference price to ~2x on Raydium CLMM. pool_fee in 1e-6 units (500 = 0.05%); ticks are Raydium ticks of the pool's mint1-per-mint0 raw price (mint0 < mint1 bytewise).",
+  "network": "solana-devnet",
+  "usdc": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+  "usdc_decimals": 6,
+  "usdc_token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+  "stock_token_program": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+  "raydium_clmm": {
+    "program": "devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH",
+    "amm_config": "GVSwm4smQBYcgAJU7qjFHLQBHTc4AdB3F2HbZp6KqKof",
+    "tick_spacing": 10
+  },
+  "deployer": "BhhpPESimqAvAzYsbuUHMmhRMNXPv25nGJ298biZGDGt",
+  "stocks": [
+    {
+      "ticker": "NVDA",
+      "name": "NVIDIA",
+      "token": "88Bseqdd57C3sD5E8SaLPfwQ18e47RvzCXsRApiwSqbB",
+      "symbol": "NVDAx",
+      "decimals": 8,
+      "synthetic": true,
+      "pool": "FEstNywAgrVXixWbLkFaqqMjT7jbdjwmkoPdmudtRCqU",
+      "pool_fee": 500,
+      "ref_price_usd": "176.59",
+      "liquidity_range_ticks": [
+        -12620,
+        -5680
+      ]
+    },
+    {
+      "ticker": "AAPL",
+      "name": "Apple",
+      "token": "FtYHpjhYBFVrUE1inx7w48Wp1s7AzxnsFptvpgZcGkW5",
+      "symbol": "AAPLx",
+      "decimals": 8,
+      "synthetic": true,
+      "pool": "8HtcC4dszMQcnrPvow8iYF6aNDTigtFsZ8PP4BiRypsV",
+      "pool_fee": 500,
+      "ref_price_usd": "350.44",
+      "liquidity_range_ticks": [
+        -19480,
+        -12540
+      ]
+    },
+    {
+      "ticker": "MSFT",
+      "name": "Microsoft",
+      "token": "Bah7NyVk64eL7ADuHuJYwqKeG6vQTD5YRPQKLMtzG4SP",
+      "symbol": "MSFTx",
+      "decimals": 8,
+      "synthetic": true,
+      "pool": "EhyAxindqL3HiK6VPXjpJtrxKHgh2kJkePML3r5cXsdv",
+      "pool_fee": 500,
+      "ref_price_usd": "544.15",
+      "liquidity_range_ticks": [
+        -23880,
+        -16940
+      ]
+    },
+    {
+      "ticker": "GOOGL",
+      "name": "Alphabet",
+      "token": "XLYZw9YeVrUNsp4dAVVYayMdT5jWrmk6wFjUNWu8AnH",
+      "symbol": "GOOGLx",
+      "decimals": 8,
+      "synthetic": true,
+      "pool": "5dRjF2Zpc7crjrqp8NzrpntYnhGTVcLFN5QumB2iftu9",
+      "pool_fee": 500,
+      "ref_price_usd": "290.38",
+      "liquidity_range_ticks": [
+        10660,
+        17600
+      ]
+    },
+    {
+      "ticker": "AMZN",
+      "name": "Amazon",
+      "token": "D4GVCzUpbJRkqQ4ymbpXxKTC5jCxWK1gRvDXwRAHERZk",
+      "symbol": "AMZNx",
+      "decimals": 8,
+      "synthetic": true,
+      "pool": "6pRZ79bnqssPy3HhyN3TijrCjXoqzZ4auD77kcM5mVhK",
+      "pool_fee": 500,
+      "ref_price_usd": "268.14",
+      "liquidity_range_ticks": [
+        -16800,
+        -9860
+      ]
+    },
+    {
+      "ticker": "META",
+      "name": "Meta Platforms",
+      "token": "66aQ8CyXmgYkvreikf76EzETQC4oVgv9bbdxbPgFrKj8",
+      "symbol": "METAx",
+      "decimals": 8,
+      "synthetic": true,
+      "pool": "EgV8KMGkUbzpLZUru3ivLi9Cx7YgxxhtopxcDFQC6JLA",
+      "pool_fee": 500,
+      "ref_price_usd": "642.58",
+      "liquidity_range_ticks": [
+        -25540,
+        -18600
+      ]
+    },
+    {
+      "ticker": "TSLA",
+      "name": "Tesla",
+      "token": "229y3sTgdfFBEWGxmuvQ4yvpj8puVrpmeSFNp7ZRkmSq",
+      "symbol": "TSLAx",
+      "decimals": 8,
+      "synthetic": true,
+      "pool": "8cZfaL77SdxBZPc3SVPe7mrmNpqPJa61ixqqjsBqqm2o",
+      "pool_fee": 500,
+      "ref_price_usd": "376.77",
+      "liquidity_range_ticks": [
+        13260,
+        20200
+      ]
+    },
+    {
+      "ticker": "SPCX",
+      "name": "SpaceX",
+      "token": "8mdbWErQneCkM6jpE5epezYrk8W6uhjjG9nnPwxLQDKp",
+      "symbol": "SPCXx",
+      "decimals": 8,
+      "synthetic": true,
+      "pool": "3uwogu11qDBBw7mSVFHdTFq1YXnMrgaah1bYjuAJCF5K",
+      "pool_fee": 500,
+      "ref_price_usd": "141.18",
+      "liquidity_range_ticks": [
+        -10380,
+        -3440
+      ]
+    }
+  ]
+}

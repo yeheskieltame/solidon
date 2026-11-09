@@ -13,6 +13,20 @@ export const RPC = key ? `https://solana-devnet.g.alchemy.com/v2/${key}` : "http
 export const conn = new Connection(RPC, { commitment: "confirmed", wsEndpoint: "wss://api.devnet.solana.com" });
 
 export const CLMM = new PublicKey("devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH");
+export const AMM_CONFIG = new PublicKey("GVSwm4smQBYcgAJU7qjFHLQBHTc4AdB3F2HbZp6KqKof"); // index 2, 0.05% fee, tickSpacing 10
+export const USDC = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"); // Circle devnet USDC, SPL Token, 6 dp
+export const VENUES = path.join(HERE, "../../contracts/stocks/solana-devnet.json");
+
+// eth_call on Robinhood Chain mainnet (reference prices from the Chainlink proxies).
+export async function hoodCall(to, data) {
+  if (!key) throw new Error("ALCHEMY_API_KEY missing (SOLIDON_ENV)");
+  const r = await fetch(`https://robinhood-mainnet.g.alchemy.com/v2/${key}`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to, data }, "latest"] }),
+  }).then((x) => x.json());
+  if (r.error) throw new Error(`eth_call ${to}: ${r.error.message}`);
+  return r.result;
+}
 export const STATE = path.join(HERE, "state.json");
 export const readState = () => (fs.existsSync(STATE) ? JSON.parse(fs.readFileSync(STATE, "utf8")) : {});
 export const writeState = (s) => fs.writeFileSync(STATE, JSON.stringify(s, null, 2) + "\n");
