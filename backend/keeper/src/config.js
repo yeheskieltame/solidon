@@ -134,7 +134,7 @@ export function loadConfig(flags) {
     secrets,
     factory,
     keeperAccount,
-    nearRpc: process.env.NEAR_RPC || "https://rpc.testnet.near.org",
+    nearRpc: process.env.NEAR_RPC || "https://test.rpc.fastnear.com", // rpc.testnet.near.org is deprecated and rate-limits (-429)
     nearExplorer: "https://testnet.nearblocks.io",
     nearKey: near.key,
     nearKeySource: near.source,

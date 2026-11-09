@@ -28,7 +28,7 @@ CREATOR=creator.$FACTORY
 # arrivals on Robinhood Chain, which the MPC cannot verify.
 KEEPER=keeper.$FACTORY
 NET=(network-config testnet)
-RPC=https://rpc.testnet.near.org
+RPC=https://test.rpc.fastnear.com # rpc.testnet.near.org is deprecated (-429)
 
 rpc_view_account() { # account -> code hash, or "missing"
   curl -s "$RPC" -H 'content-type: application/json' \
