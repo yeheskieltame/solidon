@@ -347,3 +347,7 @@ Devnet has no xStocks, so `1_setup.js` creates a synthetic NVDAx (Token-2022, 8 
 | `verify_foreign_transaction` `Solana` / `AccountState` of the treasury's NVDAx account, Finalized | `creator.solidon.testnet` | ✅ signed payload hash `381ad942…` | proof of holdings after the swap |
 
 Open: the exact `AccountState` value encoding the contract must hash (as S8 did for EVM logs), and a mainnet test against a real xStocks pool (scaled UI amount, compute-budget instruction).
+
+### S25 follow-up: 8 venues against Circle USDC
+
+All 8 synthetic xStocks now have Raydium CLMM devnet pools against Circle's devnet USDC (DEPLOYMENTS.md). The MPC treasury bought NVDAx with 1 USDC at $176.56 vs $176.59 reference. **One-sided pools need two tick arrays** (the near and far edge of the range): with one, `swap_v2` fails with `NotEnoughTickArrayAccount` (6027) even for a tiny buy, so the contract passes up to 3 (message 715 bytes, 19 accounts; signed 780 of 1232 bytes). Rent is about 0.18 SOL per venue.

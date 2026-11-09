@@ -64,6 +64,27 @@ Deployer [`0xcF1E…6D28`](https://testnet.bscscan.com/address/0xcF1ED498f96d272
 
 Mock tokens can only be minted by the deployer. They are **not** bStocks and have no value.
 
+## Solana devnet (10 Nov 2026)
+
+Stock venues from `backend/solana-spike/1_setup.js`, recorded in [`contracts/stocks/solana-devnet.json`](../contracts/stocks/solana-devnet.json). Circle devnet USDC [`4zMM…ncDU`](https://explorer.solana.com/address/4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU?cluster=devnet); Raydium CLMM devnet program `devi51…EAtH`, AMM config `GVSw…qKof` (0.05%). Synthetic Token-2022 mints (8 decimals, on-chain metadata) with one-sided liquidity worth $50,000 from the reference price (Chainlink, Robinhood Chain mainnet) to about 2×.
+
+| Ticker | Mint | Pool | Reference |
+| --- | --- | --- | --- |
+| NVDA | [`NVDAx` 88Bs…SqbB](https://explorer.solana.com/address/88Bseqdd57C3sD5E8SaLPfwQ18e47RvzCXsRApiwSqbB?cluster=devnet) | [FEst…RCqU](https://explorer.solana.com/address/FEstNywAgrVXixWbLkFaqqMjT7jbdjwmkoPdmudtRCqU?cluster=devnet) | $176.59 |
+| AAPL | [`AAPLx` FtYH…GkW5](https://explorer.solana.com/address/FtYHpjhYBFVrUE1inx7w48Wp1s7AzxnsFptvpgZcGkW5?cluster=devnet) | [8Htc…ypsV](https://explorer.solana.com/address/8HtcC4dszMQcnrPvow8iYF6aNDTigtFsZ8PP4BiRypsV?cluster=devnet) | $350.44 |
+| MSFT | [`MSFTx` Bah7…G4SP](https://explorer.solana.com/address/Bah7NyVk64eL7ADuHuJYwqKeG6vQTD5YRPQKLMtzG4SP?cluster=devnet) | [EhyA…Xsdv](https://explorer.solana.com/address/EhyAxindqL3HiK6VPXjpJtrxKHgh2kJkePML3r5cXsdv?cluster=devnet) | $544.15 |
+| GOOGL | [`GOOGLx` XLYZ…8AnH](https://explorer.solana.com/address/XLYZw9YeVrUNsp4dAVVYayMdT5jWrmk6wFjUNWu8AnH?cluster=devnet) | [5dRj…ftu9](https://explorer.solana.com/address/5dRjF2Zpc7crjrqp8NzrpntYnhGTVcLFN5QumB2iftu9?cluster=devnet) | $290.38 |
+| AMZN | [`AMZNx` D4GV…ERZk](https://explorer.solana.com/address/D4GVCzUpbJRkqQ4ymbpXxKTC5jCxWK1gRvDXwRAHERZk?cluster=devnet) | [6pRZ…mVhK](https://explorer.solana.com/address/6pRZ79bnqssPy3HhyN3TijrCjXoqzZ4auD77kcM5mVhK?cluster=devnet) | $268.14 |
+| META | [`METAx` 66aQ…rKj8](https://explorer.solana.com/address/66aQ8CyXmgYkvreikf76EzETQC4oVgv9bbdxbPgFrKj8?cluster=devnet) | [EgV8…6JLA](https://explorer.solana.com/address/EgV8KMGkUbzpLZUru3ivLi9Cx7YgxxhtopxcDFQC6JLA?cluster=devnet) | $642.58 |
+| TSLA | [`TSLAx` 229y…kmSq](https://explorer.solana.com/address/229y3sTgdfFBEWGxmuvQ4yvpj8puVrpmeSFNp7ZRkmSq?cluster=devnet) | [8cZf…qm2o](https://explorer.solana.com/address/8cZfaL77SdxBZPc3SVPe7mrmNpqPJa61ixqqjsBqqm2o?cluster=devnet) | $376.77 |
+| SPCX | [`SPCXx` 8mdb…QDKp](https://explorer.solana.com/address/8mdbWErQneCkM6jpE5epezYrk8W6uhjjG9nnPwxLQDKp?cluster=devnet) | [3uwo…CF5K](https://explorer.solana.com/address/3uwogu11qDBBw7mSVFHdTFq1YXnMrgaah1bYjuAJCF5K?cluster=devnet) | $141.18 |
+
+MPC treasury `GXhnfvC6yYEXgYEtSwEZNfKF2tcCd7vFn5onqEyK2UH5` (`solana-treasury` of `creator.solidon.testnet`, EdDSA), funded with 20 Circle USDC from the faucet:
+
+| Step | Transaction | Result |
+| --- | --- | --- |
+| Buy synthetic NVDAx with 1 USDC (hand-built Raydium `swap_v2`, 715-byte message, MPC-signed in 9 s) | [`EwX4QEFx…`](https://explorer.solana.com/tx/EwX4QEFxQ1g3UiUQn5vbH5WnVWecK4xFMzJ3UTP5A4xK4k9tDVtvLyCEuKvVfF5hRBmoKVNoosXSJ9wr3JdU4a9?cluster=devnet) | 0.00566387 NVDAx, effective $176.56 (ref $176.59) |
+
 ## NEAR testnet
 
 ### Current factory (9 Nov 2026, second deploy)
