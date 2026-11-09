@@ -1,0 +1,22 @@
+{
+  "name": "solidon-keeper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Solidon testnet keeper: mock oracle prices, treasury housekeeping, signed-tx broadcaster, testnet bridge",
+  "type": "module",
+  "main": "keeper.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node keeper.js",
+    "once": "node keeper.js --once",
+    "dry-run": "node keeper.js --once --dry-run",
+    "test": "node --test \"test/*.test.js\""
+  },
+  "license": "MIT",
+  "dependencies": {
+    "near-api-js": "^7.4.0",
+    "viem": "^2.57.17"
+  }
+}
