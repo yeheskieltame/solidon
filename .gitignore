@@ -29,3 +29,6 @@ __pycache__/
 contracts/evm/out/
 contracts/evm/cache/
 contracts/evm/broadcast/
+
+# Local agent tooling (worktrees)
+.claude/

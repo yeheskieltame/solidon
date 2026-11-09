@@ -1,5 +1,42 @@
 # Deployments
 
+## Base Sepolia (chain 84532, 10 Nov 2026)
+
+Stock venues from `contracts/evm/deploy-testnet-stocks.py`, recorded in [`contracts/stocks/base-sepolia.json`](../contracts/stocks/base-sepolia.json). USDC [`0x036C…CF7e`](https://sepolia.basescan.org/address/0x036CbD53842c5426634e7929541eC2318f3dCF7e) (6 decimals); Uniswap v3 SwapRouter02 [`0x94cC…2bc4`](https://sepolia.basescan.org/address/0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4). Synthetic tokens are Solidon `MockERC20`s (owner-only mint) with one-sided liquidity worth $50,000 starting at the reference price (Chainlink, Robinhood Chain mainnet).
+
+| Ticker | Token | Kind | Pool (fee 0.3%) | Price |
+| --- | --- | --- | --- | --- |
+| NVDA | [`NVDAc` 0x8f13…2654](https://sepolia.basescan.org/address/0x8f13563130684478E617C1797308A081Cb2c2654) | synthetic | [0x93A7…3129](https://sepolia.basescan.org/address/0x93A765030deB0352d22EbBe8335A2B79aF153129) | $177.56 |
+| AAPL | [`AAPLc` 0xEbF0…B9bD](https://sepolia.basescan.org/address/0xEbF01E9d3d578AD3af778C281E56aDA483ebB9bD) | synthetic | [0x0Fa2…ca4e](https://sepolia.basescan.org/address/0x0Fa222947220935106bA9C8Fed888B8Bfd74ca4e) | $350.44 |
+| MSFT | [`MSFTc` 0x4fE9…2265](https://sepolia.basescan.org/address/0x4fE929688f9A5598bE4559daC9B92a9A05cD2265) | synthetic | [0x1791…6e16](https://sepolia.basescan.org/address/0x1791E60Fd6CDB6294366b8C92e34946a5a2B6e16) | $544.15 |
+| GOOGL | [`GOOGLc` 0x12e7…7eeF](https://sepolia.basescan.org/address/0x12e763e9C1ceeb82f9AaCdf8a87b152bE05A7eeF) | synthetic | [0x0791…5A03](https://sepolia.basescan.org/address/0x07914c5774361f222bdCd991f0b872b7CF955A03) | $290.38 |
+| AMZN | [`AMZNc` 0x9b93…32a3](https://sepolia.basescan.org/address/0x9b931cb9EE0A70b88d89b3c21687d4a6ccee32a3) | synthetic | [0x3F35…Fc58](https://sepolia.basescan.org/address/0x3F35161b0E85E3FFdA761c49Ad469b607B67Fc58) | $268.14 |
+| META | [`METAc` 0x845A…477d](https://sepolia.basescan.org/address/0x845A964b112a33B6A0881b36e121fdDFFDe2477d) | synthetic | [0x6861…dDD5](https://sepolia.basescan.org/address/0x6861ADbEE1c0BBb1aaC9f7166fBe9828E26BdDD5) | $642.58 |
+| TSLA | [`TSLAc` 0x4311…5Bc5](https://sepolia.basescan.org/address/0x431190511D177106Fa49588f7e1Dc3B845c95Bc5) | synthetic | [0xfF7b…59a4](https://sepolia.basescan.org/address/0xfF7b55617F5D24686139526588977A02eE5A59a4) | $376.77 |
+| SPCX | [`SPCXc` 0x486F…5035](https://sepolia.basescan.org/address/0x486FECA986219f7d4eC52Cbf56d9ca14D4955035) | synthetic | [0xda6B…7f9f](https://sepolia.basescan.org/address/0xda6BFf78b5513b6818EDE36C1769363d99F07f9f) | $141.18 |
+
+## Robinhood Chain testnet (chain 46630, 10 Nov 2026)
+
+Stock venues from `contracts/evm/deploy-testnet-stocks.py`, recorded in [`contracts/stocks/hood-testnet.json`](../contracts/stocks/hood-testnet.json). USDC [`0xbf44…275F`](https://explorer.testnet.chain.robinhood.com/address/0xbf4479C07Dc6fdc6dAa764A0ccA06969e894275F) (18 decimals); Uniswap v3 SwapRouter02 [`0x3ce9…58fe`](https://explorer.testnet.chain.robinhood.com/address/0x3ce954107b1a675826b33bf23060dd655e3758fe). Synthetic tokens are Solidon `MockERC20`s (owner-only mint) with one-sided liquidity worth $50,000 starting at the reference price (Chainlink, Robinhood Chain mainnet).
+
+| Ticker | Token | Kind | Pool (fee 0.3%) | Price |
+| --- | --- | --- | --- | --- |
+| NVDA | [`NVDA` 0x8228…f7f4](https://explorer.testnet.chain.robinhood.com/address/0x82289af84B9a0faf598a4D2052E16c8D1619f7f4) | synthetic | [0x7AD2…6E07](https://explorer.testnet.chain.robinhood.com/address/0x7AD201DB77530864213f30Bd87Ddc2c520D86E07) | $177.56 |
+| AAPL | [`AAPL` 0x3ab3…4057](https://explorer.testnet.chain.robinhood.com/address/0x3ab373732E7bE9fD387e767F0e36040677a14057) | synthetic | [0x9f34…8eD0](https://explorer.testnet.chain.robinhood.com/address/0x9f34D4E076DD19a36C36ff28DeA2F8C671D28eD0) | $350.44 |
+| MSFT | [`MSFT` 0x8d26…7cdD](https://explorer.testnet.chain.robinhood.com/address/0x8d26425Ea6B44032938b290Bab5C032CaA747cdD) | synthetic | [0x2016…5fed](https://explorer.testnet.chain.robinhood.com/address/0x2016FfecC830012aaDB3B378b4D3b59829045fed) | $544.15 |
+| GOOGL | [`GOOGL` 0xaf95…B98C](https://explorer.testnet.chain.robinhood.com/address/0xaf95AE21417c4a1489C7C49990a9C03DD3C6B98C) | synthetic | [0x116B…bddd](https://explorer.testnet.chain.robinhood.com/address/0x116B775D35C0A53708b515156eF962171411bddd) | $290.38 |
+| AMZN | [`AMZN` 0x5884…9E02](https://explorer.testnet.chain.robinhood.com/address/0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02) | official testnet token | [0x0A83…286A](https://explorer.testnet.chain.robinhood.com/address/0x0A837200fB77687ba9b749E5174bd9a09E51286A) | pool $0.0679 (testnet price) |
+| META | [`META` 0x4d65…7D53](https://explorer.testnet.chain.robinhood.com/address/0x4d65dBeD417B42Ecef039aF0931948bC07507D53) | synthetic | [0x4CFb…7fAE](https://explorer.testnet.chain.robinhood.com/address/0x4CFbc8761a81367C2BEAf301dc2DaAB142bD7fAE) | $642.58 |
+| TSLA | [`TSLA` 0xC9f9…Bd4E](https://explorer.testnet.chain.robinhood.com/address/0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E) | official testnet token | [0xFfEf…2dA9](https://explorer.testnet.chain.robinhood.com/address/0xFfEf1147c3724a19AB7328F4e361C049ba452dA9) | pool $0.0673 (testnet price) |
+| SPCX | [`SPCX` 0xf0c2…08E0](https://explorer.testnet.chain.robinhood.com/address/0xf0c264689aC444FFe95b9F03e8eFF2bA36E508E0) | synthetic | [0x1d28…fB81](https://explorer.testnet.chain.robinhood.com/address/0x1d285a27509Fa8eeC6ab8eac73635F4b270afB81) | $141.18 |
+
+MPC treasury `0x680bcF5a2E3C07118991Adb3976d3dF077ed96EE` (`evm-treasury` of `creator.solidon.testnet`) on Robinhood testnet, all signed by `v1.signer-prod.testnet`:
+
+| Step | Transaction | Result |
+| --- | --- | --- |
+| Swap 0.002 ETH → USDC (official WETH/USDC pool) | [`0x8398…ae8f`](https://explorer.testnet.chain.robinhood.com/tx/0x83988e34f6226a19100223871de76f81d8e65cd8d01da5df6e4f754b63c4ae8f) | 0.148 USDC |
+| Buy synthetic NVDA with 0.1 USDC | [`0x06ea…1b76`](https://explorer.testnet.chain.robinhood.com/tx/0x06ea795dd8ec1881de369c3a8a1324603478c68f1d7581dc87ff9a75847b1b76) | 0.000562 NVDA, effective $177.82 (ref $177.56) |
+
 ## BSC testnet (chain 97, 9 Nov 2026)
 
 Mock bStocks and PancakeSwap v3 pools for testing the Chain Signatures flow, deployed with [`contracts/evm/deploy-bsc-testnet.sh`](../contracts/evm/deploy-bsc-testnet.sh) (dry-run first on an anvil fork of BSC testnet). Registry: [`contracts/stocks/bsc-testnet.json`](../contracts/stocks/bsc-testnet.json); re-check with `BSC_RPC=https://bsc-testnet-rpc.publicnode.com python3 contracts/stocks/verify.py contracts/stocks/bsc-testnet.json`.

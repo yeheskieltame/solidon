@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-/// @notice Test-only ERC-20 for BSC testnet: stands in for bStocks and USDT.
-/// Only the deployer can mint. Never deploy on mainnet.
+/// @notice Test-only ERC-20: a synthetic stand-in for a tokenized stock on a testnet
+/// where the real token does not exist. Only the deployer can mint. Never deploy on mainnet.
 contract MockERC20 {
     string public name;
     string public symbol;
-    uint8 public constant decimals = 18;
+    uint8 public immutable decimals;
     uint256 public totalSupply;
     address public immutable owner;
 
@@ -16,9 +16,10 @@ contract MockERC20 {
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
-    constructor(string memory name_, string memory symbol_) {
+    constructor(string memory name_, string memory symbol_, uint8 decimals_) {
         name = name_;
         symbol = symbol_;
+        decimals = decimals_;
         owner = msg.sender;
     }
 
