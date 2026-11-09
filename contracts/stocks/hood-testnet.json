@@ -1,5 +1,5 @@
 {
-  "_comment": "Testnet stock venues on hood-testnet, written by contracts/evm/deploy-testnet-stocks.py. synthetic=true: Solidon MockERC20 (owner-only mint), one-sided liquidity at the reference price. synthetic=false: the chain's official testnet token and its existing pool. The testnet's Uniswap v3 fork pays a 0.1% protocol fee in the input token to 0x6063\u2026e305 before the swap callback, so each synthetic pool also holds ~0.0106 USDC of float, sent by the deployer.",
+  "_comment": "Testnet stock venues on hood-testnet, written by contracts/evm/deploy-testnet-stocks.py. synthetic=true: Solidon MockERC20 (owner-only mint), one-sided liquidity at the reference price. synthetic=false: the chain's official testnet token and its existing pool. Each pool also holds a USDC float for the fork's up-front protocol fee.",
   "network": "hood-testnet",
   "chain_id": 46630,
   "usdc": "0xbf4479C07Dc6fdc6dAa764A0ccA06969e894275F",
@@ -74,14 +74,17 @@
     {
       "ticker": "AMZN",
       "name": "Amazon",
-      "token": "0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02",
+      "token": "0x9f555Fa3247304bEd0033EC31c8d6A88c36c6A37",
       "symbol": "AMZN",
       "decimals": 18,
-      "synthetic": false,
-      "pool": "0x0A837200fB77687ba9b749E5174bd9a09E51286A",
+      "synthetic": true,
+      "pool": "0x7CEE8466204C628edBE122597DdB993753893cbF",
       "pool_fee": 3000,
-      "pool_price_usd": "0.067935",
-      "ref_price_usd": "268.14"
+      "ref_price_usd": "268.14",
+      "liquidity_range_ticks": [
+        55860,
+        62820
+      ]
     },
     {
       "ticker": "META",
@@ -101,14 +104,17 @@
     {
       "ticker": "TSLA",
       "name": "Tesla",
-      "token": "0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E",
+      "token": "0x3D3E8Cf6F9F92b9a1574cdB4C5686261cF52b47B",
       "symbol": "TSLA",
       "decimals": 18,
-      "synthetic": false,
-      "pool": "0xFfEf1147c3724a19AB7328F4e361C049ba452dA9",
+      "synthetic": true,
+      "pool": "0x16916cACEb6be1107eF7AEDa3d8c5cE34C098F9D",
       "pool_fee": 3000,
-      "pool_price_usd": "0.067272",
-      "ref_price_usd": "376.77"
+      "ref_price_usd": "376.77",
+      "liquidity_range_ticks": [
+        59280,
+        66240
+      ]
     },
     {
       "ticker": "SPCX",

@@ -17,7 +17,7 @@ Stock venues from `contracts/evm/deploy-testnet-stocks.py`, recorded in [`contra
 
 ## Robinhood Chain testnet (chain 46630, 10 Nov 2026)
 
-Stock venues from `contracts/evm/deploy-testnet-stocks.py`, recorded in [`contracts/stocks/hood-testnet.json`](../contracts/stocks/hood-testnet.json). USDC [`0xbf44…275F`](https://explorer.testnet.chain.robinhood.com/address/0xbf4479C07Dc6fdc6dAa764A0ccA06969e894275F) (18 decimals); Uniswap v3 SwapRouter02 [`0x3ce9…58fe`](https://explorer.testnet.chain.robinhood.com/address/0x3ce954107b1a675826b33bf23060dd655e3758fe). Synthetic tokens are Solidon `MockERC20`s (owner-only mint) with one-sided liquidity worth $50,000 starting at the reference price (Chainlink, Robinhood Chain mainnet).
+Stock venues from `contracts/evm/deploy-testnet-stocks.py`, recorded in [`contracts/stocks/hood-testnet.json`](../contracts/stocks/hood-testnet.json). USDC [`0xbf44…275F`](https://explorer.testnet.chain.robinhood.com/address/0xbf4479C07Dc6fdc6dAa764A0ccA06969e894275F) (18 decimals); Uniswap v3 SwapRouter02 [`0x3ce9…58fe`](https://explorer.testnet.chain.robinhood.com/address/0x3ce954107b1a675826b33bf23060dd655e3758fe). Synthetic tokens are Solidon `MockERC20`s (owner-only mint) with one-sided liquidity worth $50,000 starting at the reference price (Chainlink, Robinhood Chain mainnet). The faucet's official TSLA/AMZN trade at arbitrary testnet prices (~$0.07), so the maintainer chose synthetic tokens for all 8 here (10 Nov 2026); each pool also holds 0.01 USDC float for the fork's up-front protocol fee.
 
 | Ticker | Token | Kind | Pool (fee 0.3%) | Price |
 | --- | --- | --- | --- | --- |
@@ -25,9 +25,9 @@ Stock venues from `contracts/evm/deploy-testnet-stocks.py`, recorded in [`contra
 | AAPL | [`AAPL` 0x3ab3…4057](https://explorer.testnet.chain.robinhood.com/address/0x3ab373732E7bE9fD387e767F0e36040677a14057) | synthetic | [0x9f34…8eD0](https://explorer.testnet.chain.robinhood.com/address/0x9f34D4E076DD19a36C36ff28DeA2F8C671D28eD0) | $350.44 |
 | MSFT | [`MSFT` 0x8d26…7cdD](https://explorer.testnet.chain.robinhood.com/address/0x8d26425Ea6B44032938b290Bab5C032CaA747cdD) | synthetic | [0x2016…5fed](https://explorer.testnet.chain.robinhood.com/address/0x2016FfecC830012aaDB3B378b4D3b59829045fed) | $544.15 |
 | GOOGL | [`GOOGL` 0xaf95…B98C](https://explorer.testnet.chain.robinhood.com/address/0xaf95AE21417c4a1489C7C49990a9C03DD3C6B98C) | synthetic | [0x116B…bddd](https://explorer.testnet.chain.robinhood.com/address/0x116B775D35C0A53708b515156eF962171411bddd) | $290.38 |
-| AMZN | [`AMZN` 0x5884…9E02](https://explorer.testnet.chain.robinhood.com/address/0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02) | official testnet token | [0x0A83…286A](https://explorer.testnet.chain.robinhood.com/address/0x0A837200fB77687ba9b749E5174bd9a09E51286A) | pool $0.0679 (testnet price) |
+| AMZN | [`AMZN` 0x9f55…6A37](https://explorer.testnet.chain.robinhood.com/address/0x9f555Fa3247304bEd0033EC31c8d6A88c36c6A37) | synthetic | [0x7CEE…3cbF](https://explorer.testnet.chain.robinhood.com/address/0x7CEE8466204C628edBE122597DdB993753893cbF) | $268.14 |
 | META | [`META` 0x4d65…7D53](https://explorer.testnet.chain.robinhood.com/address/0x4d65dBeD417B42Ecef039aF0931948bC07507D53) | synthetic | [0x4CFb…7fAE](https://explorer.testnet.chain.robinhood.com/address/0x4CFbc8761a81367C2BEAf301dc2DaAB142bD7fAE) | $642.58 |
-| TSLA | [`TSLA` 0xC9f9…Bd4E](https://explorer.testnet.chain.robinhood.com/address/0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E) | official testnet token | [0xFfEf…2dA9](https://explorer.testnet.chain.robinhood.com/address/0xFfEf1147c3724a19AB7328F4e361C049ba452dA9) | pool $0.0673 (testnet price) |
+| TSLA | [`TSLA` 0x3D3E…b47B](https://explorer.testnet.chain.robinhood.com/address/0x3D3E8Cf6F9F92b9a1574cdB4C5686261cF52b47B) | synthetic | [0x1691…8F9D](https://explorer.testnet.chain.robinhood.com/address/0x16916cACEb6be1107eF7AEDa3d8c5cE34C098F9D) | $376.77 |
 | SPCX | [`SPCX` 0xf0c2…08E0](https://explorer.testnet.chain.robinhood.com/address/0xf0c264689aC444FFe95b9F03e8eFF2bA36E508E0) | synthetic | [0x1d28…fB81](https://explorer.testnet.chain.robinhood.com/address/0x1d285a27509Fa8eeC6ab8eac73635F4b270afB81) | $141.18 |
 
 MPC treasury `0x680bcF5a2E3C07118991Adb3976d3dF077ed96EE` (`evm-treasury` of `creator.solidon.testnet`) on Robinhood testnet, all signed by `v1.signer-prod.testnet`:
@@ -36,6 +36,14 @@ MPC treasury `0x680bcF5a2E3C07118991Adb3976d3dF077ed96EE` (`evm-treasury` of `cr
 | --- | --- | --- |
 | Swap 0.002 ETH → USDC (official WETH/USDC pool) | [`0x8398…ae8f`](https://explorer.testnet.chain.robinhood.com/tx/0x83988e34f6226a19100223871de76f81d8e65cd8d01da5df6e4f754b63c4ae8f) | 0.148 USDC |
 | Buy synthetic NVDA with 0.1 USDC | [`0x06ea…1b76`](https://explorer.testnet.chain.robinhood.com/tx/0x06ea795dd8ec1881de369c3a8a1324603478c68f1d7581dc87ff9a75847b1b76) | 0.000562 NVDA, effective $177.82 (ref $177.56) |
+| Buy synthetic TSLA with 0.02 USDC | [`0x7135…b86a`](https://explorer.testnet.chain.robinhood.com/tx/0x71359f6ae5fa4329637e7cc3fe5a516f06266b2232b0d42583d79afd188cb86a) | 0.00005313 TSLA, effective $376.42 (ref $376.77) |
+
+Same treasury on Base Sepolia, with 20 Circle USDC from the faucet:
+
+| Step | Transaction | Result |
+| --- | --- | --- |
+| Approve SwapRouter02 for 2 USDC | [`0xa594…5f93`](https://sepolia.basescan.org/tx/0xa594c733e4a575436017feea32171f8a587bcb87cf539f47fc0b1b0f57815f93) | status 1 |
+| Buy synthetic NVDAc with 1 USDC | [`0xfd4b…1a18`](https://sepolia.basescan.org/tx/0xfd4b8d4ff855dad4d6c64d27190327eb29eebf1a0a9931ca4c2827d4c3d21a18) | 0.00563841 NVDAc, effective $177.35 (ref $177.56) |
 
 ## BSC testnet (chain 97, 9 Nov 2026)
 
