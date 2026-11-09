@@ -16,4 +16,6 @@ node backend/relayer/relay.mjs <meme-account> [--network testnet|mainnet]
 
 Node 18+, no dependencies. Reads the meme's treasury address and signed nonce, then sends every signed transaction the BSC chain has not mined yet (`get_signed_tx(nonce)` → `eth_sendRawTransaction`). Safe to run repeatedly or by several people at once. `NEAR_RPC` / `BSC_RPC` override the RPC URLs.
 
+API keys for the backend and spikes go in `backend/.env` (gitignored); see `backend/.env.example`.
+
 Keeper: not started. See the build plan in [docs/SPEC.md](../docs/SPEC.md#daily-build-plan).
