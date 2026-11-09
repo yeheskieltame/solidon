@@ -13,7 +13,7 @@ Built for NEAR HACKATHON 2026 · Tracks: `defi`, `memecoins` · Maintainer: [@ye
 | Path | Contents |
 | --- | --- |
 | [`contracts/`](contracts) | Rust smart contracts on NEAR: `meme` (token, pool, mNAV engine), `factory`, `mock-ft` |
-| [`backend/`](backend) | Node.js relayer and keeper |
+| [`backend/`](backend) | Node.js keeper (broadcaster, testnet bridge and oracle) and spike scripts |
 | [`frontend/`](frontend) | Next.js app and proof dashboard |
 | [`simulation/`](simulation) | 60-day mNAV simulation |
 | [`docs/`](docs) | Spec, references, hackathon rules, [deployments](docs/DEPLOYMENTS.md), PR evidence |
