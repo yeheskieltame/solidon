@@ -191,6 +191,7 @@ The MVP knowingly accepts one trust assumption: the NEAR contract cannot read BS
 | Fake token with a bStock symbol | The factory's stock list is immutable and verified by `contracts/stocks/verify.py`, which binds each token to its official PancakeSwap v3 USDT pool |
 | Relayer withholds transactions | Anyone can broadcast a signed transaction. The official relayer is a convenience, not a trust point |
 | Front-running the swap on BSC | `minAmountOut` is computed from the Pyth price with at most 1% slippage. Each swap is capped (`max_swap_usdt`) so fee + impact fit inside that 1%; a fork simulation showed a 1,000 USDT swap into a 100k-USDT pool costs 1.25% and would revert |
+| A callback panics on an unexpected MPC or Pyth response and locks the contract (no owner can reset it) | Callbacks that hold state (signing, redemption) parse raw results with a size bound and never panic: a bad response refunds or frees the slot. `clear_stuck_signature` frees a signing slot after 300 blocks as a last resort |
 | The MPC network returns a wrong or malicious signature | The contract runs `ecrecover` on every signature and stores the transaction only if it recovers to its own treasury address |
 | Nobody pays BSC gas for the treasury | Liveness only: the treasury address needs a little BNB for gas. Anyone can top it up; on mainnet Intents can deliver BNB with the cash |
 | Premium bubble then crash | The floor only defends NAV: buyback below 1.0×, redemption below 0.9×. Issuance is accretive, so a bubble leaves holders with more stock per token, not less |

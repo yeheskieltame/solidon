@@ -333,15 +333,27 @@ impl Meme {
             )
     }
 
+    /// The tokens are already burned, so this must never panic on the oracle's
+    /// response: it reads the raw result and refunds on anything unexpected.
     #[private]
-    pub fn on_redeem_price(
+    pub fn on_redeem_price(&mut self, account: AccountId, amount: U128, min_usdc: U128) -> U128 {
+        let price = env::promise_result_checked(0, 1024)
+            .ok()
+            .and_then(|bytes| near_sdk::serde_json::from_slice::<Option<PythPrice>>(&bytes).ok())
+            .flatten();
+        self.finish_redeem(account, amount, min_usdc, price)
+    }
+}
+
+impl Meme {
+    pub(crate) fn finish_redeem(
         &mut self,
         account: AccountId,
         amount: U128,
         min_usdc: U128,
-        #[callback_result] price: Result<Option<PythPrice>, PromiseError>,
+        price: Option<PythPrice>,
     ) -> U128 {
-        match self.settle_redeem(amount.0, min_usdc.0, price.ok().flatten()) {
+        match self.settle_redeem(amount.0, min_usdc.0, price) {
             Some(usdc) => {
                 FtBurn {
                     owner_id: &account,
@@ -366,7 +378,10 @@ impl Meme {
             }
         }
     }
+}
 
+#[near]
+impl Meme {
     pub fn get_treasury(&self) -> TreasuryView {
         TreasuryView {
             stock_units: U128(self.engine.stock_units),
@@ -558,7 +573,7 @@ mod tests {
         assert_eq!(m.ft_balance_of(accounts(2)).0, held - amount);
         at(HOUR + 60, "nvda.solidon.near", 0);
         assert_eq!(
-            m.on_redeem_price(accounts(2), U128(amount), U128(u128::MAX), Ok(price(HOUR)))
+            m.finish_redeem(accounts(2), U128(amount), U128(u128::MAX), price(HOUR))
                 .0,
             0
         );
@@ -570,8 +585,7 @@ mod tests {
         m.redeem(U128(amount), U128(0));
         at(HOUR + 60, "nvda.solidon.near", 0);
         assert_eq!(
-            m.on_redeem_price(accounts(2), U128(amount), U128(0), Ok(None))
-                .0,
+            m.finish_redeem(accounts(2), U128(amount), U128(0), None).0,
             0
         );
         assert_eq!(m.ft_balance_of(accounts(2)).0, held);
@@ -581,7 +595,7 @@ mod tests {
         m.redeem(U128(amount), U128(0));
         at(HOUR + 60, "nvda.solidon.near", 0);
         let paid = m
-            .on_redeem_price(accounts(2), U128(amount), U128(0), Ok(price(HOUR)))
+            .finish_redeem(accounts(2), U128(amount), U128(0), price(HOUR))
             .0;
         assert_eq!(paid, mul_div(amount, nav0, PRICE_SCALE));
         assert_eq!(m.treasury_usdc, cash0 - paid);
@@ -591,6 +605,36 @@ mod tests {
             nav1 >= nav0 && nav1 - nav0 <= nav0 / 1_000_000,
             "{nav0} -> {nav1}"
         );
+    }
+
+    #[test]
+    fn a_malformed_oracle_response_refunds_instead_of_panicking() {
+        let mut m = market();
+        m.engine.stock_units = 10u128.pow(18);
+        m.treasury_usdc = 100 * USDC;
+        m.evaluate(price(HOUR), HOUR, &accounts(3));
+        let held = m.ft_balance_of(accounts(2)).0;
+        at(HOUR + 60, accounts(2).as_str(), 1);
+        m.redeem(U128(held / 10), U128(0));
+        testing_env!(
+            VMContextBuilder::new()
+                .current_account_id("nvda.solidon.near".parse().unwrap())
+                .predecessor_account_id("nvda.solidon.near".parse().unwrap())
+                .block_timestamp((HOUR + 60) * 1_000_000_000)
+                .build(),
+            near_sdk::test_vm_config(),
+            near_sdk::RuntimeFeesConfig::test(),
+            Default::default(),
+            vec![near_sdk::PromiseResult::Successful(
+                b"{\"price\": 42".to_vec()
+            )],
+        );
+        assert_eq!(
+            m.on_redeem_price(accounts(2), U128(held / 10), U128(0)).0,
+            0
+        );
+        assert_eq!(m.ft_balance_of(accounts(2)).0, held, "tokens returned");
+        assert_eq!(m.engine.pending_redeem, 0);
     }
 
     #[test]
@@ -613,7 +657,7 @@ mod tests {
         m.redeem(U128(held), U128(0));
         at(HOUR + 60, "nvda.solidon.near", 0);
         assert_eq!(
-            m.on_redeem_price(accounts(2), U128(held), U128(0), Ok(price(HOUR)))
+            m.finish_redeem(accounts(2), U128(held), U128(0), price(HOUR))
                 .0,
             0
         );

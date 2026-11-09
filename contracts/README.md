@@ -39,6 +39,7 @@ cargo test          # unit tests + sandbox integration tests
 | `init_treasury()` | anyone, once | Reads the MPC-derived key (`bsc-treasury` path) and stores the BSC treasury address |
 | `approve_router()`, 300 TGas | anyone, once | MPC-signs `approve(router, max)` on USDT for the treasury |
 | `buy_stock()`, 300 TGas | anyone | Fresh Pyth price, then MPC-signs a PancakeSwap v3 swap of up to `max_swap_usdt` into the stock (`minOut` = oracle − 1%) |
+| `clear_stuck_signature()` | anyone, 300 blocks after a signature request | Frees a signing slot whose callback never completed; the nonce is not consumed |
 | `get_bsc_treasury`, `get_signed_tx(nonce)` | view | Treasury address, nonce, ledger; signed raw transactions for any relayer |
 | `get_params`, `get_info`, `get_pool`, `get_treasury`, `quote_buy`, `quote_sell`, `claimable_of` | view | Locked parameters, stock config, reserves and TWAP, NAV/mNAV state |
 
