@@ -1,5 +1,5 @@
 {
-  "_comment": "Testnet stock venues on Solana devnet, written by backend/solana-spike/1_setup.js. synthetic=true: Solidon Token-2022 mint (payer-only mint authority, metadata extension only), one-sided liquidity from the reference price to ~2x on Raydium CLMM. pool_fee in 1e-6 units (500 = 0.05%); ticks are Raydium ticks of the pool's mint1-per-mint0 raw price (mint0 < mint1 bytewise).",
+  "_comment": "Testnet stock venues on Solana devnet, written by backend/solana-spike/1_setup.js. synthetic=true: Solidon Token-2022 mint (payer-only mint authority, metadata extension only), one-sided liquidity from the reference price to ~2x on Raydium CLMM. pool_fee in 1e-6 units (500 = 0.05%); ticks are Raydium ticks of the pool's mint1-per-mint0 raw price (mint0 < mint1 bytewise). usdc_vault, stock_vault, observation, bitmap_extension: derived and checked against devnet by contracts/stocks/solana-accounts.py --write (re-run it after 1_setup.js).",
   "network": "solana-devnet",
   "usdc": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
   "usdc_decimals": 6,
@@ -25,7 +25,11 @@
       "liquidity_range_ticks": [
         -12620,
         -5680
-      ]
+      ],
+      "usdc_vault": "7QxxoL5DRDo2Q1Z6nvXkFa7Z55cN7r8YRyj4ig8i5sPB",
+      "stock_vault": "2x5h8nw3sH9zEo7g8G3e3ub7n9GMXJWLvivrXtJ18BN6",
+      "observation": "AggvhJqcKyXuGnW2xx52MeY3veqwsm4JSCVJDg1bfiVF",
+      "bitmap_extension": "5nUE56LNNXaxeYwZWSfpWfD2qBLXmzy2F41nSrxBKhPu"
     },
     {
       "ticker": "AAPL",
@@ -40,7 +44,11 @@
       "liquidity_range_ticks": [
         -19480,
         -12540
-      ]
+      ],
+      "usdc_vault": "Bypc7jseuTEmVSsxRa4ZuGMUWWbBXcDkYWKm4L3Rwz7L",
+      "stock_vault": "FuCMSAeVfM9gcpuYta5ATU5rjAfWpUPnaLcoFWSdbxEd",
+      "observation": "8C6cC9m4QZe2Uo1meU5ViFNitgFsuUWKZbiyuRZAL6Dy",
+      "bitmap_extension": "BGPWzSz7XYbxxBARCjQKmmRNJDxGfX4BS1VP1NmT7WRk"
     },
     {
       "ticker": "MSFT",
@@ -55,7 +63,11 @@
       "liquidity_range_ticks": [
         -23880,
         -16940
-      ]
+      ],
+      "usdc_vault": "6UCEuS84YaqMvdq7QtSKWjb53dtUe21QJVpeQJ3Kw7Za",
+      "stock_vault": "cpWuDFAwbKVQSwrYH5TBVpLUp5JxWczvtDBnPt7tFXb",
+      "observation": "Fdce5WKRHSVGfyDV1wW8HH1zhJqj5Zzt48hJJKoGJmAY",
+      "bitmap_extension": "EuDxKmaKUxPW4NnPBtdEwTfU94dtS4mKT1VKzJaEQqrZ"
     },
     {
       "ticker": "GOOGL",
@@ -70,7 +82,11 @@
       "liquidity_range_ticks": [
         10660,
         17600
-      ]
+      ],
+      "usdc_vault": "CAh6n78PmKpRoftKYjRxPjxzwnHCq4DMqTqjxQkTV3kP",
+      "stock_vault": "8DsaXeQgXNQpMrBimuocwBPi3p77yY5DdxgaSd8FMHg1",
+      "observation": "FmtdYsahFkFya4Gt5WbsaFC687QaxouQBFfu5UY7Uvbc",
+      "bitmap_extension": "AVxbcjxh7Jk1w9T44a8sfiR6yvJJEqf5K7ZHfMXMm5PE"
     },
     {
       "ticker": "AMZN",
@@ -85,7 +101,11 @@
       "liquidity_range_ticks": [
         -16800,
         -9860
-      ]
+      ],
+      "usdc_vault": "JDnodmRHHrEug4MwCxTyk6a5qfTsm3Pbbrmt9RRTqNPz",
+      "stock_vault": "4TxbktbPMi5nRz55DgRBGeTLfgRRUtb2CzbzjQKYAc9P",
+      "observation": "FsXAdpK9Zi3G6ZTXqN7H2NupHnGrSr9T4tphq6hWpSuy",
+      "bitmap_extension": "5wgsmsGYVhhey1U3CseMCNnbncmsjtM9FBjfRCYqP7ia"
     },
     {
       "ticker": "META",
@@ -100,7 +120,11 @@
       "liquidity_range_ticks": [
         -25540,
         -18600
-      ]
+      ],
+      "usdc_vault": "2YGyExb75aLndXLxNT4ryAJoakn1rN3mNe3QVEaMMp7Z",
+      "stock_vault": "EAhyM21tVxSEXZwzzZ1BUby9Qx9VggASxegprYHAqLFD",
+      "observation": "Dyw3nKTYbAV47zupjKr3J42ieoCT5SdXZCzv7WZZiXTM",
+      "bitmap_extension": "6aeyWSXNQdd54uWXnqnUmPgNMrP4HTx1gqUJGRnz61QH"
     },
     {
       "ticker": "TSLA",
@@ -115,7 +139,11 @@
       "liquidity_range_ticks": [
         13260,
         20200
-      ]
+      ],
+      "usdc_vault": "859JVZ3CQ6wghLr685PvsKb6MUCQntmQYwDYVb1amxbH",
+      "stock_vault": "FKaSrjfqFuujWS5QhPbk9umAJwmhkZrUtTiSJU4Uu4JP",
+      "observation": "Cyn6Xauut9iHYAAWrxLseLpme8rc4VwZw1g3csssoMfL",
+      "bitmap_extension": "GJvFvA9NUvqm1zw9GfvQCQDu2TxUC6ZfD7BYtZ4xVvFV"
     },
     {
       "ticker": "SPCX",
@@ -130,7 +158,11 @@
       "liquidity_range_ticks": [
         -10380,
         -3440
-      ]
+      ],
+      "usdc_vault": "D537hK9ZemQ8X2LehNkGQJkq1Ynvyx8Pe81Ebdb3JdHx",
+      "stock_vault": "Fxfk2Z4AjPgs6BEEZ2t471fsMNNVDsTAxwWmKaB2oCZJ",
+      "observation": "BYQJDxX9LRhTteeZTCFvaGh6MFCAggMXMcbuHiTmmmTP",
+      "bitmap_extension": "85hkyo48BCxBS9KQhvzwqFVdxSBa4aPSLcFZuiJizAq8"
     }
   ]
 }

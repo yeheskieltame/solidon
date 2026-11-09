@@ -24,7 +24,7 @@ pub const MEMO_PROGRAM: &str = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
 /// `sha256("global:swap_v2")[..8]`.
 const SWAP_V2: [u8; 8] = [0x2b, 0x04, 0xed, 0x0b, 0x1a, 0xc9, 0x1e, 0x62];
 /// One-sided pools need two (S25 follow-up); a third leaves room for a long swap.
-const MAX_TICK_ARRAYS: usize = 3;
+pub const MAX_TICK_ARRAYS: usize = 3;
 
 // --- Encoding -----------------------------------------------------------------
 

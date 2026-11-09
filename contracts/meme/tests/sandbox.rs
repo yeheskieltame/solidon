@@ -11,8 +11,14 @@ pub fn nvda() -> serde_json::Value {
     json!({"ticker": "NVDA",
            "price_id": "b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593",
            "venues": [
-               {"chain": "base", "token": "0x8f13563130684478E617C1797308A081Cb2c2654", "decimals": 8},
-               {"chain": "robinhood", "token": "0x82289af84B9a0faf598a4D2052E16c8D1619f7f4", "decimals": 18}]})
+               {"chain": "base", "token": "0x8f13563130684478E617C1797308A081Cb2c2654", "decimals": 8, "solana": null},
+               {"chain": "robinhood", "token": "0x82289af84B9a0faf598a4D2052E16c8D1619f7f4", "decimals": 18, "solana": null},
+               {"chain": "solana", "token": "88Bseqdd57C3sD5E8SaLPfwQ18e47RvzCXsRApiwSqbB", "decimals": 8, "solana": {
+                   "pool": "FEstNywAgrVXixWbLkFaqqMjT7jbdjwmkoPdmudtRCqU",
+                   "usdc_vault": "7QxxoL5DRDo2Q1Z6nvXkFa7Z55cN7r8YRyj4ig8i5sPB",
+                   "stock_vault": "2x5h8nw3sH9zEo7g8G3e3ub7n9GMXJWLvivrXtJ18BN6",
+                   "observation": "AggvhJqcKyXuGnW2xx52MeY3veqwsm4JSCVJDg1bfiVF",
+                   "bitmap_extension": "5nUE56LNNXaxeYwZWSfpWfD2qBLXmzy2F41nSrxBKhPu"}}]})
 }
 
 pub fn chains() -> serde_json::Value {
@@ -25,7 +31,12 @@ pub fn chains() -> serde_json::Value {
         {"name": "robinhood", "chain_id": 46630, "usdc": "0xbf4479C07Dc6fdc6dAa764A0ccA06969e894275F",
          "usdc_decimals": 18, "swap_router": "0x3ce954107b1a675826b33bf23060dd655e3758fe",
          "pool_fee": 3000, "max_fee_per_gas": "100000000", "max_priority_fee_per_gas": "10000000",
-         "max_swap_usdc": "5000000000000000000", "proof": "Relayer"}]})
+         "max_swap_usdc": "5000000000000000000", "proof": "Relayer"}],
+        "solana": {"name": "solana", "usdc_mint": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+         "usdc_token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+         "stock_token_program": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+         "clmm_program": "devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH",
+         "amm_config": "GVSwm4smQBYcgAJU7qjFHLQBHTc4AdB3F2HbZp6KqKof", "max_swap_usdc": "5000000"}})
 }
 
 fn wasm(name: &str) -> Vec<u8> {

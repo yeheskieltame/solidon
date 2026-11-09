@@ -120,8 +120,8 @@ impl Meme {
     /// (on the chain or in transit to it) and stock on every chain. One price values the stock on every chain.
     pub(crate) fn assets(&self, p: &PythPrice) -> Option<u128> {
         let mut total = self.treasury_usdc;
-        for (c, s) in self.chains.evm.iter().zip(&self.treasury.chains) {
-            total += s.usdc / c.usdc_scale() + s.in_transit;
+        for (i, s) in self.treasury.chains.iter().enumerate() {
+            total += s.usdc / self.chains.usdc_scale(i) + s.in_transit;
         }
         for v in &self.stock.venues {
             let units = self.treasury.chains[self.chain_index(&v.chain)].stock;

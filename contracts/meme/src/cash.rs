@@ -9,13 +9,14 @@
 //! arrival can be credited once. How an arrival is proven depends on the chain:
 //! - `CashProof::Mpc` (Base): the USDC `Transfer` log to the treasury is verified by the
 //!   NEAR MPC network (`verify_foreign_transaction`, SPIKE S8/S18). Anyone can submit it.
-//! - `CashProof::Relayer` (Robinhood Chain, not readable by the MPC): the factory's
-//!   relayer account reports the arrival. A trust assumption, stated in docs/SPEC.md.
+//! - `CashProof::Relayer` (Robinhood Chain, not readable by the MPC) and Solana (see
+//!   solana_treasury.rs for why): the factory's relayer account reports the arrival. A
+//!   trust assumption, stated in docs/SPEC.md.
 
 use near_contract_standards::fungible_token::core::ext_ft_core;
 use near_sdk::json_types::U128;
 use near_sdk::serde_json::json;
-use near_sdk::{env, near, require, Gas, NearToken, Promise, PromiseError, PromiseOrValue};
+use near_sdk::{bs58, env, near, require, Gas, NearToken, Promise, PromiseError, PromiseOrValue};
 
 use crate::mnav::{PythPrice, USDC_DECIMALS};
 use crate::pool::{emit, mul_div};
@@ -215,20 +216,19 @@ impl Meme {
     /// Cash `fund_chain` may send to chain `i` at price `p`: NEAR cash above the 20% buffer
     /// (the buyback rule), capped at one swap's worth. Zero for an unusable price.
     pub(crate) fn sendable(&self, i: usize, p: &PythPrice) -> u128 {
-        let c = &self.chains.evm[i];
         let Some(assets) = self.assets(p) else {
             return 0;
         };
         let buffer = mul_div(assets, self.params.cash_buffer_bps.into(), BPS);
         self.treasury_usdc
             .saturating_sub(buffer)
-            .min(c.max_swap_usdc.0 / c.usdc_scale())
+            .min(self.chains.max_swap_usdc(i) / self.chains.usdc_scale(i))
     }
 
     /// Moves `amount` (6 decimals) of chain `i`'s in-transit cash into its USDC ledger,
     /// capped by what is in transit. Returns the amount moved.
     pub(crate) fn book_arrival(&mut self, i: usize, amount: u128) -> u128 {
-        let scale = self.chains.evm[i].usdc_scale();
+        let scale = self.chains.usdc_scale(i);
         let s = &mut self.treasury.chains[i];
         let credit = amount.min(s.in_transit);
         s.in_transit -= credit;
@@ -244,7 +244,7 @@ impl Meme {
     /// attach 100 TGas.
     pub fn fund_chain(&mut self, chain: String) -> Promise {
         let i = self.chain_index(&chain);
-        self.treasury_address();
+        self.treasury_address_on(i);
         self.read_price()
             .get_price_no_older_than(self.stock.price_id.clone(), self.params.oracle_max_age_secs)
             .then(
@@ -262,7 +262,7 @@ impl Meme {
         #[callback_result] price: Result<Option<PythPrice>, PromiseError>,
     ) -> PromiseOrValue<U128> {
         let i = chain as usize;
-        let name = self.chains.evm[i].name.clone();
+        let name = self.chains.name(i).to_string();
         let amount = price.ok().flatten().map_or(0, |p| self.sendable(i, &p));
         if amount == 0 {
             emit(
@@ -273,7 +273,7 @@ impl Meme {
         }
         self.treasury_usdc -= amount;
         self.treasury.chains[i].in_transit += amount;
-        let to = format!("0x{}", hex_encode(&self.treasury_address()));
+        let to = self.treasury_address_on(i);
         emit(
             "cash_sent",
             json!({"chain": name, "amount": U128(amount), "bridge": self.chains.bridge, "to": to}),
@@ -305,7 +305,7 @@ impl Meme {
         self.treasury_usdc += amount.0;
         emit(
             "cash_returned",
-            json!({"chain": self.chains.evm[chain as usize].name, "amount": amount}),
+            json!({"chain": self.chains.name(chain as usize), "amount": amount}),
         );
         U128(0)
     }
@@ -322,11 +322,16 @@ impl Meme {
         log: LogArgs,
     ) -> Promise {
         let i = self.chain_index(&chain);
-        let c = &self.chains.evm[i];
-        let CashProof::Mpc {
-            foreign_chain,
-            finality,
-        } = &c.proof
+        let Some(
+            c @ EvmChain {
+                proof:
+                    CashProof::Mpc {
+                        foreign_chain,
+                        finality,
+                    },
+                ..
+            },
+        ) = self.chains.evm.get(i)
         else {
             env::panic_str("This chain's cash is reported by the relayer")
         };
@@ -406,22 +411,35 @@ impl Meme {
         U128(credit)
     }
 
-    /// Credits cash that arrived on a relayer-reported chain, up to the cash in transit
-    /// there. Only `ChainsConfig::relayer`, once per `tx_hash`. `amount` is in raw units
-    /// of the chain's USDC.
+    /// Credits cash that arrived on a relayer-reported chain (Robinhood Chain, Solana), up
+    /// to the cash in transit there. Only `ChainsConfig::relayer`, once per `tx_hash` (on
+    /// Solana the transaction signature, base58). `amount` is in raw units of the chain's
+    /// USDC.
     pub fn report_cash(&mut self, chain: String, tx_hash: String, amount: U128) -> U128 {
         require!(
             env::predecessor_account_id() == self.chains.relayer,
             "Only the relayer can report cash"
         );
         let i = self.chain_index(&chain);
-        let c = &self.chains.evm[i];
         require!(
-            c.proof == CashProof::Relayer,
+            self.chains
+                .evm
+                .get(i)
+                .is_none_or(|c| c.proof == CashProof::Relayer),
             "This chain's cash is proven by the MPC: use credit_cash"
         );
-        let amount = amount.0 / c.usdc_scale();
-        let tx = hash32(&tx_hash);
+        let amount = amount.0 / self.chains.usdc_scale(i);
+        let tx = if self.chains.is_solana(i) {
+            // 64 bytes: hashed to fit the 32-byte replay key.
+            let mut sig = [0u8; 64];
+            require!(
+                matches!(bs58::decode(&tx_hash).onto(&mut sig), Ok(64)),
+                "tx_hash must be a Solana transaction signature, base58"
+            );
+            env::sha256_array(sig)
+        } else {
+            hash32(&tx_hash)
+        };
         require!(
             self.treasury.credited.insert((i as u32, tx, 0)),
             "Already credited"
@@ -430,7 +448,7 @@ impl Meme {
         require!(credit > 0, "Nothing in transit, or below one USDC unit");
         emit(
             "cash_credited",
-            json!({"chain": self.chains.evm[i].name, "tx_hash": tx_hash, "amount": U128(credit), "proof": "relayer"}),
+            json!({"chain": self.chains.name(i), "tx_hash": tx_hash, "amount": U128(credit), "proof": "relayer"}),
         );
         U128(credit)
     }

@@ -20,8 +20,9 @@ const GAS_ON_CREATE: Gas = Gas::from_tgas(10);
 const STATE_BYTES: u128 = 20_000;
 
 // The types below have the same shape as the meme's (`meme::Stock`, `meme::Venue`,
-// `meme::treasury::{ChainsConfig, EvmChain}`, `meme::cash::{CashProof, Finality}`); the
-// meme contract validates them in `new`.
+// `meme::treasury::{ChainsConfig, EvmChain}`, `meme::cash::{CashProof, Finality}`,
+// `meme::solana_treasury::{SolanaChain, SolanaVenue}`); the meme contract validates them
+// in `new`.
 
 #[near(serializers = [borsh, json])]
 #[derive(Clone)]
@@ -29,6 +30,30 @@ pub struct Venue {
     pub chain: String,
     pub token: String,
     pub decimals: u8,
+    /// Solana venues only: the stock's Raydium CLMM pool accounts.
+    pub solana: Option<SolanaVenue>,
+}
+
+#[near(serializers = [borsh, json])]
+#[derive(Clone)]
+pub struct SolanaVenue {
+    pub pool: String,
+    pub usdc_vault: String,
+    pub stock_vault: String,
+    pub observation: String,
+    pub bitmap_extension: String,
+}
+
+#[near(serializers = [borsh, json])]
+#[derive(Clone)]
+pub struct SolanaChain {
+    pub name: String,
+    pub usdc_mint: String,
+    pub usdc_token_program: String,
+    pub stock_token_program: String,
+    pub clmm_program: String,
+    pub amm_config: String,
+    pub max_swap_usdc: U128,
 }
 
 #[near(serializers = [borsh, json])]
@@ -82,6 +107,7 @@ pub struct ChainsConfig {
     /// Reports cash arrivals on chains the MPC cannot verify.
     pub relayer: AccountId,
     pub evm: Vec<EvmChain>,
+    pub solana: Option<SolanaChain>,
 }
 
 #[near(contract_state)]
