@@ -33,6 +33,9 @@ const GAS_LIMIT_SWAP: u128 = 300_000;
 const GAS_MPC_VIEW: Gas = Gas::from_tgas(10);
 const GAS_MPC_SIGN: Gas = Gas::from_tgas(50);
 const GAS_CALLBACK: Gas = Gas::from_tgas(30);
+/// Longer than the MPC contract's yield timeout (200 blocks): after this, a request
+/// whose callback never cleared the slot (e.g. it panicked) can be cleared by anyone.
+const STUCK_AFTER_BLOCKS: u64 = 300;
 
 /// BSC environment, fixed by the factory for every meme it launches.
 #[near(serializers = [borsh, json])]
@@ -90,6 +93,8 @@ pub enum TxKind {
 /// The one transaction waiting for its MPC signature.
 #[near(serializers = [borsh])]
 pub struct PendingTx {
+    /// Block height of the signature request, for `clear_stuck_signature`.
+    requested_at: u64,
     nonce: u64,
     to: [u8; 20],
     input: Vec<u8>,
@@ -164,11 +169,14 @@ pub trait Mpc {
 
 // --- Encoding -----------------------------------------------------------------
 
-fn hex_decode(s: &str) -> Vec<u8> {
-    require!(s.len().is_multiple_of(2), "odd hex length");
+/// `None` on any malformed input; never panics (it parses MPC responses in a callback).
+fn hex_decode(s: &str) -> Option<Vec<u8>> {
+    if !s.is_ascii() || !s.len().is_multiple_of(2) {
+        return None;
+    }
     (0..s.len())
         .step_by(2)
-        .map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap_or_else(|_| env::panic_str("bad hex")))
+        .map(|i| u8::from_str_radix(&s[i..i + 2], 16).ok())
         .collect()
 }
 
@@ -272,6 +280,7 @@ impl Meme {
         kind: TxKind,
     ) -> Promise {
         let pending = PendingTx {
+            requested_at: env::block_height(),
             nonce: self.treasury.nonce,
             to,
             input,
@@ -307,8 +316,8 @@ impl Meme {
             .take()
             .expect("no pending transaction");
         let sig = sig?;
-        let big_r = hex_decode(&sig.big_r.affine_point);
-        let s = hex_decode(&sig.s.scalar);
+        let big_r = hex_decode(&sig.big_r.affine_point)?;
+        let s = hex_decode(&sig.s.scalar)?;
         if big_r.len() != 33 || s.len() != 32 || sig.recovery_id > 1 {
             return None;
         }
@@ -477,16 +486,36 @@ impl Meme {
         ))
     }
 
+    /// Parses the MPC response without panicking: a panic here would roll back the
+    /// cleared slot and, with no owner, block signing until `clear_stuck_signature`.
     #[private]
-    pub fn on_signed(
-        &mut self,
-        #[callback_result] sig: Result<MpcSignature, PromiseError>,
-    ) -> Option<String> {
-        let raw = self.finish_signature(sig.ok());
+    pub fn on_signed(&mut self) -> Option<String> {
+        // A signature response is ~250 bytes; the bound keeps a huge result from
+        // exhausting the callback's gas.
+        let sig = env::promise_result_checked(0, 1024)
+            .ok()
+            .and_then(|bytes| near_sdk::serde_json::from_slice::<MpcSignature>(&bytes).ok());
+        let raw = self.finish_signature(sig);
         if raw.is_none() {
             emit("bsc_tx_rejected", json!({"nonce": self.treasury.nonce}));
         }
         raw.map(|r| format!("0x{}", hex_encode(&r)))
+    }
+
+    /// Frees a signature slot whose callback never completed. Anyone, after 300 blocks.
+    /// The nonce is not consumed, so the transaction can be requested again.
+    pub fn clear_stuck_signature(&mut self) {
+        let pending = self
+            .treasury
+            .pending
+            .as_ref()
+            .unwrap_or_else(|| env::panic_str("Nothing pending"));
+        require!(
+            env::block_height() >= pending.requested_at + STUCK_AFTER_BLOCKS,
+            "The signature request is not stuck yet"
+        );
+        emit("bsc_signature_cleared", json!({"nonce": pending.nonce}));
+        self.treasury.pending = None;
     }
 
     /// The signed raw transaction for `nonce`, ready to broadcast to BSC.
@@ -553,7 +582,7 @@ mod tests {
     }
 
     fn signing_key(hex: &str) -> SigningKey {
-        SigningKey::from_slice(&hex_decode(hex)).unwrap()
+        SigningKey::from_slice(&hex_decode(hex).unwrap()).unwrap()
     }
 
     /// What the MPC contract would return, produced with a local key.
@@ -697,6 +726,45 @@ mod tests {
         assert_eq!(out, 7_315_991_723_322_494_826);
         let bad = PythPrice { price: I64(0), ..p };
         assert_eq!(min_stock_out(1, &bad, 18), None);
+    }
+
+    #[test]
+    fn malformed_mpc_responses_are_rejected_without_panicking() {
+        let mut m = meme_with_treasury(KEY);
+        for (r, s) in [("zz", "00"), ("02abc", "00"), ("é", "00"), ("", "")] {
+            m.approve_router();
+            let sig = MpcSignature {
+                big_r: AffinePoint {
+                    affine_point: r.into(),
+                },
+                s: Scalar { scalar: s.into() },
+                recovery_id: 0,
+            };
+            assert!(m.finish_signature(Some(sig)).is_none());
+            assert!(m.treasury.pending.is_none());
+        }
+        assert_eq!(m.treasury.nonce, 0);
+    }
+
+    #[test]
+    fn a_stuck_slot_can_be_cleared_after_300_blocks() {
+        let mut m = meme_with_treasury(KEY);
+        m.approve_router(); // requested at block 0
+        testing_env!(VMContextBuilder::new()
+            .current_account_id("elondoge.solidon.testnet".parse().unwrap())
+            .block_height(300)
+            .build());
+        m.clear_stuck_signature();
+        assert!(m.treasury.pending.is_none());
+        assert_eq!(m.treasury.nonce, 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "not stuck yet")]
+    fn a_fresh_slot_cannot_be_cleared() {
+        let mut m = meme_with_treasury(KEY);
+        m.approve_router();
+        m.clear_stuck_signature();
     }
 
     #[test]
