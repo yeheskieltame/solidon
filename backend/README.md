@@ -5,6 +5,7 @@ Node.js services that support the contracts. Neither holds a key that controls f
 | Service | Purpose |
 | --- | --- |
 | `relayer` | Broadcasts transactions signed by `v1.signer` to BNB Smart Chain |
+| `spike` | Integration spike scripts behind [docs/SPIKE.md](../docs/SPIKE.md) |
 | `keeper` | Calls `rebalance()` on every meme when its cooldown ends |
 
 ## relayer
