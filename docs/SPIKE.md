@@ -326,7 +326,7 @@ What exists on each testnet (checked on-chain and in the explorers):
 | USDC | Circle `0x036C…CF7e` | Circle `4zMM…ncDU` | `0xbf44…275F` (18 decimals, owner mint; buy via WETH/USDC pool) |
 | Official stock tokens | none (only third-party mocks) | none (no xStocks) | TSLA, AMZN, PLTR, NFLX, AMD from the faucet; Robinhood's asset API (`api.robinhood.com/rhj/assets`) lists mainnet only |
 
-So synthetic tokens are needed for all 8 on Base Sepolia and Solana devnet, and for NVDA, AAPL, MSFT, GOOGL, META, SPCX on Robinhood testnet. The official TSLA/AMZN testnet pools trade at about $0.07 (arbitrary testnet prices), so on testnet a stock's price is per venue, not one global price.
+So synthetic tokens are needed for all 8 on Base Sepolia and Solana devnet, and for NVDA, AAPL, MSFT, GOOGL, META, SPCX on Robinhood testnet. The official TSLA/AMZN testnet pools trade at about $0.07 (arbitrary testnet prices); valuing them at the real price would make NAV meaningless, so the maintainer chose synthetic tokens for all 8 on every testnet (one global price per stock).
 
 Synthetic pools hold one-sided liquidity (stock only) from the reference price up to 2×, so buys fill near the reference without the deployer holding USDC. Quotes on an anvil fork of Base Sepolia: $100 buys fill −0.06% to +0.35% from the reference for all 8.
 

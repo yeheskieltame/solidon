@@ -13,7 +13,7 @@ with the pool initialised just below it. Buying the stock with USDC moves into t
 the deployer needs no USDC. (The treasury only ever buys.)
 
 Needs ../.env with EVM_DEPLOYER_ADDRESS and EVM_DEPLOYER_PRIVATE_KEY, and backend/.env with
-ALCHEMY_API_KEY (reference prices). Refuses to run twice.
+ALCHEMY_API_KEY (reference prices). Refuses to run twice, except ONLY=TSLA,AMZN to redo those rows.
 Run: python3 contracts/evm/deploy-testnet-stocks.py base-sepolia | hood-testnet
 """
 import json, math, os, subprocess, sys, time
@@ -42,9 +42,12 @@ CHAINS = {
         "factory": "0x911b4000d3422f482f4062a913885f7b035382df",
         "router": "0x3ce954107b1a675826b33bf23060dd655e3758fe",
         "npm": "0x54A0EF7da351cb8fD1998E7945cc51E5825fB233",
-        # Robinhood testnet faucet Stock Tokens (contract 0x8762…17be, verified source)
-        "official": {"TSLA": "0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E",
-                     "AMZN": "0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02"},
+        # The faucet's official TSLA/AMZN Stock Tokens trade at arbitrary testnet prices (~$0.07), so the
+        # maintainer chose synthetic tokens for all 8 here (one global price per stock).
+        "official": {},
+        # This Uniswap fork pays a 0.1% protocol fee in the input token before the swap callback, so each
+        # pool needs a little USDC float (raw units) from the deployer; get USDC via the WETH/USDC pool.
+        "usdc_float": 10 ** 16,
     },
 }
 # Official Chainlink proxies on Robinhood Chain mainnet (docs/SPIKE.md S19)
@@ -62,8 +65,9 @@ DEPTH_USD = 50_000  # stock value placed in each synthetic pool
 net = sys.argv[1]
 cfg = CHAINS[net]
 out = Path(os.environ.get("OUT", HERE.parent / f"stocks/{net}.json"))  # OUT/RPC: dry run on an anvil fork
-if out.exists():
-    sys.exit(f"{out} exists: this setup already ran")
+ONLY = [t for t in os.environ.get("ONLY", "").split(",") if t]
+if out.exists() and not ONLY:
+    sys.exit(f"{out} exists: this setup already ran (ONLY=<tickers> redoes some rows)")
 env = dict(l.split("=", 1) for l in (HERE.parent / ".env").read_text().splitlines() if "=" in l and not l.startswith("#"))
 ME, PK = env["EVM_DEPLOYER_ADDRESS"].strip(), env["EVM_DEPLOYER_PRIVATE_KEY"].strip()
 RPC = os.environ.get("RPC", cfg["rpc"])
@@ -124,8 +128,14 @@ def pool_price_usd(pool, stock, s_dec):  # USD per stock from slot0
 subprocess.run(["forge", "build"], cwd=HERE, capture_output=True, check=True)
 usdc, u_dec = cfg["usdc"]
 s_dec = cfg["stock_decimals"]
+if cfg.get("usdc_float"):
+    need = cfg["usdc_float"] * (len(ONLY) or len(STOCKS))
+    have = int(cast("call", usdc, "balanceOf(address)(uint256)", ME).split()[0])
+    assert have >= need, f"deployer needs {need} raw USDC for pool float, has {have}: swap some ETH to USDC first"
 rows = []
 for ticker, name, proxy in STOCKS:
+    if ONLY and ticker not in ONLY:
+        continue
     price = chainlink(proxy)
     if ticker in cfg["official"]:
         token = cfg["official"][ticker]
@@ -156,6 +166,8 @@ for ticker, name, proxy in STOCKS:
     send(cfg["npm"], "mint((address,address,uint24,int24,int24,uint256,uint256,uint256,uint256,address,uint256))",
          f"({t0},{t1},{FEE},{lo},{hi},{a0},{a1},0,0,{ME},{int(time.time()) + 1200})")
     pool = cast("call", cfg["factory"], "getPool(address,address,uint24)(address)", t0, t1, str(FEE))
+    if cfg.get("usdc_float"):
+        send(usdc, "transfer(address,uint256)", pool, str(cfg["usdc_float"]))
 
     # Check: the pool holds the liquidity, and the range starts within 1% of the reference price.
     # (pool.liquidity() is 0 by design: the range starts just past the current price)
@@ -169,10 +181,16 @@ for ticker, name, proxy in STOCKS:
 doc = {
     "_comment": f"Testnet stock venues on {net}, written by contracts/evm/deploy-testnet-stocks.py. "
                 "synthetic=true: Solidon MockERC20 (owner-only mint), one-sided liquidity at the reference price. "
-                "synthetic=false: the chain's official testnet token and its existing pool.",
+                "synthetic=false: the chain's official testnet token and its existing pool."
+                + (" Each pool also holds a USDC float for the fork's up-front protocol fee." if cfg.get("usdc_float") else ""),
     "network": net, "chain_id": cfg["chain_id"], "usdc": usdc, "usdc_decimals": u_dec,
     "uniswap_v3": {"factory": cfg["factory"], "swap_router02": cfg["router"], "position_manager": cfg["npm"]},
     "deployer": ME, "stocks": rows,
 }
+if ONLY:  # replace the redone rows in the existing file, keep everything else
+    old = json.loads(out.read_text())
+    new = {r["ticker"]: r for r in rows}
+    old["stocks"] = [new.get(r["ticker"], r) for r in old["stocks"]]
+    old["_comment"], doc = doc["_comment"], old
 out.write_text(json.dumps(doc, indent=2) + "\n")
 print(f"wrote {out}")
