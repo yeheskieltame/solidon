@@ -109,3 +109,45 @@ bStocks trade around the clock; the stock market and its oracles do not. With `m
 
 1. Mainnet MPC verifies the Chainlink Arbitrum log above (decides the price source).
 2. Mainnet MPC verifies a BSC mainnet ERC-20 `Transfer` log (same code path as testnet; confirms mainnet RPC providers).
+
+# Part 2: which chain should hold the treasury (9 Nov 2026)
+
+Question: on which chain can a NEAR-controlled treasury buy and hold the listed stocks, with NEAR Intents (1Click) moving the cash, a fresh price, and MPC verification? Same rule: live calls only.
+
+## Comparison
+
+| Chain | Stock tokens for the 8 tickers | Any address can hold | Cost to buy $1k / $5k | Fresh oracle, no key | 1Click from USDC on NEAR | MPC can verify txs |
+| --- | --- | --- | --- | --- | --- | --- |
+| **BSC** | bStocks (no SPCX on Pyth) | ✅ fork test | 0.27–0.43% / 0.28–1.16% | ❌ Pyth stale 80 days | ❌ **minimum $1,000** | ✅ |
+| **Base** | **Coinbase tokenized stocks, all 8 incl. SPCXc** | ✅ live `eth_call` to a fresh address | **0.00–0.04% / 0.01–0.05%** | ⚠️ via Chainlink on Arbitrum (7/8, no SPCX) | ✅ from $20, ~22 s | ✅ |
+| **Solana** | xStocks, all 8 incl. SPCXx | ✅ (Token-2022, no allowlist; issuer has permanent delegate) | 0.00–0.24% at $5k (Jupiter) | ❌ Pyth/Switchboard 600–2,300 h stale, no Chainlink equities | ✅ USDC from $20, ~17 s; stock tokens not routable | ✅ |
+| **Arbitrum** | Robinhood (7, no SPCX) and xStocks | not tested | ❌ no stable pool ≥ $5k | ✅ Chainlink 7/8 | ✅ from $20, ~19 s | ✅ |
+| **Robinhood Chain** (`hood`) | no stock tokens found yet | — | — | — | ✅ USDG from $20, ~19 s | ❌ not in MPC list |
+| **Mantle** | xStocks incl. SPCXx (wrapped pools only) | ✅ fork test | ❌ 2.2% / 9.3% | ❌ Pyth 3 years stale; RedStone, API3 empty | ❌ chain not supported | ❌ |
+
+## S11 · 1Click routes (`backend/spike/s11_oneclick_routes.py`)
+
+- No tokenized stock is routable through 1Click on any chain (a quote to NVDAx returns `tokenOut is not valid`). Intents can deliver stablecoins; the treasury buys the stock locally.
+- USDC on NEAR → stablecoin: **BSC is the only chain with a $1,000 minimum.** Solana, Base, Arbitrum, Ethereum, Polygon, Avalanche, Optimism and Robinhood Chain all quote from $20, in 17–27 s.
+
+## S12 · Base, Coinbase tokenized stocks (`backend/spike/s12_base_stocks.py`)
+
+- Tokens (8 decimals): NVDAc `0xb20000000000000000000078ee7ce2fe4908108c`, AAPLc `0xb200000000000000000000c2e324d24d7eecd1fb`, MSFTc `0xb200000000000000000000ab99cfa739e253872b`, GOOGLc `0xb2000000000000000000002d0ba3164cc74f58b7`, AMZNc `0xb200000000000000000000d9192b6b456483c2e8`, METAc `0xb2000000000000000000008bc8786b856e61707c`, TSLAc `0xb2000000000000000000001e800a7f5189430cd0`, SPCXc `0xb2000000000000000000007b9fcbd005511acbd5`. Name, symbol, decimals read on-chain.
+- **The code at these addresses is the single byte `0xef`**: they are not ordinary EVM contracts, so an anvil fork cannot simulate them. Holding was tested on the real node instead: `eth_call transfer(fresh, amount)` from a holder and from the Aerodrome pool to a brand-new address returns `true` for NVDAc and SPCXc. In 100 minutes, 29 distinct addresses (EOAs, EIP-7702 EOAs, routers) received NVDAc from the Aerodrome pool.
+- Liquidity (DexScreener): Aerodrome pools GOOGLc $1.70M, NVDAc $1.11M, METAc $0.93M, SPCXc $0.93M, MSFTc $0.55M, AAPLc $0.52M (daily volume $5–14M each); AMZNc and TSLAc about $33k on Uniswap v4.
+- KyberSwap aggregator quotes: buying $5,000 costs 0.01–0.05% more than buying $100, for all 8.
+- Pool vs Chainlink (Arbitrum): NVDA −2.8%, AAPL +0.6%, MSFT +1.1%, GOOGL +1.0%, AMZN +1.6%, META +1.4%, TSLA +0.6%.
+
+## S13 · Solana xStocks
+
+All 8 xStocks mints match the issuer API (`api.backed.fi`), Jupiter, and the on-chain metadata (list in `backend/spike/solana-mints.json`). Token-2022, `defaultAccountState=initialized`, no transfer hook program set, recent holders include System-owned wallets. Jupiter buy $5k: 0.00–0.24% impact. Ondo's Solana tokens are illiquid (24–95% impact at $1k). No fresh equity oracle on Solana without a key. Signing Solana transactions with the MPC EdDSA domain is not tested yet.
+
+## S14 · Mantle
+
+xStocks (incl. SPCXx) exist and a fork transfer to a fresh EOA succeeds, but the only liquid pools are the wrapped versions (~$100k): 2.2% at $1k, 9.3% at $5k. Pyth equity feeds on Mantle are about 3 years stale; RedStone and API3 have no equity feeds. Not a 1Click chain, not MPC-verifiable.
+
+## Still open
+
+1. Mainnet MPC verification of a Chainlink update on Arbitrum (price source).
+2. SPCX price: no Chainlink feed anywhere checked.
+3. A contract-driven Intents swap (USDC on NEAR → USDC on Base to the treasury) without trusting whoever supplies the 1Click deposit address. Candidate: the meme registers an MPC-derived ed25519 key on `intents.near` and MPC-signs its own NEP-413 intents. Mainnet only.
