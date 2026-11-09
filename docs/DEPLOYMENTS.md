@@ -24,6 +24,20 @@ Listed stocks: NVDA, AAPL, MSFT, GOOGL, AMZN, META, TSLA, SPCX. Pyth feed IDs ar
 
 **Why delete and recreate.** The factory's `new` can run only once per account, and it has no admin method, so a new stock list needs an account without state. Deleting the account and creating it again keeps the name. The delete transaction shows one failed receipt: the gas refund to the deleted account, which is normal on NEAR.
 
+### Memes on the current factory
+
+| Meme | Thesis stock | Creator | Seed |
+| --- | --- | --- | --- |
+| [`elondoge.solidon.testnet`](https://testnet.nearblocks.io/address/elondoge.solidon.testnet) "Elon Doge" (`ELONDOGE`) | SPCX (SpaceX) | `creator.solidon.testnet` | 1,000 USDC |
+
+| Step | Transaction | Result |
+| --- | --- | --- |
+| `create_meme` with 2.9 NEAR | [`Ak3PY5W…`](https://testnet.nearblocks.io/txns/Ak3PY5WKVHUBX4sm5rvtsfruZWWbX5GiceAV3RjubcZK) | `true`; `ft_mint` 1,000,000,000 ELONDOGE to the pool; `launch` event |
+| Register the meme on USDC | [`Hu6nWjS…`](https://testnet.nearblocks.io/txns/Hu6nWjSDpoEvbXvR4a9LkyKCzu4qcJYXna9tEGczxWVR) | storage registered |
+| Seed 1,000 USDC | [`8AtGuPh…`](https://testnet.nearblocks.io/txns/8AtGuPhkEb1r5NvBtxRzPPHo8k6qm8Ms7Z2TaXPjnAKu) | `seed` event, all 1,000 USDC used |
+
+All three were checked final through RPC with no failed receipts.
+
 ### Launch a meme
 
 ```bash
