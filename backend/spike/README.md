@@ -11,3 +11,6 @@ Scripts behind [docs/SPIKE.md](../../docs/SPIKE.md): each one calls the real ser
 | `s8_foreign_tx_hash.py` | Reproduces an MPC foreign-tx payload hash from BSC RPC data |
 | `s8_recover.py` | Recovers which MPC key signed a foreign-tx response |
 | `s9_chainlink.py` | Chainlink equity feeds per chain and their freshness |
+| `s11_oneclick_routes.py` | Tokenized stocks in 1Click; minimum size of USDC on NEAR → stablecoin per chain |
+| `s12_base_stocks.py` | Coinbase tokenized stocks on Base: cost by size, gap to Chainlink |
+| `solana-mints.json` | Verified Solana mints (xStocks, Backpack, Ondo) |
