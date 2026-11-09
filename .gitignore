@@ -5,6 +5,7 @@
 *.pem
 *.key
 **/credentials*.json
+backend/solana-spike/.secrets/
 
 # Rust / NEAR
 target/

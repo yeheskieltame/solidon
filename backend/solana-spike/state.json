@@ -1,0 +1,45 @@
+{
+  "payer": "BhhpPESimqAvAzYsbuUHMmhRMNXPv25nGJ298biZGDGt",
+  "usdc": "4MUpSzmNTEqR9YwvGotwEMSFHCTWSiP9epnse7E7bzpd",
+  "nvdax": "GB6qjXZX5evbBEk6DCZTVCPySUfitcJSkpsHAodDbesU",
+  "mintUsdcTx": "3D9aFzgb2tAZ5RUNH8tApBLiKVqjxzvqCJ6anRxgmAtsXa4wQ9vVZSxvWmtcGNi8FMqFCdY4Thsyc8SZrm3E8csc",
+  "mintNvdaxTx": "3gi4S7H7NpQHMP5LBbgL3VUS3XQSR4DoW5Bxjt7mBnAP3Pgm3kVXLZCzUojHAsdMQHomd15oL6uF2aKeLKa7wo1W",
+  "minted": true,
+  "pool": "HCY7R4SEa4XAhRBpbvMPc4PrsmrHzWpBpqcMjsqeuXtK",
+  "createPoolTx": "58zA3zY49CFwMsyv82HrcvhyHM1jg5sTLuAvvUY4tYP94Wn36zbb6pyR1Q7tSNLw3jRYVna2ZzUArrPugyLPrq4j",
+  "positionNft": "HLhgN89fg5nGYLs8pLACnkq1qFJaaPfjw19Nvigt8QPi",
+  "openPositionTx": "64tb4JjoomFHsf1XJoTKChs5t6mKuiwkV31dsYficMXYMjHLbhRZB6U7n1TxJjujP1FwbqHgtPBkK9skBipJmMCh",
+  "ticks": [
+    -12810,
+    1050
+  ],
+  "fundSolTx": "5Kd1EzpkCnSkLfF56ZHdHAmdKkBADoca5VPsj2gkDD15P78nHgdCPyzbsedqatj6Ftm3YJewpkSrnzZDjAK1FVsN",
+  "fundUsdcTx": "42VNhT9KFgFNRh6Jegwwpa4fjnpiFUGT7qqqfbqjJYvDbfZ56SgH1t3gYyTYCPwdVhgW3atyrEUYSwpLS3m5fBNi",
+  "treasury": "DtPStxpjk3PCyGSK7hGeiUArwQ89ECHsScC2cDQnT1Cr",
+  "treasuryFunded": true,
+  "swap": {
+    "tx": "U2ZaaZpZwi7xLg85eJbuiNwYP1gx6BKSh5JSnFuG4B6cVZsNoTvcih7DYyJT9AP6GzbYZAw171ox59yzmnmPPvV",
+    "status": "finalized",
+    "err": null,
+    "messageBytes": 682,
+    "txBytes": 747,
+    "accountKeys": 18,
+    "computeUnits": 88552,
+    "amountIn": "100000000",
+    "minOut": "54972221",
+    "usdc": [
+      "1000000000",
+      "900000000"
+    ],
+    "nvdax": [
+      "0",
+      "55437615"
+    ],
+    "tickArrayStart": -13200,
+    "tickArray": "Da81y6oGSHBS3rCCci3YGz6jxjaPZvUv9TAGiP5ZWZ2A",
+    "bitmapExt": "HMMU9FTazn4vqKYgMGmLFWLozFBNxt1LWFfniWuLqjT1",
+    "observation": "CiYyiXxiupSiem5VHuxZceLb4rmjMkSqTPYh4g2JH82J",
+    "vault0": "FeuxKvcccYGfdyR9vHCGreyAnLpDUzwbdDX4Pce4ADhV",
+    "vault1": "97ZbMydugHdC7CBX29eFoifDWd3JJmCGyrkpgGuT9dDq"
+  }
+}
