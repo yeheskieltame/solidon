@@ -21,7 +21,7 @@ def url(net):
     return f"https://{NETWORKS[net]}.g.alchemy.com/v2/{os.environ['ALCHEMY_API_KEY']}"
 
 
-def call(net, method, params, retries=5):
+def call(net, method, params, retries=8):
     body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
     for attempt in range(retries):
         try:
