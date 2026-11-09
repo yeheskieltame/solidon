@@ -206,7 +206,9 @@ async fn advance(worker: &near_workspaces::Worker<near_workspaces::network::Sand
 
 async fn set_nvda(pyth: &Contract, usd_cents: i64) {
     pyth.call("set_price")
-        .args_json(json!({"price_id": NVDA_ID, "price": (usd_cents * 1_000_000).to_string(), "expo": -8}))
+        .args_json(
+            json!({"price_id": NVDA_ID, "price": (usd_cents * 1_000_000).to_string(), "expo": -8}),
+        )
         .transact()
         .await
         .unwrap()
@@ -214,8 +216,16 @@ async fn set_nvda(pyth: &Contract, usd_cents: i64) {
         .unwrap();
 }
 
-async fn rebalance(caller: &Account, meme: &Contract) -> near_workspaces::result::ExecutionFinalResult {
-    caller.call(meme.id(), "rebalance").max_gas().transact().await.unwrap()
+async fn rebalance(
+    caller: &Account,
+    meme: &Contract,
+) -> near_workspaces::result::ExecutionFinalResult {
+    caller
+        .call(meme.id(), "rebalance")
+        .max_gas()
+        .transact()
+        .await
+        .unwrap()
 }
 
 /// The engine end to end with real promises: stale price, young pool, issuance,
@@ -236,16 +246,32 @@ async fn rebalance_issue_then_redeem() -> anyhow::Result<()> {
                 .unwrap()
         }
     };
-    let (creator, bob, keeper) = (make("creator").await, make("bob").await, make("keeper").await);
-    let usdc = make("usdc").await.deploy(&wasm("mock_ft")).await?.into_result()?;
+    let (creator, bob, keeper) = (
+        make("creator").await,
+        make("bob").await,
+        make("keeper").await,
+    );
+    let usdc = make("usdc")
+        .await
+        .deploy(&wasm("mock_ft"))
+        .await?
+        .into_result()?;
     usdc.call("new")
         .args_json(json!({"name": "USD Coin", "symbol": "USDC", "decimals": 6}))
         .transact()
         .await?
         .into_result()?;
-    let pyth = make("pyth").await.deploy(&wasm("mock_pyth")).await?.into_result()?;
+    let pyth = make("pyth")
+        .await
+        .deploy(&wasm("mock_pyth"))
+        .await?
+        .into_result()?;
     pyth.call("new").transact().await?.into_result()?;
-    let meme = make("nvda").await.deploy(&wasm("meme")).await?.into_result()?;
+    let meme = make("nvda")
+        .await
+        .deploy(&wasm("meme"))
+        .await?
+        .into_result()?;
     meme.call("new")
         .args_json(json!({
             "creator": creator.id(), "usdc": usdc.id(), "oracle": pyth.id(), "stock": nvda(),
@@ -264,7 +290,14 @@ async fn rebalance_issue_then_redeem() -> anyhow::Result<()> {
     storage_deposit(&creator, &usdc, meme.id().as_str()).await;
     storage_deposit(&bob, &meme, bob.id().as_str()).await;
     ft_call(&creator, &usdc, &meme, 1_000 * USDC, r#"{"action":"seed"}"#).await;
-    ft_call(&bob, &usdc, &meme, 1_000 * USDC, r#"{"action":"buy","min_out":"1"}"#).await;
+    ft_call(
+        &bob,
+        &usdc,
+        &meme,
+        1_000 * USDC,
+        r#"{"action":"buy","min_out":"1"}"#,
+    )
+    .await;
 
     // 1. No Pyth price yet: nothing happens, cooldown not consumed.
     let out: serde_json::Value = rebalance(&keeper, &meme).await.into_result()?.json()?;
@@ -282,8 +315,14 @@ async fn rebalance_issue_then_redeem() -> anyhow::Result<()> {
     let out: serde_json::Value = rebalance(&keeper, &meme).await.into_result()?.json()?;
     let issued: u128 = out["issued"]["meme"].as_str().unwrap().parse()?;
     assert!(issued > 0, "{out}");
-    assert_eq!(view_u128(&meme, "ft_total_supply", json!({})).await, supply0 + issued);
-    assert!(view_u128(&meme, "claimable_of", json!({"account_id": keeper.id()})).await > 0, "caller tip");
+    assert_eq!(
+        view_u128(&meme, "ft_total_supply", json!({})).await,
+        supply0 + issued
+    );
+    assert!(
+        view_u128(&meme, "claimable_of", json!({"account_id": keeper.id()})).await > 0,
+        "caller tip"
+    );
 
     // 4. Cooldown: a second call within the hour is rejected.
     assert!(rebalance(&keeper, &meme).await.is_failure());
@@ -329,6 +368,9 @@ async fn rebalance_issue_then_redeem() -> anyhow::Result<()> {
     for a in [&creator, &keeper] {
         owed += view_u128(&meme, "claimable_of", json!({"account_id": a.id()})).await;
     }
-    assert_eq!(balance(&usdc, meme.as_account()).await, reserve + cash + owed);
+    assert_eq!(
+        balance(&usdc, meme.as_account()).await,
+        reserve + cash + owed
+    );
     Ok(())
 }
