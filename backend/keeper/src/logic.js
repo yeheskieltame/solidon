@@ -1,4 +1,6 @@
 // Pure keeper logic: no I/O, so every rule here is unit-tested (test/logic.test.js).
+// The Solana helpers use @solana/web3.js only for PDA math (sha256 + curve check), no network.
+import { PublicKey } from "@solana/web3.js";
 
 /** keccak256("Transfer(address,address,uint256)"). */
 export const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
@@ -7,13 +9,25 @@ export const USDC_DECIMALS = 6;
 
 /**
  * The memo `fund_chain` puts on its ft_transfer to the bridge (contracts/meme/src/cash.rs,
- * `on_fund_price`): `solidon fund <chain> <treasury>`, treasury = `0x` + 40 lowercase hex.
+ * `on_fund_price`): `solidon fund <chain> <treasury>`, treasury = `0x` + 40 hex on EVM chains
+ * (returned lowercase) or a base58 Solana address (32 bytes, case kept).
  * Returns `{ chain, to }` or `null` for anything else.
  */
 export function parseFundMemo(memo) {
   if (typeof memo !== "string") return null;
-  const m = /^solidon fund ([a-z0-9_-]{1,32}) (0x[0-9a-fA-F]{40})$/.exec(memo);
-  return m ? { chain: m[1], to: m[2].toLowerCase() } : null;
+  const m = /^solidon fund ([a-z0-9_-]{1,32}) (0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$/.exec(memo);
+  if (!m) return null;
+  if (m[2].startsWith("0x")) return { chain: m[1], to: m[2].toLowerCase() };
+  return isSolanaAddress(m[2]) ? { chain: m[1], to: m[2] } : null;
+}
+
+/** True for a base58 string that decodes to exactly 32 bytes. */
+export function isSolanaAddress(s) {
+  try {
+    return new PublicKey(s).toBase58() === s;
+  } catch {
+    return false;
+  }
 }
 
 /** Converts a raw token amount between decimals (bigint). Scaling down floors. */
@@ -166,6 +180,190 @@ export function tickArrayStarts({ tickCurrent, tickSpacing, bitmap, zeroForOne, 
     if (isSet(s)) starts.push(s);
   }
   return starts;
+}
+
+/**
+ * Every chain ledger of `get_treasury_chains()` in the EVM `ChainView` shape (`config.name`,
+ * `config.usdc_decimals`, `config.max_swap_usdc`, `venue`, `usdc`, `stock`, `in_transit`): the
+ * EVM chains plus the Solana chain (6-decimal USDC), as the contract's NAV counts them all.
+ */
+export function ledgerChains(tc) {
+  const out = [...(tc?.chains ?? [])];
+  const s = tc?.solana;
+  if (s) {
+    out.push({
+      config: { name: s.config.name, usdc_decimals: USDC_DECIMALS, max_swap_usdc: s.config.max_swap_usdc },
+      venue: s.venue,
+      usdc: s.usdc,
+      stock: s.stock,
+      in_transit: s.in_transit,
+    });
+  }
+  return out;
+}
+
+// --- Solana -------------------------------------------------------------------------------
+
+export const SOLANA = {
+  ATA_PROGRAM: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+  TOKEN_PROGRAM: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+  TOKEN_2022_PROGRAM: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+  /** NEAR blocks after a Solana signature before `resign_solana` is allowed (solana_treasury.rs). */
+  RESIGN_AFTER_BLOCKS: 200,
+  /** `buy_stock_solana` / `resign_solana` take 1 to 3 tick arrays. */
+  MAX_TICK_ARRAYS: 3,
+};
+
+const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+/** Base58 (Bitcoin alphabet) of any byte string, e.g. a 64-byte Solana transaction signature. */
+export function base58(bytes) {
+  const b = Uint8Array.from(bytes);
+  let n = 0n;
+  for (const x of b) n = (n << 8n) | BigInt(x);
+  let out = "";
+  while (n > 0n) {
+    out = B58[Number(n % 58n)] + out;
+    n /= 58n;
+  }
+  for (let i = 0; i < b.length && b[i] === 0; i++) out = `1${out}`;
+  return out;
+}
+
+/** The associated token account of `owner` for `mint` under `tokenProgram`, with its canonical bump. */
+export function associatedTokenAccount(owner, tokenProgram, mint) {
+  const [address, bump] = PublicKey.findProgramAddressSync(
+    [new PublicKey(owner).toBuffer(), new PublicKey(tokenProgram).toBuffer(), new PublicKey(mint).toBuffer()],
+    new PublicKey(SOLANA.ATA_PROGRAM),
+  );
+  return { address: address.toBase58(), bump };
+}
+
+/**
+ * The bumps `set_solana_accounts` takes: the treasury's USDC (SPL Token) and stock (Token-2022)
+ * associated token accounts, derived exactly as solana.rs `associated_token_address` does.
+ */
+export function solanaTokenAccounts({ treasury, usdcMint, stockMint }) {
+  return {
+    usdc: associatedTokenAccount(treasury, SOLANA.TOKEN_PROGRAM, usdcMint),
+    stock: associatedTokenAccount(treasury, SOLANA.TOKEN_2022_PROGRAM, stockMint),
+  };
+}
+
+/**
+ * The fields of a Raydium CLMM `PoolState` account the keeper needs (offsets from 2_swap.js,
+ * after the 8-byte discriminator): mints, vaults, tick spacing, current tick, and the default
+ * 1024-bit tick-array bitmap (16 little-endian u64 at 904).
+ */
+export function parseClmmPool(data) {
+  const d = Buffer.from(data);
+  if (d.length < 904 + 128) throw new Error(`not a CLMM pool account (${d.length} bytes)`);
+  const pk = (o) => new PublicKey(d.subarray(o, o + 32)).toBase58();
+  return {
+    ammConfig: pk(9),
+    mint0: pk(73),
+    mint1: pk(105),
+    vault0: pk(137),
+    vault1: pk(169),
+    observation: pk(201),
+    tickSpacing: d.readUInt16LE(235),
+    tickCurrent: d.readInt32LE(269),
+    bitmap: Array.from({ length: 16 }, (_, i) => d.readBigUInt64LE(904 + 8 * i)),
+  };
+}
+
+/** `[start_index, bump]` of a pool's tick array: PDA of ["tick_array", pool, i32 BE start]. */
+export function tickArrayBump(clmm, pool, start) {
+  const be = Buffer.alloc(4);
+  be.writeInt32BE(start);
+  const [address, bump] = PublicKey.findProgramAddressSync(
+    [Buffer.from("tick_array"), new PublicKey(pool).toBuffer(), be],
+    new PublicKey(clmm),
+  );
+  return { start, bump, address: address.toBase58() };
+}
+
+/**
+ * The live inputs of `buy_stock_solana` / `resign_solana` except the blockhash: the pool's
+ * initialized tick arrays in the USDC -> stock direction, nearest first, up to 3, as
+ * `[start, bump]`. The pool must pair `usdcMint` with `stockMint` (and match the venue's vaults
+ * when given). Throws if no initialized array is in the default bitmap (the extension would be
+ * needed, which the contract does not pass).
+ */
+export function planSolanaSwap({ pool, poolData, clmm, usdcMint, stockMint, venue = null, max = SOLANA.MAX_TICK_ARRAYS }) {
+  const p = parseClmmPool(poolData);
+  const zeroForOne = p.mint0 === usdcMint;
+  const [inMint, outMint] = zeroForOne ? [p.mint0, p.mint1] : [p.mint1, p.mint0];
+  if (inMint !== usdcMint || outMint !== stockMint) throw new Error(`pool ${pool} does not pair USDC with ${stockMint}`);
+  if (venue) {
+    const [usdcVault, stockVault] = zeroForOne ? [p.vault0, p.vault1] : [p.vault1, p.vault0];
+    if (venue.usdc_vault !== usdcVault || venue.stock_vault !== stockVault || venue.observation !== p.observation) {
+      throw new Error(`pool ${pool} accounts differ from the meme's venue config`);
+    }
+  }
+  const starts = tickArrayStarts({ tickCurrent: p.tickCurrent, tickSpacing: p.tickSpacing, bitmap: p.bitmap, zeroForOne, max });
+  if (!starts.length) throw new Error(`pool ${pool}: no initialized tick array in the default bitmap`);
+  const arrays = starts.map((s) => tickArrayBump(clmm, pool, s));
+  return {
+    zeroForOne,
+    tickCurrent: p.tickCurrent,
+    tickArrays: arrays.map((a) => [a.start, a.bump]),
+    addresses: arrays.map((a) => a.address),
+  };
+}
+
+/** Reads a Solana compact-u16 at `o`: `[value, nextOffset]`. */
+function shortvec(b, o) {
+  let v = 0;
+  for (let i = 0; i < 3; i++) {
+    const x = b[o + i];
+    v |= (x & 0x7f) << (7 * i);
+    if (!(x & 0x80)) return [v, o + i + 1];
+  }
+  throw new Error("bad compact-u16");
+}
+
+/**
+ * A signed legacy transaction (`get_signed_tx("solana", seq)`, base64 `[n] ‖ sigs ‖ message`):
+ * its id (first signature, base58) and the recent blockhash in its message.
+ */
+export function parseSolanaTx(base64) {
+  const b = Buffer.from(base64, "base64");
+  const [nSigs, o] = shortvec(b, 0);
+  if (nSigs < 1 || b.length < o + 64 * nSigs + 3) throw new Error("not a signed Solana transaction");
+  const msg = o + 64 * nSigs;
+  const [nKeys, k] = shortvec(b, msg + 3);
+  const bh = k + 32 * nKeys;
+  if (b.length < bh + 32) throw new Error("truncated Solana message");
+  return {
+    signature: base58(b.subarray(o, o + 64)),
+    blockhash: new PublicKey(b.subarray(bh, bh + 32)).toBase58(),
+  };
+}
+
+/**
+ * What to do with the meme's last signed Solana buy, from its signature status
+ * (`getSignatureStatuses` with history, `null` if unknown), whether its blockhash is still valid,
+ * and the NEAR block height:
+ * - `landed`: confirmed or finalized without error.
+ * - `pending`: seen but only processed; check again.
+ * - `broadcast`: unknown and its blockhash is still valid: (re)send it.
+ * - `resign`: it can no longer land (expired unknown, or landed with an error, which moves
+ *   nothing) and 200 NEAR blocks have passed since it was signed: `resign_solana`.
+ * - `wait-resign`: same, but the contract's 200-block wait is not over.
+ */
+export function solanaBuyAction({ status, blockhashValid, nearHeight, signedAt }) {
+  if (status && !status.err && ["confirmed", "finalized"].includes(status.confirmationStatus)) return "landed";
+  if (status && !status.err) return "pending";
+  if (!status && blockhashValid) return "broadcast";
+  return nearHeight >= Number(signedAt) + SOLANA.RESIGN_AFTER_BLOCKS ? "resign" : "wait-resign";
+}
+
+/** Lamports to send so a treasury holding `balance` is back at `topup` once below `min` (else 0). */
+export function solTopup(balance, min, topup) {
+  const b = BigInt(balance);
+  if (b >= BigInt(min)) return 0n;
+  return BigInt(topup) > b ? BigInt(topup) - b : 0n;
 }
 
 /** Replaces every secret (and any Alchemy-style `/v2/<key>` path) in `text` with `***`. */

@@ -26,7 +26,7 @@ export const CHAINLINK_PROXIES = {
 };
 
 /**
- * Treasury chains by their name in the factory's chains config. The registry file holds the
+ * EVM treasury chains by their name in the factory's chains config (Solana: `cfg.solana`). The registry file holds the
  * venue list deploy-testnet.sh built the factory from; the RPC is Alchemy (the maintainer's ISP
  * blocks *.robinhood.com, docs/SPIKE.md S23) unless the env override is set.
  */
@@ -124,6 +124,8 @@ export function loadConfig(flags) {
   const evmKey = process.env.KEEPER_EVM_PRIVATE_KEY || process.env.EVM_DEPLOYER_PRIVATE_KEY || "";
   const secrets = [alchemyKey, evmKey, near.key, process.env.NEARBLOCKS_API_KEY, process.env.PYTH_API_KEY].filter(Boolean);
   for (const c of Object.values(CHAINS)) if (process.env[c.rpcEnv]) secrets.push(process.env[c.rpcEnv]);
+  if (process.env.SOLANA_DEVNET_RPC) secrets.push(process.env.SOLANA_DEVNET_RPC);
+  const sol = (name, dflt) => toUnits(process.env[name] || dflt, 9);
 
   return {
     flags,
@@ -155,6 +157,22 @@ export function loadConfig(flags) {
     treasuryGasTopup: toUnits(process.env.TREASURY_GAS_TOPUP_ETH || "0.0005", 18),
     receiptTimeoutSecs: num("RECEIPT_TIMEOUT_SECS", 120),
     creditMaxAttempts: num("CREDIT_MAX_ATTEMPTS", 6),
+    solana: {
+      registry: readJson(path.join(STOCKS, "solana-devnet.json")),
+      url: process.env.SOLANA_DEVNET_RPC || alchemy("solana-devnet") || "https://api.devnet.solana.com",
+      explorer: "https://explorer.solana.com",
+      cluster: "devnet",
+      // Throwaway devnet keypair of the keeper (bridge deliveries, treasury SOL), created on
+      // first run; git-ignored, never printed.
+      keypairPath: process.env.KEEPER_SOLANA_KEYPAIR || path.join(REPO, "backend/keeper/.secrets/solana-keeper.json"),
+      // The treasury pays its swap fees and the first stock token account rent (~0.002 SOL).
+      treasuryMin: sol("TREASURY_SOL_MIN", "0.01"),
+      treasuryTopup: sol("TREASURY_SOL_TOPUP", "0.02"),
+      // Below this the keeper asks the devnet faucet (Alchemy requestAirdrop, 1 SOL a request).
+      walletMin: sol("KEEPER_SOL_MIN", "0.1"),
+      confirmTimeoutSecs: num("SOLANA_CONFIRM_SECS", 60),
+      maxResigns: num("SOLANA_MAX_RESIGNS", 5),
+    },
   };
 }
 
