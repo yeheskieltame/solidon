@@ -570,6 +570,33 @@ mod tests {
         );
     }
 
+    /// `Log { log_index }` is the BLOCK-WIDE log index, not the position in the receipt.
+    /// Base Sepolia tx 0x5c4120e3…c187 has 2 logs; its USDC Transfer is at position 1 with
+    /// block-wide logIndex 3. The live testnet MPC answered log_index 3 with this hash
+    /// (NEAR tx Eq8XgmqvSCvKHUREhuN2Jzoi9mUSevFXPQUjpwuicmJw) and rejected log_index 1
+    /// (NEAR tx 5nm74FxFUbg9AFd43LCj5SrYZkcMgcNzSyNw3GfoZedT). The keeper passes the
+    /// receipt's `logIndex`, which is block-wide.
+    #[test]
+    fn log_index_is_block_wide() {
+        let log = LogArgs {
+            block_hash: "0x8dc6161b3918d0361ecf54dfdef65a1fe10284fea3d2f69d8749da13e0368b00".into(),
+            block_number: 56_659_046,
+            transaction_index: 4,
+            address: "0x036cbd53842c5426634e7929541ec2318f3dcf7e".into(),
+            topics: vec![
+                "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef".into(),
+                "0x00000000000000000000000088ba353d9f814c33d889ca634f7c7e0bcf2de580".into(),
+                "0x000000000000000000000000a849bbad82f9edafdf9a5550cc874276138779d9".into(),
+            ],
+            data: "0x00000000000000000000000000000000000000000000000000000000000003e8".into(),
+        };
+        let tx = "0x5c4120e35b90ebc2c4ebad4f8d9cd94ac9f2f0240c37c56fa5c6d0e6a57ec187";
+        assert_eq!(
+            hex_encode(&EvmLog::parse(tx, 3, &log).payload_hash(6, Finality::Latest)),
+            "48d297f3668d8222838c231bfeed2e3f5c49ab4055a1ee8569c5bee0a979addb"
+        );
+    }
+
     #[test]
     fn credit_cash_asks_the_mpc_for_exactly_this_log() {
         let mut m = meme();
