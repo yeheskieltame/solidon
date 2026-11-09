@@ -207,3 +207,16 @@ Found purely on-chain: 52 aggregators emitted `AnswerUpdated` in the last 4 hour
 AAPL did not update in the window. Unlike every other chain checked, these feeds run around the clock like the tokens they price, so the pool-to-oracle gap stays under 0.5% on a weekend (Base vs Arbitrum Chainlink: up to 2.8%). The addresses above are aggregators; the proxies were not resolved because the explorer API is unreachable from the test network.
 
 **Limit:** Robinhood Chain is not in the NEAR MPC's `verify_foreign_transaction` list, so a NEAR contract cannot read these prices or prove a Robinhood Chain swap without trusting a relayer.
+
+## S18 · MPC verifies Base and Arbitrum (testnets) ✅
+
+`verify_foreign_transaction` on `v1.signer-prod.testnet`, domain 3, a USDC `Transfer` log:
+
+| Chain | Tx | Finality | Result |
+| --- | --- | --- | --- |
+| Base Sepolia | `0x96305fb3…5379`, log 1 (block 56,556,227, ~5 h old) | Latest | signed in 13 s ([NEAR tx](https://testnet.nearblocks.io/txns/8XLNe554VZ8ZQ3XebDVCGoXA8nKTVvPdwfZk1xMmcDHZ)) |
+| Base Sepolia | same | Finalized | signed ([NEAR tx](https://testnet.nearblocks.io/txns/BTj2kwPb2CKVySzsNVfB2wSzV7issBH55RiVQahQpuT7)) |
+| Arbitrum Sepolia | `0x06c274af…8c6d`, log 56 (~8 h old) | Latest | signed in 11 s ([NEAR tx](https://testnet.nearblocks.io/txns/HeUniR8Vg3UdbLGFBb7FbYvGBLknp9rUyXGEUKRzVoDQ)) |
+| Base Sepolia, Arbitrum Sepolia | txs only 4–30 min old | Finalized | timed out (L2 finality on L1 not reached yet) |
+
+So the treasury chain (Base) and the price chain (Arbitrum) are both verifiable on testnet. `Finalized` on an L2 needs the transaction to be finalized on Ethereum first (tens of minutes); `Latest` answers in seconds.
