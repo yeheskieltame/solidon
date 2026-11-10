@@ -5,11 +5,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useId, useState } from "react";
 import { cn } from "cn";
 import { LogoTile, StockLogo } from "@/components/brand-logo";
-import { CountUp } from "@/components/count-up";
 import { describeEvent, eventKind } from "@/components/event-log";
 import { MemeIcon } from "@/components/meme-icon";
 import { ZoneBadge } from "@/components/mnav-gauge";
 import { Notice } from "@/components/notice";
+import { Stat, StatRow } from "@/components/stat";
 import { useToast } from "@/components/toast";
 import { GetTestUsdcButton } from "@/components/wallet-controls";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { AppLink } from "@/lib/app-link";
 import { PLATFORM_LOGOS } from "@/lib/brands";
 import { NEARBLOCKS, USDC_DECIMALS } from "@/lib/config";
 import { fetchMemeEvents, type MemeEvent } from "@/lib/events";
+import { fmtUsdCompact } from "@/lib/figure";
 import { fmtAmount, fmtRaw, fmtUsd, timeAgo } from "@/lib/format";
 import { loadMarket } from "@/lib/market";
 import { loadPortfolio, type Position } from "@/lib/portfolio";
@@ -90,10 +91,9 @@ export function Dashboard() {
   if (!accountId) {
     return (
       <Shell>
-        <div className="card relative isolate overflow-hidden px-6 py-14 text-center sm:py-20">
-          <div className="halftone absolute inset-0 -z-10 opacity-60" aria-hidden />
-          <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-ink text-white" aria-hidden>
-            <Wallet className="size-5" />
+        <div className="px-2 py-14 text-center sm:py-20">
+          <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-page-deep text-ink" aria-hidden>
+            <Wallet className="size-5" strokeWidth={1.75} />
           </span>
           <h2 className="type-h1 mx-auto mt-5 max-w-[20ch]">Connect a wallet to see your portfolio.</h2>
           <p className="mx-auto mt-3 max-w-[36rem] text-soft">
@@ -125,14 +125,14 @@ export function Dashboard() {
   return (
     <Shell
       action={
-        <Button variant="outline" size="sm" onClick={() => setTick((t) => t + 1)} disabled={data.loading}>
+        <Button variant="ghost" size="sm" onClick={() => setTick((t) => t + 1)} disabled={data.loading}>
           <RefreshCw className={cn(data.loading && "animate-spin")} aria-hidden />
           Refresh
         </Button>
       }
     >
       {readOnly && (
-        <p className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-blue-wash px-3.5 py-2.5 text-sm text-blue-ink" role="status">
+        <p className="mb-10 flex flex-wrap items-center gap-2 rounded-xl bg-blue-wash px-3.5 py-2.5 text-sm text-blue-ink" role="status">
           <Eye className="size-4 shrink-0" aria-hidden />
           <span>
             Read-only view of <span className="font-medium">{accountId}</span>. Connect that wallet to claim or trade.
@@ -145,32 +145,50 @@ export function Dashboard() {
         </Notice>
       ) : (
         <>
-          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line shadow-[var(--shadow-sm)] lg:grid-cols-4">
-            <Tile label="Portfolio, at pool price" value={pf ? pf.totals.atPrice : null} note={pf ? `A full sell returns about ${fmtUsd(pf.totals.sellQuoteUsd)}` : undefined} />
-            <Tile
-              label="Backed by NAV"
+          <StatRow>
+            <Stat
+              label="Portfolio value"
+              hint="Every meme you hold at its pool price."
+              value={pf ? pf.totals.atPrice : null}
+              format={fmtUsdCompact}
+              sub={pf ? `A full sell returns ${fmtUsd(pf.totals.sellQuoteUsd)}` : undefined}
+            />
+            <Stat
+              label="At NAV"
+              hint="The treasury assets behind your tokens: your share of each meme's NAV."
               value={pf ? pf.totals.atNav : null}
-              note={pf && pf.totals.atPrice > 0 ? `${pct(pf.totals.atNav / pf.totals.atPrice)} of the pool value` : "Treasury assets behind your tokens"}
+              format={fmtUsdCompact}
+              sub={pf && pf.totals.atPrice > 0 ? `${pct(pf.totals.atNav / pf.totals.atPrice)} of the pool value` : "Treasury assets behind your tokens"}
             />
-            <Tile
-              label="USDC on NEAR"
+            <Stat
+              label="USDC"
+              hint="USDC on NEAR in this account, ready to buy with."
               value={pf ? Number(pf.usdc) / 10 ** USDC_DECIMALS : null}
-              icon={<LogoTile logo={PLATFORM_LOGOS.usdc} size={18} decorative rounded="full" className="!ring-0" />}
-              extra={readOnly ? undefined : <GetTestUsdcButton onDone={() => setTick((t) => t + 1)} label="Get test USDC" />}
+              format={fmtUsdCompact}
+              sub={
+                readOnly ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <LogoTile logo={PLATFORM_LOGOS.usdc} size={16} decorative className="!ring-0" />
+                    On NEAR
+                  </span>
+                ) : (
+                  <GetTestUsdcButton onDone={() => setTick((t) => t + 1)} label="Get test USDC" className="-ml-0.5" />
+                )
+              }
             />
-            <Tile label="Claimable USDC" value={pf ? pf.totals.claimableUsd : null} note="Creator fees, tips and failed payouts" />
-          </dl>
+            <Stat label="Claimable" hint="Creator fees, caller tips and failed payouts waiting for this account." value={pf ? pf.totals.claimableUsd : null} format={fmtUsdCompact} sub="Fees, tips, failed payouts" />
+          </StatRow>
 
-          <section aria-labelledby="positions-title" className="mt-8">
+          <section aria-labelledby="positions-title" className="mt-16">
             <div className="flex items-baseline justify-between gap-3">
-              <h2 id="positions-title" className="type-h3">
+              <h2 id="positions-title" className="type-section">
                 Positions
               </h2>
               {pf && <p className="text-sm text-soft">{positions.length} {positions.length === 1 ? "meme" : "memes"}</p>}
             </div>
             <div className="mt-3">
               {data.loading && !pf ? (
-                <div className="card grid gap-3 p-4" aria-busy aria-label="Loading positions">
+                <div className="panel grid gap-3 p-5" aria-busy aria-label="Loading positions">
                   <Skeleton className="h-12" />
                   <Skeleton className="h-12" />
                 </div>
@@ -186,24 +204,34 @@ export function Dashboard() {
                   Buy a meme from its page and it shows up here, valued at the pool price and at NAV.
                 </Notice>
               ) : (
-                <ul className="card divide-y divide-line overflow-hidden">
-                  {positions.map((p) => (
-                    <PositionRow key={p.row.account} p={p} busy={busy === p.row.account} onClaim={readOnly ? null : () => claim(p)} />
-                  ))}
-                </ul>
+                <div className="panel overflow-hidden">
+                  <div className="hidden grid-cols-[minmax(0,1.3fr)_repeat(4,minmax(0,1fr))_13rem] gap-4 border-b border-line px-5 py-3.5 text-sm text-soft lg:grid">
+                    <span>Meme</span>
+                    <span>Balance</span>
+                    <span>At pool price</span>
+                    <span>At NAV</span>
+                    <span>Share of treasury</span>
+                    <span className="sr-only">Actions</span>
+                  </div>
+                  <ul className="divide-y divide-line">
+                    {positions.map((p) => (
+                      <PositionRow key={p.row.account} p={p} busy={busy === p.row.account} onClaim={readOnly ? null : () => claim(p)} />
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           </section>
 
-          <section aria-labelledby="activity-title" className="mt-8">
-            <h2 id="activity-title" className="type-h3">
-              Your recent activity
+          <section aria-labelledby="activity-title" className="mt-16">
+            <h2 id="activity-title" className="type-section">
+              Recent activity
             </h2>
-            <div className="mt-3">
+            <div className="mt-5">
               {held.length === 0 ? (
                 <p className="text-sm text-soft">Trades on memes you hold appear here.</p>
               ) : activity.loading && !activity.data ? (
-                <Skeleton className="h-24 rounded-2xl" />
+                <Skeleton className="h-24 rounded-[18px]" />
               ) : activity.error ? (
                 <Notice title="Activity is unavailable right now">
                   {activity.error}.{" "}
@@ -219,22 +247,22 @@ export function Dashboard() {
                   </a>
                 </Notice>
               ) : (
-                <ol className="card divide-y divide-line">
+                <ol className="panel divide-y divide-line">
                   {activity.data!.map((e, i) => {
                     const kind = eventKind(e.event);
                     const Icon = kind.icon;
                     return (
-                      <li key={`${e.txHash}-${i}`} className="flex items-start gap-3 p-3.5">
+                      <li key={`${e.txHash}-${i}`} className="flex items-center gap-3 px-5 py-4">
                         <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-full", kind.tint)} aria-hidden>
                           <Icon className="size-4" />
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium">
-                            {kind.label} <span className="font-normal text-soft">on {e.symbol}</span>
+                          <p className="text-[0.9375rem]">
+                            {kind.label} <span className="text-soft">on {e.symbol}</span>
                           </p>
                           <p className="text-[0.8125rem] break-words text-soft">{describeEvent(e, e.symbol)}</p>
                         </div>
-                        <a href={`${NEARBLOCKS}/txns/${e.txHash}`} target="_blank" rel="noreferrer" className="link shrink-0 text-xs">
+                        <a href={`${NEARBLOCKS}/txns/${e.txHash}`} target="_blank" rel="noreferrer" className="num-link shrink-0 text-sm">
                           {e.time ? timeAgo(e.time) : "tx"}
                           <span className="sr-only">: transaction on NearBlocks (opens in a new tab)</span>
                         </a>
@@ -253,11 +281,11 @@ export function Dashboard() {
 
 function Shell({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <div className="wrap pt-8 pb-16 sm:pt-10">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div className="wrap pt-10 pb-20 sm:pt-14">
+      <div className="mb-12 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="type-h1">Dashboard</h1>
-          <p className="mt-1.5 text-soft">Your positions across every meme, read live from NEAR.</p>
+          <p className="mt-2 text-soft">Your positions across every meme, read live from NEAR.</p>
         </div>
         {action}
       </div>
@@ -266,42 +294,14 @@ function Shell({ children, action }: { children: React.ReactNode; action?: React
   );
 }
 
-function Tile({
-  label,
-  value,
-  note,
-  icon,
-  extra,
-}: {
-  label: string;
-  value: number | null;
-  note?: string;
-  icon?: React.ReactNode;
-  extra?: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col bg-card p-4 sm:p-5">
-      <dt className="flex items-center gap-1.5 text-xs text-soft">
-        {icon}
-        {label}
-      </dt>
-      <dd className="type-num mt-1.5 text-2xl sm:text-[1.75rem]">
-        <CountUp value={value} format={fmtUsd} />
-      </dd>
-      {note && <dd className="mt-1 text-xs text-soft">{note}</dd>}
-      {extra && <dd className="mt-3">{extra}</dd>}
-    </div>
-  );
-}
-
 function PositionRow({ p, busy, onClaim }: { p: Position; busy: boolean; onClaim: (() => void) | null }) {
   const r = p.row;
   return (
-    <li className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1.3fr)_repeat(4,minmax(0,1fr))_auto] lg:items-center">
+    <li className="grid gap-4 px-5 py-4 transition-colors hover:bg-[#212126] lg:grid-cols-[minmax(0,1.3fr)_repeat(4,minmax(0,1fr))_13rem] lg:items-center">
       <div className="flex items-center gap-3">
         <MemeIcon icon={r.icon} symbol={r.symbol} size={40} />
         <div className="min-w-0">
-          <AppLink href={`/meme/${r.account}`} className="font-medium hover:underline">
+          <AppLink href={`/meme/${r.account}`} className="hover:underline">
             {r.symbol}
           </AppLink>
           <p className="flex items-center gap-1.5 text-xs text-soft">
@@ -346,9 +346,9 @@ function PositionRow({ p, busy, onClaim }: { p: Position; busy: boolean; onClaim
 function Cell({ k, v, sub }: { k: string; v: string; sub?: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3 lg:block">
-      <p className="text-xs text-soft">{k}</p>
+      <p className="text-xs text-soft lg:sr-only">{k}</p>
       <p className="text-right lg:text-left">
-        <span className="block text-sm font-medium tabular-nums">{v}</span>
+        <span className="block text-[0.9375rem] tabular-nums">{v}</span>
         {sub && <span className="block text-xs text-soft">{sub}</span>}
       </p>
     </div>
@@ -363,7 +363,7 @@ function ViewAsForm() {
   const [value, setValue] = useState("");
   return (
     <form
-      className="mx-auto mt-8 flex max-w-md flex-wrap items-center justify-center gap-2 border-t border-line pt-6"
+      className="mx-auto mt-10 flex max-w-md flex-wrap items-center justify-center gap-2 border-t border-line pt-8"
       onSubmit={(e) => {
         e.preventDefault();
         const v = value.trim().toLowerCase();
@@ -375,7 +375,7 @@ function ViewAsForm() {
       </label>
       <input
         id={id}
-        className="field !min-h-10 min-w-0 flex-1 !rounded-full"
+        className="field !min-h-10 min-w-0 flex-1"
         placeholder="name.testnet"
         value={value}
         onChange={(e) => setValue(e.target.value)}

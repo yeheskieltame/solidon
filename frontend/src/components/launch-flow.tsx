@@ -4,7 +4,7 @@ import { ArrowRight, Check, Wallet } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useId, useState, type ReactNode } from "react";
 import { cn } from "cn";
-import { ChainStack, StockLogo } from "./brand-logo";
+import { ChainStack, LogoTile, StockLogo } from "./brand-logo";
 import { MemeIcon } from "./meme-icon";
 import { MnavGauge } from "./mnav-gauge";
 import { Notice } from "./notice";
@@ -19,7 +19,7 @@ import { FACTORY, NEARBLOCKS, USDC, USDC_DECIMALS } from "@/lib/config";
 import { fmtAmount, fmtRaw, parseUnits, toBig, toDecimalString, toNumber } from "@/lib/format";
 import { factory, tryView, type FtMetadata, type MemeInfo, type PoolView, type Stock, type StorageBalance, type TreasuryChainsRaw } from "@/lib/near";
 import { AppLink } from "@/lib/app-link";
-import { STOCK_LOGOS } from "@/lib/brands";
+import { PLATFORM_LOGOS, STOCK_LOGOS } from "@/lib/brands";
 import { useAsync } from "@/lib/use-async";
 import { TESTNET_VENUES } from "@/lib/venues";
 import { errorText, useWallet } from "@/lib/wallet";
@@ -108,7 +108,7 @@ const STEPS = [
 /** The visible stepper: done steps get a green tick, the current one is raised. */
 function Stepper({ current }: { current: number }) {
   return (
-    <ol className="grid grid-cols-3 gap-2 sm:gap-3" aria-label="Launch steps">
+    <ol className="grid grid-cols-3 gap-3 sm:gap-5" aria-label="Launch steps">
       {STEPS.map((s, i) => {
         const state = i < current ? "done" : i === current ? "active" : "todo";
         return (
@@ -116,16 +116,16 @@ function Stepper({ current }: { current: number }) {
             key={s.title}
             aria-current={state === "active" ? "step" : undefined}
             className={cn(
-              "relative flex flex-col items-start gap-1.5 rounded-2xl border p-2.5 transition-[background-color,border-color,box-shadow] duration-300 sm:flex-row sm:items-center sm:gap-3 sm:p-3",
-              state === "active" && "border-line-strong bg-card shadow-[var(--shadow-md)]",
-              state === "done" && "border-line bg-card",
-              state === "todo" && "border-dashed border-line-strong",
+              "relative flex flex-col items-start gap-2 border-t-2 pt-3 transition-colors duration-300 sm:flex-row sm:items-center sm:gap-3",
+              state === "active" && "border-blue",
+              state === "done" && "border-green",
+              state === "todo" && "border-line-strong",
             )}
           >
             <span
               className={cn(
-                "flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold tabular-nums transition-colors duration-300",
-                state === "active" && "bg-ink text-white",
+                "flex size-7 shrink-0 items-center justify-center rounded-full text-sm tabular-nums transition-colors duration-300",
+                state === "active" && "bg-blue text-white",
                 state === "done" && "bg-green-wash text-green-ink",
                 state === "todo" && "bg-page-deep text-soft",
               )}
@@ -134,7 +134,7 @@ function Stepper({ current }: { current: number }) {
               {state === "done" ? <Check className="size-4" strokeWidth={2.5} /> : i + 1}
             </span>
             <span className="min-w-0 leading-tight">
-              <span className={cn("block text-[0.8125rem] font-medium sm:text-sm", state === "todo" && "text-soft")}>
+              <span className={cn("block text-[0.875rem] sm:text-[0.9375rem]", state === "todo" && "text-soft")}>
                 {s.title}
                 <span className="sr-only">
                   {state === "done" ? " (done)" : state === "active" ? " (current step)" : " (not yet)"}
@@ -151,14 +151,14 @@ function Stepper({ current }: { current: number }) {
 
 function StepCard({ n, title, intro, children, next }: { n: number; title: string; intro: ReactNode; children: ReactNode; next: string }) {
   return (
-    <section className="card toast p-5 sm:p-7" aria-labelledby={`step-${n}`}>
-      <h2 id={`step-${n}`} className="font-heading text-2xl font-[650] tracking-[-0.03em]">
+    <section className="toast pt-4" aria-labelledby={`step-${n}`}>
+      <h2 id={`step-${n}`} className="type-section">
         {title}
       </h2>
-      <p className="mt-1.5 max-w-[60ch] text-soft">{intro}</p>
-      <div className="mt-6">{children}</div>
-      <p className="panel mt-6 flex items-start gap-2 p-3 text-sm">
-        <ArrowRight className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <p className="mt-2 max-w-[60ch] text-soft">{intro}</p>
+      <div className="mt-8">{children}</div>
+      <p className="mt-8 flex items-start gap-2 border-t border-line pt-5 text-sm">
+        <ArrowRight className="mt-0.5 size-4 shrink-0 text-soft" aria-hidden />
         <span>
           <span className="text-soft">What happens next: </span>
           {next}
@@ -322,8 +322,8 @@ export function LaunchFlow() {
   const pvSeed = p?.seeded ? toNumber(p.usdcReserve, USDC_DECIMALS) : seedRaw ? toNumber(seedRaw, USDC_DECIMALS) : null;
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_21rem]">
-      <div className="grid min-w-0 content-start gap-5">
+    <div className="grid gap-x-14 gap-y-10 lg:grid-cols-[minmax(0,1fr)_23rem]">
+      <div className="grid min-w-0 content-start gap-8">
         <Stepper current={current} />
 
         {txErr && (
@@ -333,7 +333,7 @@ export function LaunchFlow() {
         )}
 
         {resuming ? (
-          <div className="card grid gap-4 p-7" aria-busy aria-label="Loading your launch">
+          <div className="grid gap-4 pt-4" aria-busy aria-label="Loading your launch">
             <Skeleton className="h-10 w-1/2" />
             <Skeleton className="h-5 w-3/4" />
             <Skeleton className="h-40" />
@@ -354,12 +354,15 @@ export function LaunchFlow() {
             >
               <div className="grid gap-5 sm:grid-cols-2">
                 <div className="grid content-start gap-2">
-                  <Label htmlFor={ids.name}>Name</Label>
-                  <Input id={ids.name} value={name} maxLength={40} onChange={(e) => setName(e.target.value)} placeholder="Nvidia Meme" required />
+                  <label className="input-card cursor-text" htmlFor={ids.name}>
+                    <span className="text-[0.9375rem] text-ink-2">Name</span>
+                    <input id={ids.name} className="mt-2 !text-2xl" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} placeholder="Nvidia Meme" required />
+                  </label>
                 </div>
                 <div className="grid content-start gap-2">
-                  <Label htmlFor={ids.symbol}>Ticker</Label>
-                  <Input
+                  <label className="input-card cursor-text" htmlFor={ids.symbol} data-invalid={(symbol.length > 0 && (!symbolOk || taken.data === true)) || undefined}>
+                    <span className="text-[0.9375rem] text-ink-2">Ticker</span>
+                  <input
                     id={ids.symbol}
                     value={symbol}
                     maxLength={10}
@@ -368,8 +371,9 @@ export function LaunchFlow() {
                     aria-describedby={`${ids.symbol}-hint`}
                     aria-invalid={symbol.length > 0 && (!symbolOk || taken.data === true)}
                     required
-                    className="font-medium tracking-wide uppercase"
+                    className="mt-2 !text-2xl uppercase"
                   />
+                  </label>
                   <p
                     id={`${ids.symbol}-hint`}
                     className={cn("text-[0.8125rem] [overflow-wrap:anywhere]", symbol && (!symbolOk || taken.data) ? "text-red-ink" : symbolOk && taken.data === false ? "text-green-ink" : "text-soft")}
@@ -388,7 +392,7 @@ export function LaunchFlow() {
               </div>
 
               <fieldset>
-                <legend className="mb-2 text-sm font-medium">Which stock does it believe in?</legend>
+                <legend className="mb-3 text-[0.9375rem] text-ink-2">Which stock does it believe in?</legend>
                 {stocks.error ? (
                   <Notice tone="error" title="Could not load the stock list">
                     {stocks.error}
@@ -405,10 +409,10 @@ export function LaunchFlow() {
                       <label
                         key={s.ticker}
                         className={cn(
-                          "flex cursor-pointer items-center gap-3 rounded-2xl border p-3 transition-[transform,box-shadow,border-color,background-color] duration-300 ease-[var(--ease-spring)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-blue",
+                          "flex cursor-pointer items-center gap-3 rounded-[16px] border bg-panel p-3.5 transition-[transform,border-color,background-color] duration-300 ease-[var(--ease-spring)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-blue",
                           ticker === s.ticker
-                            ? "-translate-y-0.5 border-ink bg-card shadow-[var(--shadow-md)] ring-1 ring-ink"
-                            : "border-line bg-card hover:-translate-y-0.5 hover:border-line-strong hover:shadow-[var(--shadow-sm)]",
+                            ? "border-blue"
+                            : "border-transparent hover:-translate-y-0.5 hover:bg-[#212126]",
                         )}
                       >
                         <input
@@ -421,7 +425,7 @@ export function LaunchFlow() {
                         />
                         <StockLogo ticker={s.ticker} size={32} decorative />
                         <span className="min-w-0 leading-tight">
-                          <span className="block text-sm font-medium">{s.ticker}</span>
+                          <span className="block text-[0.9375rem]">{s.ticker}</span>
                           <span className="block truncate text-xs text-soft">
                             {STOCK_LOGOS[s.ticker]?.name ?? TESTNET_VENUES[s.ticker]?.name ?? "Listed stock"}
                           </span>
@@ -439,7 +443,7 @@ export function LaunchFlow() {
               </fieldset>
 
               <div className="grid gap-2">
-                <Label htmlFor={ids.icon}>Icon (optional)</Label>
+                <Label htmlFor={ids.icon} className="font-normal text-ink-2">Icon (optional)</Label>
                 <Input
                   id={ids.icon}
                   type="file"
@@ -497,41 +501,50 @@ export function LaunchFlow() {
                 </Notice>
               )}
               <div className="grid gap-2">
-                <Label htmlFor={ids.seed}>How much USDC goes in?</Label>
-                <div className="relative">
-                  <Input
+                <div className="input-card" data-invalid={(seed !== "" && !seedRaw) || undefined}>
+                  <div className="flex items-center justify-between gap-3">
+                    <label htmlFor={ids.seed} className="text-[0.9375rem] text-ink-2">
+                      You seed USDC
+                    </label>
+                    <LogoTile logo={PLATFORM_LOGOS.usdc} size={22} decorative className="!ring-0" />
+                  </div>
+                  <input
                     id={ids.seed}
+                    className="mt-3"
                     inputMode="decimal"
                     autoComplete="off"
+                    placeholder="0.00"
                     value={seed}
                     onChange={(e) => setSeed(e.target.value)}
                     aria-describedby={`${ids.seed}-hint`}
                     aria-invalid={seed !== "" && !seedRaw}
-                    className="h-14 pr-20 text-2xl font-semibold tracking-tight tabular-nums"
                   />
-                  <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-sm font-medium text-soft">USDC</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quick seed amounts">
-                  {["100", "500", "1000"].map((v) => (
-                    <button key={v} type="button" className="chip flex-1" aria-pressed={seed === v} onClick={() => setSeed(v)}>
-                      {Number(v).toLocaleString("en-US")}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    className="chip flex-1"
-                    disabled={!usdc.data}
-                    onClick={() => usdc.data && setSeed(toDecimalString(usdc.data, USDC_DECIMALS))}
-                  >
-                    Max
-                  </button>
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <span className="text-soft tabular-nums">{seedRaw ? `$${fmtRaw(seedRaw, USDC_DECIMALS)}` : "$0"}</span>
+                    <span className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Quick seed amounts">
+                      <span className="mr-1 text-ink-2 tabular-nums">{usdc.data != null ? `${fmtRaw(usdc.data, USDC_DECIMALS)} USDC` : "–"}</span>
+                      {["100", "500", "1000"].map((v) => (
+                        <button key={v} type="button" className="max-chip" aria-pressed={seed === v} onClick={() => setSeed(v)}>
+                          {Number(v).toLocaleString("en-US")}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className="max-chip"
+                        disabled={!usdc.data}
+                        onClick={() => usdc.data && setSeed(toDecimalString(usdc.data, USDC_DECIMALS))}
+                      >
+                        MAX
+                      </button>
+                    </span>
+                  </div>
                 </div>
                 <p id={`${ids.seed}-hint`} className="text-[0.8125rem] text-soft">
                   All 1,000,000,000 tokens start in the pool, so the opening price is{" "}
-                  <span className="font-medium text-ink">
+                  <span className="text-ink">
                     {seedRaw ? `$${fmtAmount(toNumber(seedRaw, USDC_DECIMALS) / 1e9)}` : "seed ÷ 1,000,000,000"}
                   </span>{" "}
-                  per token. Your balance: {usdc.data != null ? `${fmtRaw(usdc.data, USDC_DECIMALS)} USDC` : "–"}.
+                  per token.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -585,9 +598,8 @@ export function LaunchFlow() {
             </div>
           </StepCard>
         ) : (
-          <section className="card toast relative isolate overflow-hidden p-6 sm:p-8" aria-labelledby="launched">
-            <div className="glow -z-10 -right-10 -bottom-16 h-48 w-64 bg-[#ffd76a]" aria-hidden />
-            <div className="relative max-w-[32rem]">
+          <section className="toast pt-4" aria-labelledby="launched">
+            <div className="max-w-[32rem]">
               <span className="pill pill-green">All three steps done</span>
               <h2 id="launched" className="type-h1 mt-3">
                 {p?.meta?.symbol ?? "Your meme"} is live.
@@ -612,12 +624,12 @@ export function LaunchFlow() {
 
       <aside className="grid content-start gap-5" aria-label="Preview and details">
         <div>
-          <p className="mb-2 text-sm font-medium">{p?.exists ? "Your meme" : "Live preview"}</p>
-          <div className="card flex flex-col gap-4 p-5 shadow-[var(--shadow-md)]">
+          <p className="mb-3 text-[0.9375rem] text-ink-2">{p?.exists ? "Your meme" : "Live preview"}</p>
+          <div className="panel flex flex-col gap-4 p-5">
             <div className="flex items-start gap-3">
               <MemeIcon icon={pvIcon} symbol={pvSymbol} size={48} />
               <div className="min-w-0 flex-1">
-                <p className={cn("truncate text-xl leading-tight font-semibold tracking-tight", !p?.meta && !symbol && "text-faint")}>{pvSymbol}</p>
+                <p className={cn("truncate text-2xl leading-tight font-light tracking-[-0.02em]", !p?.meta && !symbol && "text-faint")}>{pvSymbol}</p>
                 <p className="truncate text-sm text-soft">{pvName}</p>
               </div>
             </div>
@@ -626,7 +638,7 @@ export function LaunchFlow() {
                 <>
                   Holds
                   <StockLogo ticker={pvTicker} size={20} decorative />
-                  <span className="font-medium">{pvTicker}</span>
+                  <span>{pvTicker}</span>
                   {TESTNET_VENUES[pvTicker] && <span className="text-soft">({TESTNET_VENUES[pvTicker].name})</span>}
                   <ChainStack chains={["base", "robinhood", "solana"]} size={18} className="ml-auto" />
                 </>
@@ -634,16 +646,14 @@ export function LaunchFlow() {
                 <span className="text-soft">Pick a stock to hold</span>
               )}
             </p>
-            <dl className="grid grid-cols-2 gap-2">
-              <div className="panel px-3 py-2">
-                <dt className="text-xs text-soft">{p?.seeded ? "USDC in the pool" : "Opening price"}</dt>
-                <dd className="type-num mt-1 text-[1.0625rem]">
-                  {!pvSeed ? "–" : p?.seeded ? fmtAmount(pvSeed) : `$${fmtAmount(pvSeed / 1e9)}`}
-                </dd>
+            <dl className="border-t border-line pt-2 text-sm">
+              <div className="flex justify-between gap-3 py-1.5">
+                <dt className="text-ink-2">{p?.seeded ? "USDC in the pool" : "Opening price"}</dt>
+                <dd className="tabular-nums">{!pvSeed ? "–" : p?.seeded ? fmtAmount(pvSeed) : `$${fmtAmount(pvSeed / 1e9)}`}</dd>
               </div>
-              <div className="panel px-3 py-2">
-                <dt className="text-xs text-soft">Supply</dt>
-                <dd className="type-num mt-1 text-[1.0625rem]">1B</dd>
+              <div className="flex justify-between gap-3 py-1.5">
+                <dt className="text-ink-2">Supply</dt>
+                <dd className="tabular-nums">1,000,000,000</dd>
               </div>
             </dl>
             <MnavGauge value={null} size="sm" />
@@ -658,21 +668,21 @@ export function LaunchFlow() {
           </div>
         </div>
 
-        <div className="card p-5">
-          <p className="type-h3">What it costs</p>
+        <div className="panel p-5">
+          <p className="text-[0.9375rem]">What it costs</p>
           <ul className="mt-2 grid gap-1.5 text-sm text-soft">
             <li>
-              <span className="font-medium text-ink">{costLabel}</span> to create the contract (storage)
+              <span className="text-ink">{costLabel}</span> to create the contract (storage)
             </li>
             <li>
-              <span className="font-medium text-ink">Your seed USDC</span>, which becomes the pool&apos;s liquidity
+              <span className="text-ink">Your seed USDC</span>, which becomes the pool&apos;s liquidity
             </li>
             <li>Gas for three transactions</li>
           </ul>
         </div>
 
-        <div className="card p-5">
-          <p className="type-h3">What gets locked</p>
+        <div className="panel p-5">
+          <p className="text-[0.9375rem]">What gets locked</p>
           <p className="mt-2 text-sm text-soft">
             1% pool fee (0.8% treasury, 0.2% creator), issuance above 2.0× mNAV capped at 1% of
             supply a day, buyback below 1.0×, redemption below 0.9×, 20% cash buffer. The meme has
@@ -681,8 +691,8 @@ export function LaunchFlow() {
         </div>
 
         {accountId && (mine.data?.length ?? 0) > 0 && (
-          <div className="card p-5">
-            <p className="type-h3">Your memes</p>
+          <div className="panel p-5">
+            <p className="text-[0.9375rem]">Your memes</p>
             <ul className="mt-2 grid gap-1 text-sm">
               {mine.data!.map((m) => (
                 <li key={m}>
