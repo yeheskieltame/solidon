@@ -169,7 +169,8 @@ function StepCard({ n, title, intro, children, next }: { n: number; title: strin
 }
 
 export function LaunchFlow() {
-  const { accountId, connect, send, signHint } = useWallet();
+  const { accountId, connect, send, signHint, kind } = useWallet();
+  const waitLabel = kind === "demo" ? "Signing" : "Waiting for your wallet";
   const toast = useToast();
   const router = useRouter();
   const pathname = usePathname();
@@ -469,7 +470,7 @@ export function LaunchFlow() {
               <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-line pt-5">
                 {accountId ? (
                   <Button type="submit" size="lg" className="whitespace-normal" disabled={!formValid || !!busy}>
-                    {busy === "launch" ? <span className="dots">Waiting for your wallet</span> : (formBlocked ?? `Create ${symbol} for ${costLabel}`)}
+                    {busy === "launch" ? <span className="dots">{waitLabel}</span> : (formBlocked ?? `Create ${symbol} for ${costLabel}`)}
                   </Button>
                 ) : (
                   connectBtn("Connect a wallet to launch")
@@ -556,7 +557,7 @@ export function LaunchFlow() {
                     onClick={seedPool}
                   >
                     {busy === "seed" ? (
-                      <span className="dots">Waiting for your wallet</span>
+                      <span className="dots">{waitLabel}</span>
                     ) : !isCreator ? (
                       "Only the creator can seed"
                     ) : !seedRaw || seedRaw <= 0n ? (
@@ -590,7 +591,7 @@ export function LaunchFlow() {
             <div className="flex flex-wrap items-center gap-3">
               {accountId ? (
                 <Button size="lg" disabled={!!busy} onClick={initTreasury}>
-                  {busy === "treasury" ? <span className="dots">Waiting for your wallet</span> : "Open the treasury"}
+                  {busy === "treasury" ? <span className="dots">{waitLabel}</span> : "Open the treasury"}
                 </Button>
               ) : (
                 connectBtn("Connect a wallet to open it")
