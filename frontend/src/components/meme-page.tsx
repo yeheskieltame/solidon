@@ -244,6 +244,7 @@ export function MemePage({ account }: { account: string }) {
 
         <StatRow className="mt-12">
           <Stat
+            size="md"
             label={nav.usesTwap ? "Price (TWAP)" : "Price (spot)"}
             hint={nav.usesTwap ? GLOSSARY.twap : "The pool's spot price. The 30-minute average appears once the pool has history."}
             value={seeded ? nav.priceUsd : null}
@@ -252,14 +253,16 @@ export function MemePage({ account }: { account: string }) {
             sub={seeded ? (spotUsd !== null && nav.usesTwap ? `Spot ${fmtPrice(spotUsd)}` : "USDC per token") : "Pool not seeded"}
           />
           <Stat
+            size="md"
             label="NAV / token"
             hint={GLOSSARY.nav}
             value={nav.navUsd}
             format={fmtPrice}
             title={nav.navUsd !== null ? fmtPriceLong(nav.navUsd) : undefined}
-            sub={nav.navUsd === null ? "Starts once tokens circulate" : "Ledger at the oracle price"}
+            sub={nav.navUsd === null ? "Starts once tokens circulate" : "Ledger at oracle price"}
           />
           <Stat
+            size="md"
             label="mNAV"
             hint={GLOSSARY.mnav}
             value={nav.mnav}
@@ -267,11 +270,12 @@ export function MemePage({ account }: { account: string }) {
             sub={contractMnav !== null ? `Last rebalance ${fmtTimes(contractMnav)}` : "No rebalance yet"}
           />
           <Stat
+            size="md"
             label="Treasury value"
             hint="Everything the treasury holds: USDC on NEAR, plus USDC and stock on every chain from the ledger, with the stock at the oracle price."
             value={nav.assetsUsd}
             format={fmtUsdCompact}
-            sub={`${fmtCompact(nav.circulating)} ${metadata.symbol} circulating`}
+            sub={`${fmtCompact(nav.circulating)} circulating`}
           />
         </StatRow>
 
