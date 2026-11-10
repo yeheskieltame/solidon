@@ -41,18 +41,26 @@ export function compositionOf(row: MarketRow): Slice[] {
   ];
 }
 
+/** The stacked bar alone: one segment per slice, sized by its share of the total. */
+export function CompositionBar({ slices, total, className }: { slices: Slice[]; total: number; className?: string }) {
+  const safe = Math.max(total, 1e-9);
+  return (
+    <div className={`flex h-2.5 gap-1 overflow-hidden rounded-full bg-page-deep ${className ?? ""}`} aria-hidden>
+      {slices
+        .filter((s) => s.usd > 0)
+        .map((s) => (
+          <span key={s.key} className="bar-fill h-full rounded-full" style={{ width: `${(s.usd / safe) * 100}%`, background: s.color }} />
+        ))}
+    </div>
+  );
+}
+
 /** A stacked bar and a legend list. Every figure is the contract's ledger, nothing estimated. */
 export function Composition({ slices, total }: { slices: Slice[]; total: number }) {
   const safe = Math.max(total, 1e-9);
   return (
     <div>
-      <div className="flex h-2.5 gap-1 overflow-hidden rounded-full bg-page-deep" aria-hidden>
-        {slices
-          .filter((s) => s.usd > 0)
-          .map((s) => (
-            <span key={s.key} className="bar-fill h-full rounded-full" style={{ width: `${(s.usd / safe) * 100}%`, background: s.color }} />
-          ))}
-      </div>
+      <CompositionBar slices={slices} total={total} />
       <ul className="mt-4">
         {slices.map((s) => (
           <li key={s.key} className="flex items-center gap-3 border-b border-line py-3 last:border-b-0">

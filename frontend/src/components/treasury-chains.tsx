@@ -13,7 +13,7 @@ import { fmtRaw, fmtUsd, shortAddr } from "@/lib/format";
 import { stockUsd } from "@/lib/math";
 import type { PythPrice, TreasuryChainsRaw } from "@/lib/near";
 import { PROOF_COPY, chainProof } from "@/lib/proof";
-import { useAsync } from "@/lib/use-async";
+import { useAsync, type AsyncState } from "@/lib/use-async";
 
 /** What the contract wrote down against what the chain holds right now. */
 function verdict(ledger: bigint | null, chain: bigint | null, decimals: number, loading: boolean) {
@@ -40,8 +40,19 @@ function verdict(ledger: bigint | null, chain: bigint | null, decimals: number, 
 }
 
 /** One chain as a group of rows: a header with the address and proof type, then each asset. */
-function ChainGroup({ c, price, ticker, raw }: { c: TreasuryChain; price: PythPrice | null; ticker: string; raw: TreasuryChainsRaw | null }) {
-  const onChain = useAsync<OnChainBalance>(() => readOnChain(c), [c.key, c.address, c.stockToken, c.usdcToken]);
+function ChainGroup({
+  c,
+  price,
+  ticker,
+  raw,
+  onChain,
+}: {
+  c: TreasuryChain;
+  price: PythPrice | null;
+  ticker: string;
+  raw: TreasuryChainsRaw | null;
+  onChain: { data: OnChainBalance | undefined; loading: boolean };
+}) {
   const stockUnit = c.stockSymbol ?? ticker;
   const valued = c.ledgerStock !== null ? stockUsd(c.ledgerStock, c.stockDecimals, price) : null;
   const proof = chainProof(raw, c.key);
@@ -141,6 +152,36 @@ function ChainGroup({ c, price, ticker, raw }: { c: TreasuryChain; price: PythPr
   );
 }
 
+export type OnChainReadings = AsyncState<Record<string, OnChainBalance>>;
+
+/** Reads every treasury chain's live balances once, so the summary and the table share them. */
+export function useOnChainReadings(chains: TreasuryChain[]): OnChainReadings {
+  const key = chains.map((c) => `${c.key}:${c.address}:${c.stockToken}:${c.usdcToken}`).join("|");
+  return useAsync(async () => {
+    const all = await Promise.all(chains.map(async (c) => [c.key, await readOnChain(c)] as const));
+    return Object.fromEntries(all);
+  }, [key]);
+}
+
+export type Coverage = "pending" | "none" | "covered" | "short" | "unreadable";
+
+/** Whether the chain holds at least what the ledger claims, for the stock and the USDC it tracks. */
+export function coverage(c: TreasuryChain, r: OnChainBalance | undefined, loading: boolean): Coverage {
+  if (!c.address || (c.ledgerStock === null && c.ledgerUsdc === null)) return "none";
+  if (!r) return loading ? "pending" : "unreadable";
+  let checked = false;
+  for (const [ledger, chain] of [
+    [c.ledgerStock, r.stock],
+    [c.ledgerUsdc, r.usdc],
+  ] as const) {
+    if (ledger === null || ledger === 0n) continue;
+    if (chain === null) return "unreadable";
+    if (chain < ledger) return "short";
+    checked = true;
+  }
+  return checked ? "covered" : "none";
+}
+
 /** The treasury on every chain as one grouped table: ledger against the live on-chain balance. */
 export function TreasuryChains({
   chains,
@@ -148,12 +189,14 @@ export function TreasuryChains({
   ticker,
   note,
   raw,
+  readings,
 }: {
   chains: TreasuryChain[];
   price: PythPrice | null;
   ticker: string;
   note: string | null;
   raw: TreasuryChainsRaw | null;
+  readings: OnChainReadings;
 }) {
   return (
     <div className="grid gap-4">
@@ -176,7 +219,14 @@ export function TreasuryChains({
             </tr>
           </thead>
           {chains.map((c) => (
-            <ChainGroup key={c.key} c={c} price={price} ticker={ticker} raw={raw} />
+            <ChainGroup
+              key={c.key}
+              c={c}
+              price={price}
+              ticker={ticker}
+              raw={raw}
+              onChain={{ data: readings.data?.[c.key], loading: readings.loading && !readings.data?.[c.key] }}
+            />
           ))}
         </table>
       </div>

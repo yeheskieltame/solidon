@@ -40,6 +40,7 @@ export function MnavGauge({
   size = "lg",
   label = "mNAV",
   legend = false,
+  showValue = true,
   className,
 }: {
   value: number | null;
@@ -47,6 +48,8 @@ export function MnavGauge({
   size?: "sm" | "lg";
   label?: string;
   legend?: boolean;
+  /** The value bubble over the needle; off where the figure is already shown beside it. */
+  showValue?: boolean;
   className?: string;
 }) {
   const t = thresholds;
@@ -66,6 +69,7 @@ export function MnavGauge({
       <div
         className="gauge"
         data-size={size}
+        data-bare={(size === "lg" && !showValue) || undefined}
         role="meter"
         aria-label={label}
         aria-valuemin={0}
@@ -92,7 +96,7 @@ export function MnavGauge({
         </div>
         {pos !== null && (
           <div className="gauge-needle" style={{ "--pos": pos } as CSSProperties} aria-hidden>
-            {size === "lg" && (
+            {size === "lg" && showValue && (
               <span className="gauge-value" style={{ "--nudge": nudge } as CSSProperties}>
                 {fmtTimes(value)}
                 {over ? " ▸" : ""}
