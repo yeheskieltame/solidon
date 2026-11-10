@@ -28,11 +28,11 @@ export function MemeIcon({
   const [a, b] = TINTS[hash % TINTS.length];
   return (
     <span
-      className={cn("inline-flex shrink-0 items-center justify-center overflow-hidden ring-1 ring-black/5 ring-inset", className)}
+      className={cn("inline-flex shrink-0 items-center justify-center overflow-hidden ring-1 ring-white/10 ring-inset", className)}
       style={{
         width: size,
         height: size,
-        borderRadius: Math.round(size * 0.3),
+        borderRadius: "50%",
         background: safe ? "#fff" : `linear-gradient(140deg, ${a}, ${b})`,
       }}
     >
@@ -40,7 +40,7 @@ export function MemeIcon({
         // eslint-disable-next-line @next/next/no-img-element -- on-chain data URL
         <img src={safe} alt="" width={size} height={size} className="size-full object-cover" />
       ) : (
-        <span className="font-heading font-[650] tracking-tight text-ink" style={{ fontSize: size * 0.36 }} aria-hidden>
+        <span className="font-semibold tracking-tight text-[#0b1020]" style={{ fontSize: size * 0.36 }} aria-hidden>
           {symbol.slice(0, 2)}
         </span>
       )}

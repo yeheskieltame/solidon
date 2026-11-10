@@ -3,16 +3,17 @@
 import { Lock, LockOpen, Wallet } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 import { cn } from "cn";
+import { LogoTile } from "./brand-logo";
+import { MemeIcon } from "./meme-icon";
 import { Notice } from "./notice";
-import { Term } from "./term";
+import { Hint } from "./term";
 import { useToast } from "./toast";
 import { GetTestUsdcButton } from "./wallet-controls";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MEME_DECIMALS, NEARBLOCKS, USDC, USDC_DECIMALS } from "@/lib/config";
-import { fmtRaw, parseUnits, toBig, toDecimalString, toNumber } from "@/lib/format";
+import { CHAIN_LOGOS, PLATFORM_LOGOS } from "@/lib/brands";
+import { MEME_DECIMALS, NEARBLOCKS, NETWORK, USDC, USDC_DECIMALS } from "@/lib/config";
+import { fmtRaw, fmtUsd, parseUnits, toBig, toDecimalString, toNumber } from "@/lib/format";
 import { PRICE_SCALE, quoteBuy, quoteSell, scaledToUsd, withSlippage } from "@/lib/math";
 import { fmtPrice } from "@/lib/price";
 import type { MemeSnapshot } from "@/lib/meme";
@@ -48,97 +49,109 @@ export function useUserBalances(account: string, accountId: string | null) {
   }, [account, accountId]);
 }
 
-function Line({ k, v }: { k: ReactNode; v: string }) {
+/** One summary row: label on the left, value on the right. */
+function Row({ k, v, icon }: { k: ReactNode; v: ReactNode; icon?: ReactNode }) {
   return (
-    <div className="flex justify-between gap-3 py-1 text-sm">
-      <dt className="shrink-0 text-soft">{k}</dt>
-      <dd className="min-w-0 text-right font-medium tabular-nums">{v}</dd>
+    <div className="flex items-center justify-between gap-3 py-2 text-sm">
+      <dt className="flex shrink-0 items-center gap-2 text-ink-2">
+        {icon}
+        {k}
+      </dt>
+      <dd className="min-w-0 text-right tabular-nums">{v}</dd>
     </div>
   );
 }
 
-/** The big "you get" figure and its fine print. */
-function Quote({ label, value, unit, children }: { label: string; value: string; unit: string; children: ReactNode }) {
-  return (
-    <div className="panel p-4" aria-live="polite">
-      <p className="text-xs text-soft">{label}</p>
-      <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
-        <span className="type-num text-[1.75rem] break-all">{value}</span>
-        <span className="text-sm font-medium text-soft">{unit}</span>
-      </p>
-      <dl className="mt-2 border-t border-line pt-2">{children}</dl>
-    </div>
-  );
-}
-
-/** Amount input with a unit suffix, quick chips and a balance / error line. */
-function AmountField({
+/**
+ * Morpho-style amount card: label and token icon on top, a big light number, the dollar value
+ * and the balance with MAX underneath. The border turns blue while it has focus.
+ */
+function AmountCard({
   id,
   label,
-  unit,
+  icon,
   value,
   onChange,
-  chips,
-  hint,
+  usd,
+  balance,
+  quick,
   error,
   disabled,
+  readOnly,
 }: {
   id: string;
   label: string;
-  unit: string;
+  icon: ReactNode;
   value: string;
-  onChange: (v: string) => void;
-  chips: { label: string; value: string | null }[];
-  hint: string;
-  error: string | null;
+  onChange?: (v: string) => void;
+  usd: string;
+  balance?: string | null;
+  quick?: { label: string; value: string | null }[];
+  error?: string | null;
   disabled?: boolean;
+  readOnly?: boolean;
 }) {
   return (
-    <div className="grid gap-2">
-      <Label htmlFor={id}>{label}</Label>
-      <div className="relative">
-        <Input
+    <div>
+      <div className="input-card" data-invalid={!!error || undefined}>
+        <div className="flex items-center justify-between gap-3">
+          <label htmlFor={id} className="text-[0.9375rem] text-ink-2">
+            {label}
+          </label>
+          {icon}
+        </div>
+        <input
           id={id}
+          className="mt-3"
           inputMode="decimal"
           autoComplete="off"
+          placeholder="0.00"
           value={value}
-          placeholder="0"
           disabled={disabled}
-          onChange={(e) => onChange(e.target.value)}
+          readOnly={readOnly}
+          tabIndex={readOnly ? -1 : undefined}
+          onChange={(e) => onChange?.(e.target.value)}
           aria-invalid={!!error}
-          aria-describedby={`${id}-hint`}
-          className="h-14 pr-24 text-2xl font-semibold tracking-tight tabular-nums"
+          aria-describedby={error ? `${id}-err` : undefined}
+          aria-live={readOnly ? "polite" : undefined}
         />
-        <span className="pointer-events-none absolute top-1/2 right-4 max-w-20 -translate-y-1/2 truncate text-sm font-medium text-soft">
-          {unit}
-        </span>
+        <div className="mt-3 flex min-h-7 items-center justify-between gap-3 text-sm">
+          <span className="text-soft tabular-nums">{usd}</span>
+          {balance !== undefined && (
+            <span className="flex items-center gap-1.5">
+              <span className="text-ink-2 tabular-nums">{balance ?? "–"}</span>
+              {quick?.map((q) => (
+                <button
+                  key={q.label}
+                  type="button"
+                  className="max-chip"
+                  disabled={disabled || q.value === null}
+                  aria-pressed={q.value !== null && q.value === value}
+                  onClick={() => q.value !== null && onChange?.(q.value)}
+                >
+                  {q.label}
+                </button>
+              ))}
+            </span>
+          )}
+        </div>
       </div>
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Quick amounts for ${label}`}>
-        {chips.map((c) => (
-          <button
-            key={c.label}
-            type="button"
-            className="chip !min-h-8 flex-1 !px-2"
-            disabled={disabled || c.value === null}
-            aria-pressed={c.value !== null && c.value === value}
-            onClick={() => c.value !== null && onChange(c.value)}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
-      <p id={`${id}-hint`} className={cn("text-[0.8125rem]", error ? "text-red-ink" : "text-soft")}>
-        {error ?? hint}
-      </p>
+      {error && (
+        <p id={`${id}-err`} className="mt-2 px-1 text-[0.8125rem] text-red-ink">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
 
-/** A share of a raw balance as a decimal string, for the percentage chips. */
+/** A share of a raw balance as a decimal string, for the quick-amount chips. */
 function share(balance: bigint | undefined, pct: number, decimals: number): string | null {
   if (!balance || balance <= 0n) return null;
   return toDecimalString((balance * BigInt(pct)) / 100n, decimals);
 }
+
+const pctText = (n: number) => `${n >= 0 ? "+" : ""}${(n * 100).toFixed(2)}%`;
 
 export function TradePanel({
   snap,
@@ -160,7 +173,7 @@ export function TradePanel({
   const [slip, setSlip] = useState(100);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ tone: "quiet" | "error"; text: string } | null>(null);
-  const ids = { buy: useId(), sell: useId(), redeem: useId() };
+  const ids = { buy: useId(), buyOut: useId(), sell: useId(), sellOut: useId(), redeem: useId(), redeemOut: useId() };
 
   const seeded = pool ? toBig(pool.usdc_reserve) > 0n : false;
   const redemptionOpen = !!treasury?.redemption_open;
@@ -219,6 +232,7 @@ export function TradePanel({
   const sellRaw = parseUnits(sellIn, MEME_DECIMALS);
   const sellOut = pool && sellRaw ? quoteSell(sellRaw, pool, params) : 0n;
   const sellMin = withSlippage(sellOut, slip);
+  const sellAvg = sellRaw && sellOut > 0n ? toNumber(sellOut, USDC_DECIMALS) / toNumber(sellRaw, MEME_DECIMALS) : 0;
   const sellErr =
     sellIn && !sellRaw ? "Enter a valid amount." :
     user && sellRaw && sellRaw > user.meme ? `More than your ${sym} balance.` : null;
@@ -232,24 +246,45 @@ export function TradePanel({
     redeemIn && !redeemRaw ? "Enter a valid amount." :
     user && redeemRaw && redeemRaw > user.meme ? `More than your ${sym} balance.` : null;
 
-  const fee = `${params.pool_fee_bps / 100}% (${params.treasury_fee_bps / 100}% treasury, ${params.creator_fee_bps / 100}% creator)`;
-  const memeChips = [25, 50, 75].map((p) => ({ label: `${p}%`, value: share(user?.meme, p, MEME_DECIMALS) }));
-  memeChips.push({ label: "Max", value: share(user?.meme, 100, MEME_DECIMALS) });
+  const fee = `${params.pool_fee_bps / 100}%`;
+  const feeTip = `${params.treasury_fee_bps / 100}% goes to the treasury, ${params.creator_fee_bps / 100}% to the creator. Taken from the USDC side.`;
+  const memeQuick = [
+    { label: "50%", value: share(user?.meme, 50, MEME_DECIMALS) },
+    { label: "MAX", value: share(user?.meme, 100, MEME_DECIMALS) },
+  ];
+  const memeBalance = user ? `${fmtRaw(user.meme, MEME_DECIMALS)} ${sym}` : null;
+  const memeUsd = (raw: bigint | null) => fmtUsd(raw ? toNumber(raw, MEME_DECIMALS) * spotUsd : 0);
+  const usdcUsd = (raw: bigint | null, frac = 2) => (raw ? `$${fmtRaw(raw, USDC_DECIMALS, frac)}` : "$0");
+
+  const memeIcon = <MemeIcon icon={metadata.icon} symbol={sym} size={22} />;
+  const usdcIcon = <LogoTile logo={PLATFORM_LOGOS.usdc} size={22} decorative className="!ring-0" />;
 
   const slippage = (
-    <fieldset className="flex flex-wrap items-center gap-2 text-sm">
-      <legend className="sr-only">Slippage tolerance</legend>
-      <span className="mr-auto text-soft">
-        <Term tip="How far the price may move against you before the trade is cancelled instead of filled." align="start">
-          Slippage
-        </Term>
+    <div className="flex items-center justify-between gap-3 py-2 text-sm">
+      <span className="flex items-center gap-1.5 text-ink-2">
+        Slippage
+        <Hint tip="How far the price may move against you before the trade is cancelled instead of filled." align="start" />
       </span>
-      {SLIPPAGES.map((s) => (
-        <button key={s} type="button" aria-pressed={slip === s} onClick={() => setSlip(s)} className="chip !min-h-8 !px-2.5">
-          {s / 100}%
-        </button>
-      ))}
-    </fieldset>
+      <span className="seg !p-0.5" role="group" aria-label="Slippage tolerance">
+        {SLIPPAGES.map((s) => (
+          <button key={s} type="button" aria-pressed={slip === s} onClick={() => setSlip(s)} className="!px-2 !py-0.5 !text-[0.8125rem]">
+            {s / 100}%
+          </button>
+        ))}
+      </span>
+    </div>
+  );
+
+  const network = (
+    <Row
+      k="Network"
+      v={
+        <span className="inline-flex items-center gap-2">
+          <LogoTile logo={CHAIN_LOGOS.near} size={18} decorative />
+          NEAR {NETWORK}
+        </span>
+      }
+    />
   );
 
   /** One full-width button whose label always says exactly what will happen, or why it cannot. */
@@ -283,7 +318,7 @@ export function TradePanel({
   }
 
   return (
-    <div className="card p-4 shadow-[var(--shadow-md)] sm:p-5">
+    <div>
       <Tabs
         value={tab}
         onValueChange={(v) => {
@@ -295,33 +330,39 @@ export function TradePanel({
           <TabsTrigger value="buy">Buy</TabsTrigger>
           <TabsTrigger value="sell">Sell</TabsTrigger>
           <TabsTrigger value="redeem">
-            {redemptionOpen ? <LockOpen className="size-4" aria-hidden /> : <Lock className="size-4" aria-hidden />}
+            {redemptionOpen ? <LockOpen aria-hidden /> : <Lock aria-hidden />}
             Redeem
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="buy" className="grid gap-4">
-          <AmountField
+        <TabsContent value="buy" className="grid gap-3">
+          <AmountCard
             id={ids.buy}
-            label="You pay"
-            unit="USDC"
+            label="You pay USDC"
+            icon={usdcIcon}
             value={buyIn}
             onChange={setBuyIn}
-            chips={[
-              { label: "25", value: "25" },
-              { label: "50", value: "50" },
-              { label: "100", value: "100" },
-              { label: "Max", value: share(user?.usdc, 100, USDC_DECIMALS) },
-            ]}
-            hint={user ? `Balance: ${fmtRaw(user.usdc, USDC_DECIMALS)} USDC` : "Connect a wallet to see your balance."}
+            usd={usdcUsd(buyRaw)}
+            balance={user ? `${fmtRaw(user.usdc, USDC_DECIMALS)} USDC` : null}
+            quick={[{ label: "MAX", value: share(user?.usdc, 100, USDC_DECIMALS) }]}
             error={buyErr}
           />
-          <Quote label="You get about" value={fmtRaw(buyOut, MEME_DECIMALS)} unit={sym}>
-            <Line k="Minimum received" v={`${fmtRaw(buyMin, MEME_DECIMALS)} ${sym}`} />
-            <Line k="Average price" v={buyAvg ? `${fmtPrice(buyAvg)} (spot ${fmtPrice(spotUsd)})` : "–"} />
-            <Line k="Fee" v={fee} />
-          </Quote>
-          {slippage}
+          <AmountCard id={ids.buyOut} label={`You receive ${sym}`} icon={memeIcon} value={buyOut > 0n ? fmtRaw(buyOut, MEME_DECIMALS) : ""} usd={memeUsd(buyOut)} readOnly />
+          <dl className="panel px-5 py-3">
+            {network}
+            <Row k="Minimum received" v={`${fmtRaw(buyMin, MEME_DECIMALS)} ${sym}`} />
+            <Row k="Average price" v={buyAvg ? fmtPrice(buyAvg) : "–"} />
+            <Row
+              k={
+                <>
+                  Price impact <Hint tip="Average price against the spot price, with the fee included." align="start" />
+                </>
+              }
+              v={buyAvg && spotUsd ? pctText(buyAvg / spotUsd - 1) : "–"}
+            />
+            <Row k={<>Fee <Hint tip={feeTip} align="start" /></>} v={fee} />
+            {slippage}
+          </dl>
           {action(
             `Buy ~${fmtRaw(buyOut, MEME_DECIMALS)} ${sym} for ${buyRaw ? fmtRaw(buyRaw, USDC_DECIMALS) : "0"} USDC`,
             !buyIn.trim() || buyRaw === 0n ? "Enter an amount" : !buyRaw ? "Enter a valid amount" : buyShort ? "Not enough USDC" : buyOut <= 0n ? "Amount too small" : null,
@@ -339,34 +380,46 @@ export function TradePanel({
               ]),
           )}
           {accountId && (buyShort || (user && user.usdc === 0n)) && (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-golden-wash p-3">
-              <p className="text-sm text-golden-ink">Out of USDC? It is free on testnet.</p>
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+              <p className="text-sm text-soft">Out of USDC? It is free on testnet.</p>
               <GetTestUsdcButton onDone={onDone} />
             </div>
           )}
           {accountId && user && !user.registered && (
-            <p className="text-[0.8125rem] text-soft">
+            <p className="px-1 text-[0.8125rem] text-soft">
               Your first buy also registers your account on {sym} (0.00125 NEAR storage), so the wallet asks twice.
             </p>
           )}
         </TabsContent>
 
-        <TabsContent value="sell" className="grid gap-4">
-          <AmountField
+        <TabsContent value="sell" className="grid gap-3">
+          <AmountCard
             id={ids.sell}
-            label="You sell"
-            unit={sym}
+            label={`You sell ${sym}`}
+            icon={memeIcon}
             value={sellIn}
             onChange={setSellIn}
-            chips={memeChips}
-            hint={user ? `Balance: ${fmtRaw(user.meme, MEME_DECIMALS)} ${sym}` : "Connect a wallet to see your balance."}
+            usd={memeUsd(sellRaw)}
+            balance={memeBalance}
+            quick={memeQuick}
             error={sellErr}
           />
-          <Quote label="You get about" value={fmtRaw(sellOut, USDC_DECIMALS, 4)} unit="USDC">
-            <Line k="Minimum received" v={`${fmtRaw(sellMin, USDC_DECIMALS, 4)} USDC`} />
-            <Line k="Fee" v={fee} />
-          </Quote>
-          {slippage}
+          <AmountCard id={ids.sellOut} label="You receive USDC" icon={usdcIcon} value={sellOut > 0n ? fmtRaw(sellOut, USDC_DECIMALS, 4) : ""} usd={usdcUsd(sellOut, 4)} readOnly />
+          <dl className="panel px-5 py-3">
+            {network}
+            <Row k="Minimum received" v={`${fmtRaw(sellMin, USDC_DECIMALS, 4)} USDC`} />
+            <Row k="Average price" v={sellAvg ? fmtPrice(sellAvg) : "–"} />
+            <Row
+              k={
+                <>
+                  Price impact <Hint tip="Average price against the spot price, with the fee included." align="start" />
+                </>
+              }
+              v={sellAvg && spotUsd ? pctText(sellAvg / spotUsd - 1) : "–"}
+            />
+            <Row k={<>Fee <Hint tip={feeTip} align="start" /></>} v={fee} />
+            {slippage}
+          </dl>
           {action(
             `Sell ${sellRaw ? fmtRaw(sellRaw, MEME_DECIMALS) : "0"} ${sym} for ~${fmtRaw(sellOut, USDC_DECIMALS, 4)} USDC`,
             !sellIn.trim() || sellRaw === 0n ? "Enter an amount" : !sellRaw ? "Enter a valid amount" : sellErr ? `Not enough ${sym}` : sellOut <= 0n ? "Amount too small" : null,
@@ -382,35 +435,39 @@ export function TradePanel({
           )}
         </TabsContent>
 
-        <TabsContent value="redeem" className="grid gap-4">
-          <div
-            className={cn(
-              "flex items-start gap-3 rounded-xl p-3.5 text-sm",
-              redemptionOpen ? "bg-green-wash text-green-ink" : "panel text-soft",
-            )}
-          >
+        <TabsContent value="redeem" className="grid gap-3">
+          <p className={cn("flex items-start gap-2.5 px-1 text-sm", redemptionOpen ? "text-green-ink" : "text-soft")}>
             {redemptionOpen ? <LockOpen className="mt-0.5 size-4 shrink-0" aria-hidden /> : <Lock className="mt-0.5 size-4 shrink-0" aria-hidden />}
-            <p>
-              {redemptionOpen
-                ? "The window is open: mNAV fell below 0.9× at the last rebalance. Burn tokens for NAV per token in USDC from the cash buffer."
-                : "The window is closed. It opens when a rebalance finds mNAV below 0.9×."}
-            </p>
-          </div>
-          <AmountField
+            {redemptionOpen
+              ? "The window is open: mNAV fell below 0.9× at the last rebalance. Burn tokens for NAV per token in USDC from the cash buffer."
+              : "The window is closed. It opens when a rebalance finds mNAV below 0.9×."}
+          </p>
+          <AmountCard
             id={ids.redeem}
-            label="You burn"
-            unit={sym}
+            label={`You burn ${sym}`}
+            icon={memeIcon}
             value={redeemIn}
             onChange={setRedeemIn}
-            chips={memeChips}
+            usd={memeUsd(redeemRaw)}
+            balance={memeBalance}
+            quick={memeQuick}
             disabled={!redemptionOpen}
-            hint="Paid at NAV with a fresh oracle price. If the price is stale or cash runs short, your tokens come back."
             error={redeemErr}
           />
-          <Quote label="You get about, at the last NAV" value={fmtRaw(redeemEst, USDC_DECIMALS, 4)} unit="USDC">
-            <Line k="Minimum received" v={`${fmtRaw(redeemMin, USDC_DECIMALS, 4)} USDC`} />
-          </Quote>
-          {slippage}
+          <AmountCard id={ids.redeemOut} label="You receive USDC, at the last NAV" icon={usdcIcon} value={redeemEst > 0n ? fmtRaw(redeemEst, USDC_DECIMALS, 4) : ""} usd={usdcUsd(redeemEst, 4)} readOnly />
+          <dl className="panel px-5 py-3">
+            {network}
+            <Row k="Minimum received" v={`${fmtRaw(redeemMin, USDC_DECIMALS, 4)} USDC`} />
+            <Row
+              k={
+                <>
+                  Paid at <Hint tip="NAV with a fresh oracle price. If the price is stale or cash runs short, your tokens come back." align="start" />
+                </>
+              }
+              v="NAV per token"
+            />
+            {slippage}
+          </dl>
           {action(
             `Burn ${redeemRaw ? fmtRaw(redeemRaw, MEME_DECIMALS) : "0"} ${sym} for ~${fmtRaw(redeemEst, USDC_DECIMALS, 4)} USDC`,
             !redemptionOpen ? "Redemption is closed" : !redeemIn.trim() || redeemRaw === 0n ? "Enter an amount" : !redeemRaw ? "Enter a valid amount" : redeemErr ? `Not enough ${sym}` : null,
@@ -429,10 +486,10 @@ export function TradePanel({
       </Tabs>
 
       {user && user.claimable > 0n && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-golden-wash p-3.5">
+        <div className="panel mt-3 flex flex-wrap items-center justify-between gap-3 px-5 py-4">
           <p className="text-sm">
-            <span className="font-medium">{fmtRaw(user.claimable, USDC_DECIMALS, 4)} USDC</span>{" "}
-            <span className="text-golden-ink">waiting for you (creator fees, tips or failed payouts)</span>
+            <span className="tabular-nums">{fmtRaw(user.claimable, USDC_DECIMALS, 4)} USDC</span>{" "}
+            <span className="text-soft">waiting for you (creator fees, tips or failed payouts)</span>
           </p>
           <Button
             variant="golden"
@@ -451,7 +508,7 @@ export function TradePanel({
         <p
           role={msg.tone === "error" ? "alert" : "status"}
           className={cn(
-            "toast mt-4 rounded-xl p-3 text-sm break-words",
+            "toast mt-3 rounded-xl p-3 text-sm break-words",
             msg.tone === "error" ? "bg-red-wash text-red-ink" : "bg-green-wash text-green-ink",
           )}
         >

@@ -25,9 +25,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { chainMeta } from "@/lib/chains";
 import { MEME_DECIMALS, NEARBLOCKS, USDC_DECIMALS } from "@/lib/config";
 import { fmtRaw, shortAddr, timeAgo, toBig } from "@/lib/format";
-import { fetchMemeEvents, type MemeEvent } from "@/lib/events";
+import type { MemeEvent } from "@/lib/events";
 import { fmtTimes } from "@/lib/mnav";
-import { useAsync } from "@/lib/use-async";
+import type { AsyncState } from "@/lib/use-async";
 
 const KINDS: Record<string, { label: string; icon: LucideIcon; tint: string }> = {
   ft_mint: { label: "Mint", icon: Sparkles, tint: "bg-golden-wash text-golden-ink" },
@@ -122,27 +122,32 @@ export function eventKind(event: string): { label: string; icon: LucideIcon; tin
   return KINDS[event] ?? { label: event, icon: Sparkles, tint: "bg-page-deep text-ink-2" };
 }
 
-export function EventLog({ account, symbol }: { account: string; symbol: string }) {
-  const log = useAsync(() => fetchMemeEvents(account), [account]);
+/** Rebalance results from the log as (time, mNAV) points, oldest first: real on-chain history. */
+export function mnavHistory(events: MemeEvent[] | undefined): { t: number; v: number }[] {
+  return (events ?? [])
+    .filter((e) => e.event === "rebalance" && e.time > 0 && e.data.mnav_bps !== undefined)
+    .map((e) => ({ t: e.time, v: Number(toBig(e.data.mnav_bps as string)) / 10_000 }))
+    .filter((p) => p.v > 0)
+    .sort((a, b) => a.t - b.t);
+}
 
+/** The meme's events as a table: event, what happened, when (linked to the transaction). */
+export function EventLog({ account, symbol, log }: { account: string; symbol: string; log: AsyncState<MemeEvent[]> }) {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-[46ch] text-sm text-soft">
-          Every mint, burn, trade and rebalance the contract logged, read from NearBlocks.
+        <p className="max-w-[52ch] text-[0.9375rem] text-soft">
+          Every mint, burn, trade and rebalance the contract logged in its latest transactions, read from NearBlocks.
         </p>
-        <Button variant="outline" size="sm" onClick={log.reload} disabled={log.loading}>
+        <Button variant="ghost" size="sm" onClick={log.reload} disabled={log.loading}>
           <RefreshCw className={cn(log.loading && "animate-spin")} aria-hidden />
           Refresh
         </Button>
       </div>
       {log.loading && !log.data ? (
-        <div className="mt-4 grid gap-3" aria-busy>
+        <div className="panel mt-4 grid gap-3 p-5" aria-busy>
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="flex items-center gap-3">
-              <Skeleton className="size-8 shrink-0 rounded-full" />
-              <Skeleton className="h-10 flex-1" />
-            </div>
+            <Skeleton key={i} className="h-9" />
           ))}
         </div>
       ) : log.error ? (
@@ -162,35 +167,45 @@ export function EventLog({ account, symbol }: { account: string; symbol: string 
           The first trade or rebalance shows up here.
         </Notice>
       ) : (
-        <ol className="relative mt-4 grid before:absolute before:top-4 before:bottom-4 before:left-[1.5625rem] before:w-px before:bg-line">
-          {(log.data ?? []).map((e, i) => {
-            const kind = eventKind(e.event);
-            const Icon = kind.icon;
-            return (
-              <li key={`${e.txHash}-${i}`} className="relative grid grid-cols-[2rem_1fr] items-start gap-3 rounded-xl px-2.5 py-2.5 transition-colors hover:bg-page">
-                <span className={cn("relative flex size-8 items-center justify-center rounded-full ring-4 ring-card", kind.tint)} aria-hidden>
-                  <Icon className="size-4" strokeWidth={2} />
-                </span>
-                <div className="min-w-0">
-                  <p className="flex flex-wrap items-baseline justify-between gap-x-3">
-                    <span className="text-sm font-medium">{kind.label}</span>
-                    <a
-                      href={`${NEARBLOCKS}/txns/${e.txHash}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="link text-xs"
-                      title={e.txHash}
-                    >
-                      {e.time ? timeAgo(e.time) : shortAddr(e.txHash)}
-                      <span className="sr-only">: transaction on NearBlocks (opens in a new tab)</span>
-                    </a>
-                  </p>
-                  <p className="text-[0.8125rem] break-words text-soft">{describeEvent(e, symbol)}</p>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+        <div className="panel mt-4 overflow-x-auto">
+          <table className="table min-w-[36rem]">
+            <caption className="sr-only">Contract events</caption>
+            <thead>
+              <tr>
+                <th scope="col">Event</th>
+                <th scope="col">Details</th>
+                <th scope="col" className="num">
+                  Time
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {(log.data ?? []).map((e, i) => {
+                const kind = eventKind(e.event);
+                const Icon = kind.icon;
+                return (
+                  <tr key={`${e.txHash}-${i}`} data-hover="true">
+                    <td className="w-[15rem]">
+                      <span className="flex items-center gap-3">
+                        <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-full", kind.tint)} aria-hidden>
+                          <Icon className="size-3.5" strokeWidth={2} />
+                        </span>
+                        <span className="text-[0.9375rem]">{kind.label}</span>
+                      </span>
+                    </td>
+                    <td className="text-[0.875rem] break-words text-soft">{describeEvent(e, symbol)}</td>
+                    <td className="num">
+                      <a href={`${NEARBLOCKS}/txns/${e.txHash}`} target="_blank" rel="noreferrer" className="num-link text-sm" title={e.txHash}>
+                        {e.time ? timeAgo(e.time) : shortAddr(e.txHash)}
+                        <span className="sr-only">: transaction on NearBlocks (opens in a new tab)</span>
+                      </a>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
