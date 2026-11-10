@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Single dark theme, styled by tokens: the `dark:` variants in the shadcn primitives never match. */
+/* Themes are tokens on html[data-theme] (see :root below); the shadcn `dark:` variants never match. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
@@ -121,10 +121,86 @@
   --shadow-md: 0 12px 32px -14px rgb(0 0 0 / 0.6);
   --shadow-lg: 0 28px 60px -24px rgb(0 0 0 / 0.75);
 
+  /* Interaction and overlay tones that are not part of the base palette. */
+  --hover: #212126;
+  --chart-bg: #202025;
+  --tip-bg: #2c2c32;
+  --tip-ink: #f4f4f6;
+  --skeleton-hi: #24242a;
+  --logo-ring: rgb(255 255 255 / 0.1);
+  --btn-white-hover: #303036;
+  --btn-ink-hover: #ffffff;
+  --link-hover: #b3c7ff;
+  --glass: rgb(21 21 24 / 0.78);
+  --tint: rgb(255 255 255 / 0.015);
+  --frame: rgb(255 255 255 / 0.03);
+  --selection: rgb(58 111 247 / 0.4);
+  --glow-opacity: 0.2;
+
   --background: var(--page);
   --foreground: var(--ink);
   --radius: 12px;
   --header-h: 4.25rem;
+}
+
+/*
+ * Solidon, light: the same Morpho language on paper. Off-white chrome, a white surface,
+ * light-grey panels, ink text and the same blue. Zone colours are deepened so their -ink
+ * text passes AA on white; fills keep their hue so the gauge reads the same in both themes.
+ *   page  #F7F7F8   card #FFFFFF   panel #F2F2F4   ink #16161A   soft #5E5E68 (AA)
+ */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --page: #f7f7f8;
+  --card: #ffffff;
+  --panel: #f2f2f4;
+  --page-deep: #e7e7eb;
+  --ink: #16161a;
+  --ink-2: #3a3a42;
+  --soft: #5e5e68;
+  --faint: #767680;
+  --line: #e8e8ec;
+  --line-strong: #d4d4da;
+  --focus: #3a6ff7;
+
+  --lilac: #7b66f0;
+  --lilac-ink: #5a43d6;
+  --lilac-wash: #efecff;
+  --green: #22a863;
+  --green-ink: #12733f;
+  --green-wash: #e2f5ea;
+  --blue: #3a6ff7;
+  --blue-ink: #2456d9;
+  --blue-wash: #e8eefe;
+  --golden: #e9ad00;
+  --golden-ink: #835f00;
+  --golden-wash: #fbf1d3;
+  --orange: #ec8a32;
+  --orange-ink: #a24f0b;
+  --orange-wash: #fdeedf;
+  --red: #e5484d;
+  --red-ink: #be2a2f;
+  --red-wash: #fde8e8;
+
+  --shadow-xs: 0 1px 2px rgb(16 16 24 / 0.06);
+  --shadow-sm: 0 1px 3px rgb(16 16 24 / 0.08);
+  --shadow-md: 0 12px 32px -14px rgb(16 16 24 / 0.18);
+  --shadow-lg: 0 24px 48px -20px rgb(16 16 24 / 0.22);
+
+  --hover: #ebebee;
+  --chart-bg: #ffffff;
+  --tip-bg: #1d1d22;
+  --tip-ink: #f4f4f6;
+  --skeleton-hi: #e6e6ea;
+  --logo-ring: rgb(16 16 24 / 0.1);
+  --btn-white-hover: #dcdce1;
+  --btn-ink-hover: #000000;
+  --link-hover: #1a44b8;
+  --glass: rgb(255 255 255 / 0.82);
+  --tint: rgb(16 16 24 / 0.02);
+  --frame: rgb(16 16 24 / 0.02);
+  --selection: rgb(58 111 247 / 0.22);
+  --glow-opacity: 0.12;
 }
 
 @layer base {
@@ -138,6 +214,7 @@
     overflow-x: clip;
     scroll-behavior: smooth;
     scroll-padding-top: calc(var(--header-h) + 5rem);
+    scrollbar-color: var(--line-strong) var(--page);
   }
   body {
     background: var(--page);
@@ -147,7 +224,7 @@
     overflow-x: clip;
   }
   ::selection {
-    background: rgb(58 111 247 / 0.4);
+    background: var(--selection);
   }
   :focus-visible {
     outline: 2px solid var(--focus);
@@ -333,14 +410,14 @@
     color: var(--ink);
   }
   .btn-white:hover:not(:disabled) {
-    background: #303036;
+    background: var(--btn-white-hover);
   }
   .btn-ink {
     background: var(--ink);
     color: var(--page);
   }
   .btn-ink:hover:not(:disabled) {
-    background: #fff;
+    background: var(--btn-ink-hover);
   }
   .btn-ghost {
     background: transparent;
@@ -400,7 +477,7 @@
       transform 0.3s var(--ease-spring);
   }
   .card-lift:hover {
-    background: #212126;
+    background: var(--hover);
   }
 
   /* Badges */
@@ -639,7 +716,7 @@
     transition: color 0.15s;
   }
   .link:hover {
-    color: #b3c7ff;
+    color: var(--link-hover);
     text-decoration: underline;
     text-underline-offset: 3px;
   }
@@ -677,7 +754,7 @@
     position: sticky;
     top: var(--header-h);
     z-index: 30;
-    background: rgb(21 21 24 / 0.78);
+    background: var(--glass);
     backdrop-filter: blur(14px) saturate(1.4);
     -webkit-backdrop-filter: blur(14px) saturate(1.4);
     border-bottom: 1px solid var(--line);
@@ -742,8 +819,8 @@
     max-width: min(18rem, 80vw);
     padding: 0.5rem 0.75rem;
     border-radius: 10px;
-    background: #2c2c32;
-    color: var(--ink);
+    background: var(--tip-bg);
+    color: var(--tip-ink);
     font-size: 0.8125rem;
     font-weight: 400;
     line-height: 1.45;
@@ -784,7 +861,7 @@
 
   .skeleton {
     border-radius: 10px;
-    background: linear-gradient(90deg, var(--panel) 0%, #24242a 50%, var(--panel) 100%);
+    background: linear-gradient(90deg, var(--panel) 0%, var(--skeleton-hi) 50%, var(--panel) 100%);
     background-size: 200% 100%;
     animation: shimmer 1.4s linear infinite;
   }
@@ -962,7 +1039,7 @@
     transition: background-color 0.15s;
   }
   .table tbody tr[data-hover="true"]:hover {
-    background: #212126;
+    background: var(--hover);
   }
   .table .num {
     text-align: right;
@@ -973,7 +1050,7 @@
     padding-block: 0.625rem;
     font-size: 0.8125rem;
     color: var(--soft);
-    background: rgb(255 255 255 / 0.015);
+    background: var(--tint);
   }
   .sort-btn {
     display: inline-flex;
@@ -1020,7 +1097,7 @@
     position: relative;
     border-radius: 26px;
     padding: 6px;
-    background: rgb(255 255 255 / 0.03);
+    background: var(--frame);
     border: 1px solid var(--line);
   }
 
@@ -1077,6 +1154,15 @@
 
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Theme toggle: the sun shows in dark (switch to light), the moon in light. */
+  .theme-icon-moon,
+  [data-theme="light"] .theme-icon-sun {
+    display: none;
+  }
+  [data-theme="light"] .theme-icon-moon {
+    display: block;
   }
 }
 

@@ -1,12 +1,13 @@
 "use client";
 
-import { ArrowUpRight, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cn } from "cn";
 import { Logo } from "@/components/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
-import { APP_URL, GITHUB_URL } from "@/lib/site";
+import { APP_URL } from "@/lib/site";
 
 const NAV = [
   { href: "#product", label: "Product" },
@@ -15,7 +16,7 @@ const NAV = [
   { href: "#faq", label: "FAQ" },
 ];
 
-/** Landing navigation: anchors, the docs link and one primary action, Open app. */
+/** Landing navigation: anchors, the theme toggle and one primary action, Open app. */
 export function LandingHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -46,18 +47,9 @@ export function LandingHeader() {
               {n.label}
             </a>
           ))}
-          <a
-            href={GITHUB_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-0.5 rounded-[10px] px-3.5 py-2 text-ink-2 transition-colors hover:bg-page-deep hover:text-ink"
-          >
-            Docs
-            <ArrowUpRight className="size-3.5" aria-hidden />
-            <span className="sr-only"> on GitHub (opens in a new tab)</span>
-          </a>
         </nav>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Link href={APP_URL} className={buttonVariants({ size: "sm" })}>
             Open app
           </Link>
@@ -80,9 +72,6 @@ export function LandingHeader() {
               {n.label}
             </a>
           ))}
-          <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="rounded-xl px-3 py-2.5 text-base hover:bg-page-deep">
-            Docs on GitHub
-          </a>
         </nav>
       )}
     </header>

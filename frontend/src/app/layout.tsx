@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Geist } from "next/font/google";
 import "./globals.css";
+import { THEME_SCRIPT } from "@/lib/theme";
 
 /** Only the wordmark uses Bricolage; everything else is Geist. */
 const bricolage = Bricolage_Grotesque({
@@ -21,12 +22,24 @@ export const metadata: Metadata = {
     "A memecoin launchpad on NEAR where every meme is a treasury company holding a tokenized stock on Base, Robinhood Chain and Solana through Chain Signatures, with mNAV capital rules locked in code.",
 };
 
-export const viewport: Viewport = { themeColor: "#0e0e10" };
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f7f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e0e10" },
+  ],
+};
 
-/** The root shell only: fonts and the skip link. The landing and the app bring their own chrome. */
+/**
+ * The root shell only: fonts, the theme and the skip link. The landing and the app bring their
+ * own chrome. Dark is the server default; the inline script sets the stored or system theme
+ * before first paint, so `suppressHydrationWarning` lets React keep that attribute.
+ */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${bricolage.variable} ${geist.variable} h-full antialiased`}>
+    <html lang="en" data-theme="dark" suppressHydrationWarning className={`${bricolage.variable} ${geist.variable} h-full antialiased`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="flex min-h-full flex-col">
         <a
           href="#main"
