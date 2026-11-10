@@ -51,8 +51,8 @@ export function useUserBalances(account: string, accountId: string | null) {
 function Line({ k, v }: { k: ReactNode; v: string }) {
   return (
     <div className="flex justify-between gap-3 py-1 text-sm">
-      <dt className="text-soft">{k}</dt>
-      <dd className="text-right font-medium tabular-nums">{v}</dd>
+      <dt className="shrink-0 text-soft">{k}</dt>
+      <dd className="min-w-0 text-right font-medium tabular-nums">{v}</dd>
     </div>
   );
 }
@@ -317,7 +317,7 @@ export function TradePanel({
             error={buyErr}
           />
           <Quote label="You get about" value={fmtRaw(buyOut, MEME_DECIMALS)} unit={sym}>
-            <Line k="At least, after slippage" v={`${fmtRaw(buyMin, MEME_DECIMALS)} ${sym}`} />
+            <Line k="Minimum received" v={`${fmtRaw(buyMin, MEME_DECIMALS)} ${sym}`} />
             <Line k="Average price" v={buyAvg ? `${fmtPrice(buyAvg)} (spot ${fmtPrice(spotUsd)})` : "–"} />
             <Line k="Fee" v={fee} />
           </Quote>
@@ -363,7 +363,7 @@ export function TradePanel({
             error={sellErr}
           />
           <Quote label="You get about" value={fmtRaw(sellOut, USDC_DECIMALS, 4)} unit="USDC">
-            <Line k="At least, after slippage" v={`${fmtRaw(sellMin, USDC_DECIMALS, 4)} USDC`} />
+            <Line k="Minimum received" v={`${fmtRaw(sellMin, USDC_DECIMALS, 4)} USDC`} />
             <Line k="Fee" v={fee} />
           </Quote>
           {slippage}
@@ -408,7 +408,7 @@ export function TradePanel({
             error={redeemErr}
           />
           <Quote label="You get about, at the last NAV" value={fmtRaw(redeemEst, USDC_DECIMALS, 4)} unit="USDC">
-            <Line k="At least, after slippage" v={`${fmtRaw(redeemMin, USDC_DECIMALS, 4)} USDC`} />
+            <Line k="Minimum received" v={`${fmtRaw(redeemMin, USDC_DECIMALS, 4)} USDC`} />
           </Quote>
           {slippage}
           {action(

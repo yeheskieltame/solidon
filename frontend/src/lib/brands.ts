@@ -20,7 +20,7 @@ export const STOCK_LOGOS: Record<string, BrandLogo> = {
   AMZN: { src: "/logos/stocks/amazon.svg", name: "Amazon", scale: 0.6 },
   META: { src: "/logos/stocks/meta.svg", name: "Meta", scale: 0.64 },
   TSLA: { src: "/logos/stocks/tesla.svg", name: "Tesla", scale: 0.56 },
-  SPCX: { src: "/logos/stocks/spacex.svg", name: "SpaceX", scale: 0.66 },
+  SPCX: { src: "/logos/stocks/spacex.svg", name: "SpaceX", scale: 0.82 },
 };
 
 export const CHAIN_LOGOS: Record<string, BrandLogo> = {
