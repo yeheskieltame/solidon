@@ -9,7 +9,7 @@ import { StockMarquee } from "@/components/landing/stock-marquee";
 import { LogoMark } from "@/components/logo";
 import { RulesPlayground } from "@/components/rules-playground";
 import { buttonVariants } from "@/components/ui/button";
-import { APP_URL, GITHUB_URL, appUrl } from "@/lib/site";
+import { APP_URL, appUrl } from "@/lib/site";
 
 export default function Landing() {
   return (
@@ -59,11 +59,10 @@ export default function Landing() {
           <h2 id="faq-title" className="type-h2">
             Fair questions.
           </h2>
-          <p className="lede mt-4">The short answers. The long ones live in the spec.</p>
-          <a href={`${GITHUB_URL}/blob/main/docs/SPEC.md`} target="_blank" rel="noreferrer" className="link mt-4 inline-block text-sm">
-            Read the spec on GitHub
-            <span className="sr-only"> (opens in a new tab)</span>
-          </a>
+          <p className="lede mt-4">The short answers. Every risk in full is on one page.</p>
+          <Link href="/risks" className="link mt-4 inline-block text-sm">
+            Read the risks
+          </Link>
         </div>
         <Faq />
       </section>

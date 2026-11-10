@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { DISCLAIMERS, TRADEMARK_NOTE } from "@/components/disclaimers";
-import { GITHUB_URL } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Risks" };
 
@@ -10,8 +10,7 @@ export default function RisksPage() {
     <div className="wrap max-w-[52rem] pt-14 pb-24 sm:pt-20">
       <h1 className="type-h1">Risks</h1>
       <p className="lede mt-4 max-w-[40rem]">
-        Solidon runs on testnets. Read this before you trade, launch or redeem. The long version is
-        the threat model in the spec.
+        Solidon runs on testnets. Read this before you trade, launch or redeem.
       </p>
       <dl className="mt-12">
         {DISCLAIMERS.map((d) => (
@@ -32,15 +31,9 @@ export default function RisksPage() {
           <dd className="text-soft">{TRADEMARK_NOTE}</dd>
         </div>
       </dl>
-      <a
-        href={`${GITHUB_URL}/blob/main/docs/SPEC.md`}
-        target="_blank"
-        rel="noreferrer"
-        className="link mt-8 inline-block"
-      >
-        Trust assumptions and threat model in the spec
-        <span className="sr-only"> (opens in a new tab)</span>
-      </a>
+      <Link href="/#faq" className="link mt-8 inline-block">
+        More answers in the FAQ
+      </Link>
     </div>
   );
 }

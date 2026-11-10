@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Logo } from "./logo";
-import { GITHUB_URL, SITE_URL, appUrl } from "@/lib/site";
+import { SITE_URL, appUrl } from "@/lib/site";
 
-/** Risk statements from docs/SPEC.md "Trust assumptions & threat model", shown in full on /risks. */
+/** Risk statements from the threat model, shown in full on /risks. */
 export const DISCLAIMERS = [
   {
     title: "A NAV floor, not a price guarantee",
@@ -66,9 +66,6 @@ export function SiteFooter({ compact = false }: { compact?: boolean }) {
               {l.label}
             </Link>
           ))}
-          <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="text-soft transition-colors hover:text-ink">
-            GitHub<span className="sr-only"> (opens in a new tab)</span>
-          </a>
         </nav>
       </div>
       <p className="mt-10 border-t border-line pt-6 text-[0.8125rem] text-faint">

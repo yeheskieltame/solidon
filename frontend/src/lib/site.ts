@@ -9,8 +9,6 @@ export const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "/app").replace(/\/+$
 /** The landing site, used for links back from the app. "/" on a single host. */
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/+$/, "");
 
-export const GITHUB_URL = "https://github.com/yeheskieltame/solidon";
-
 /** The live end-to-end meme from docs/DEPLOYMENTS.md: NVDA on Base, Robinhood Chain and Solana. */
 export const SHOWCASE_MEME = "e2etest.solidon.testnet";
 
