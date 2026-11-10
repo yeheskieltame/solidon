@@ -1,3 +1,4 @@
+import { Info } from "lucide-react";
 import { useId, type ReactNode } from "react";
 
 /** Plain-language definitions for the jargon the dashboard cannot avoid. */
@@ -31,6 +32,30 @@ export function Term({
   return (
     <span className="term" tabIndex={0} aria-describedby={id} data-align={align}>
       {children}
+      <span role="tooltip" id={id} className="term-tip">
+        {text}
+      </span>
+    </span>
+  );
+}
+
+/** The (i) after a stat label: the same tooltip as `Term`, on an icon. */
+export function Hint({
+  tip,
+  k,
+  label = "What is this?",
+  align = "center",
+}: {
+  tip?: string;
+  k?: keyof typeof GLOSSARY;
+  label?: string;
+  align?: "center" | "start" | "end";
+}) {
+  const id = useId();
+  const text = tip ?? (k ? GLOSSARY[k] : "");
+  return (
+    <span className="hint" tabIndex={0} role="button" aria-label={label} aria-describedby={id} data-align={align}>
+      <Info className="size-4" strokeWidth={1.75} aria-hidden />
       <span role="tooltip" id={id} className="term-tip">
         {text}
       </span>

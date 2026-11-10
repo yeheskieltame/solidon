@@ -9,7 +9,6 @@ export const metadata: Metadata = { title: "Page not found" };
 export default function NotFound() {
   return (
     <main id="main" className="relative isolate flex flex-1 flex-col">
-      <div className="halftone absolute inset-0 -z-10" aria-hidden />
       <div className="wrap flex h-[var(--header-h)] items-center">
         <Link href={SITE_URL || "/"} aria-label="Solidon home">
           <Logo />
@@ -17,7 +16,7 @@ export default function NotFound() {
       </div>
       <div className="wrap flex flex-1 flex-col items-center justify-center py-20 text-center">
         <LogoMark className="size-14 -rotate-12" />
-        <p className="type-num mt-6 text-sm text-soft">Error 404</p>
+        <p className="mt-6 text-sm text-soft">Error 404</p>
         <h1 className="type-h2 mt-2 max-w-[16ch]">This page is not on the balance sheet.</h1>
         <p className="lede mt-4 max-w-[30rem]">
           The link is wrong or the page moved. The memes and their treasuries are where you left them.

@@ -17,7 +17,7 @@ export default function AppLayout({ children }: LayoutProps<"/app">) {
     <WalletProvider>
       <ToastProvider>
         <AppHeader />
-        <main id="main" className="flex-1 pb-20 md:pb-0">
+        <main id="main" className="surface flex-1">
           {children}
         </main>
         <div className="pb-16 md:pb-0">

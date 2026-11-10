@@ -2,7 +2,7 @@ import { cn } from "cn";
 import { chainLogo, stockLogo, type BrandLogo } from "@/lib/brands";
 
 /**
- * A real logo in a neutral rounded tile: same size and corner for every brand, so a row of
+ * A real logo in a round tile (like a token icon): same size for every brand, so a row of
  * stocks or chains reads as one set. `decorative` hides it from screen readers when the name
  * is printed next to it.
  */
@@ -11,7 +11,7 @@ export function LogoTile({
   size = 28,
   decorative = false,
   className,
-  rounded = "md",
+  rounded = "full",
 }: {
   logo: BrandLogo;
   size?: number;
@@ -23,7 +23,7 @@ export function LogoTile({
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center overflow-hidden ring-1 ring-line ring-inset",
+        "inline-flex shrink-0 items-center justify-center overflow-hidden ring-1 ring-white/10 ring-inset",
         rounded === "full" ? "rounded-full" : "",
         className,
       )}
@@ -69,8 +69,8 @@ export function StockLogo({
   if (logo) return <LogoTile logo={logo} size={size} decorative={decorative} className={className} />;
   return (
     <span
-      className={cn("inline-flex shrink-0 items-center justify-center bg-page-deep font-semibold text-soft", className)}
-      style={{ width: size, height: size, borderRadius: Math.round(size * 0.28), fontSize: size * 0.32 }}
+      className={cn("inline-flex shrink-0 items-center justify-center rounded-full bg-page-deep font-semibold text-soft", className)}
+      style={{ width: size, height: size, fontSize: size * 0.32 }}
       aria-hidden={decorative || undefined}
     >
       {(ticker ?? "?").slice(0, 2)}

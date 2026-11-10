@@ -2,7 +2,7 @@ import { cn } from "cn";
 
 /**
  * Solidon's mark: a gold coin whose smile is a rising chart line (a meme with a balance
- * sheet). Flat, with a soft rim; the wordmark is set in Bricolage Grotesque.
+ * sheet). Flat, with a soft rim; the wordmark is set in Bricolage Grotesque (the only place it is used).
  */
 export function LogoMark({ className }: { className?: string }) {
   return (
@@ -33,9 +33,9 @@ export function Logo({ className, suffix }: { className?: string; suffix?: strin
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
       <LogoMark />
-      <span className="font-heading text-[1.3125rem] leading-none font-[650] tracking-[-0.04em]">solidon</span>
+      <span className="font-brand text-[1.3125rem] leading-none font-[650] tracking-[-0.04em]">solidon</span>
       {suffix && (
-        <span className="rounded-md bg-page-deep px-1.5 py-0.5 text-xs font-medium text-soft">{suffix}</span>
+        <span className="rounded-md bg-page-deep px-1.5 py-0.5 text-xs text-soft">{suffix}</span>
       )}
     </span>
   );

@@ -1,75 +1,66 @@
 "use client";
 
-import { ChevronRight, ExternalLink, RefreshCw, Scale } from "lucide-react";
+import { ChevronRight, RefreshCw, Scale } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { cn } from "cn";
-import { LogoTile, StockLogo } from "./brand-logo";
-import { CountUp } from "./count-up";
-import { EventLog } from "./event-log";
+import { ChainLogo, StockLogo } from "./brand-logo";
+import { Composition, compositionOf } from "./composition";
+import { CopyButton, ExplorerLink } from "./copy-button";
+import { EventLog, mnavHistory } from "./event-log";
 import { MemeIcon } from "./meme-icon";
+import { MnavChart } from "./mnav-chart";
 import { MnavGauge, ZoneBadge } from "./mnav-gauge";
 import { Notice } from "./notice";
-import { Term } from "./term";
+import { SectionNav } from "./section-nav";
+import { Stat, StatRow } from "./stat";
+import { GLOSSARY, Hint } from "./term";
 import { useToast } from "./toast";
 import { TradePanel, useUserBalances } from "./trade-panel";
 import { TreasuryChains } from "./treasury-chains";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppLink } from "@/lib/app-link";
-import { PLATFORM_LOGOS, STOCK_LOGOS } from "@/lib/brands";
+import { STOCK_LOGOS } from "@/lib/brands";
 import { MEME_DECIMALS, NEARBLOCKS } from "@/lib/config";
-import { fmtAmount, fmtRaw, fmtUsd, shortAddr, timeAgo, toBig } from "@/lib/format";
+import { fetchMemeEvents } from "@/lib/events";
+import { fmtCompact, fmtUsdCompact } from "@/lib/figure";
+import { fmtAmount, fmtRaw, fmtUsd, shortAddr, timeAgo, toBig, toNumber } from "@/lib/format";
 import { lastMnav, oracleUsd } from "@/lib/math";
 import { loadMemeCached, summarize } from "@/lib/market";
 import { fmtPrice, fmtPriceLong } from "@/lib/price";
-import { fmtTimes, mnavSentence } from "@/lib/mnav";
+import { fmtTimes, mnavSentence, ZONES } from "@/lib/mnav";
 import { useAsync } from "@/lib/use-async";
 import { errorText, useWallet } from "@/lib/wallet";
 
-function Stat({
-  label,
-  value,
-  format,
-  note,
-  title,
-}: {
-  label: ReactNode;
-  value: number | null;
-  format: (n: number) => string;
-  note?: ReactNode;
-  title?: string;
-}) {
-  return (
-    <div className="bg-card p-4 sm:p-5">
-      <dt className="text-xs text-soft">{label}</dt>
-      <dd className="type-num mt-1.5 truncate text-2xl sm:text-[1.75rem]" title={title}>
-        <CountUp value={value} format={format} />
-      </dd>
-      {note && <dd className="mt-1 text-xs text-soft">{note}</dd>}
-    </div>
-  );
-}
+const SECTIONS = [
+  { id: "overview", label: "Overview" },
+  { id: "treasury", label: "Treasury" },
+  { id: "rules", label: "Rules" },
+  { id: "activity", label: "Activity" },
+];
 
 function Section({ id, title, intro, children }: { id: string; title: string; intro?: ReactNode; children: ReactNode }) {
   return (
-    <section aria-labelledby={id} className="scroll-mt-28">
-      <h2 id={id} className="font-heading text-[1.375rem] font-[650] tracking-[-0.025em]">
+    <section id={id} aria-labelledby={`${id}-title`} className="pt-14">
+      <h2 id={`${id}-title`} className="type-section">
         {title}
       </h2>
-      {intro && <p className="mt-1.5 max-w-[66ch] text-sm text-soft">{intro}</p>}
-      <div className="mt-4">{children}</div>
+      {intro && <p className="mt-2 max-w-[68ch] text-[0.9375rem] text-soft">{intro}</p>}
+      <div className="mt-6">{children}</div>
     </section>
   );
 }
 
-function SheetRow({ k, v, strong }: { k: ReactNode; v: string; strong?: boolean }) {
+/** A key/value attribute row with a hairline under it. */
+function Attr({ k, v, hint }: { k: ReactNode; v: ReactNode; hint?: string }) {
   return (
-    <tr className={cn("border-t", strong ? "border-line-strong" : "border-line")}>
-      <th scope="row" className={cn("py-2.5 pr-4 text-left", strong ? "font-medium" : "font-normal text-soft")}>
+    <div className="attr">
+      <dt>
         {k}
-      </th>
-      <td className={cn("py-2.5 text-right tabular-nums", strong ? "text-base font-semibold" : "font-medium")}>{v}</td>
-    </tr>
+        {hint && <Hint tip={hint} align="start" />}
+      </dt>
+      <dd>{v}</dd>
+    </div>
   );
 }
 
@@ -81,19 +72,17 @@ function fmtSecs(s: number) {
 
 function PageSkeleton() {
   return (
-    <div className="wrap grid gap-6 pt-8 pb-20" aria-busy aria-label="Loading the meme">
+    <div className="wrap grid gap-8 pt-12 pb-20" aria-busy aria-label="Loading the meme">
       <div className="flex items-center gap-4">
-        <Skeleton className="size-14 rounded-2xl" />
-        <div className="grid flex-1 gap-2">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-72" />
-        </div>
+        <Skeleton className="size-16 rounded-full" />
+        <Skeleton className="h-14 w-72" />
       </div>
-      <Skeleton className="h-24 rounded-2xl" />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_23rem]">
-        <Skeleton className="h-80 rounded-2xl" />
-        <Skeleton className="h-[28rem] rounded-2xl" />
+      <div className="grid grid-cols-2 gap-8 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-24" />
+        ))}
       </div>
+      <Skeleton className="h-80 rounded-2xl" />
     </div>
   );
 }
@@ -101,11 +90,13 @@ function PageSkeleton() {
 export function MemePage({ account }: { account: string }) {
   const [fresh, setFresh] = useState(0);
   const snap = useAsync(() => loadMemeCached(account, fresh > 0), [account, fresh]);
+  const events = useAsync(() => fetchMemeEvents(account), [account]);
   const { accountId, send, connect } = useWallet();
   const user = useUserBalances(account, accountId);
   const toast = useToast();
   const [rebalanceMsg, setRebalanceMsg] = useState<{ error: boolean; text: string } | null>(null);
   const [rebalancing, setRebalancing] = useState(false);
+  const [mnavView, setMnavView] = useState<"live" | "last">("live");
 
   if (snap.loading && !snap.data) return <PageSkeleton />;
   if (snap.error || !snap.data) {
@@ -149,11 +140,26 @@ export function MemePage({ account }: { account: string }) {
   const refillAt = params.cash_refill_bps / 10_000;
   const epochCap = toBig(treasury?.epoch_cap);
   const epochIssued = toBig(treasury?.epoch_issued);
-  const shownMnav = row.mnav;
   const cashPct = (nav.cashShare ?? 0) * 100;
+  const shownMnav = mnavView === "last" ? contractMnav : (nav.mnav ?? contractMnav);
+  const history = mnavHistory(events.data);
+  const slices = compositionOf(row);
+  const chainsHeld = chains.filter((c) => c.address);
   // The buffer bar spans 0 to twice the target, so the 20% mark sits mid-bar.
   const barMax = Math.max(bufferTarget * 2, 0.01);
   const barAt = (x: number) => `${Math.min(100, (x / barMax) * 100)}%`;
+
+  // Per-swap caps reported by the contract, per chain.
+  const rawChains = [...(d.chains?.chains ?? []), ...(d.chains?.solana ? [d.chains.solana] : [])];
+  const caps = rawChains
+    .map((c) => {
+      const cap = c.config?.max_swap_usdc;
+      if (cap === undefined) return null;
+      const dec = typeof c.config?.usdc_decimals === "number" ? c.config.usdc_decimals : 6;
+      return toNumber(toBig(cap), dec);
+    })
+    .filter((n): n is number => n !== null);
+  const capText = caps.length === 0 ? null : new Set(caps).size === 1 ? `${fmtAmount(caps[0])} USDC per swap, each chain` : caps.map((c) => `${fmtAmount(c)} USDC`).join(" / ");
 
   const reload = () => {
     setFresh((f) => f + 1);
@@ -182,310 +188,344 @@ export function MemePage({ account }: { account: string }) {
     } finally {
       setRebalancing(false);
       reload();
+      events.reload();
     }
   }
 
   return (
-    <div className="wrap pt-6 pb-16 sm:pt-8">
-      <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-soft">
-        <AppLink href="/" className="hover:text-ink">
-          Markets
-        </AppLink>
-        <ChevronRight className="size-3.5" aria-hidden />
-        <span className="text-ink" aria-current="page">
-          {metadata.symbol}
-        </span>
-      </nav>
+    <div className="wrap grid gap-x-14 pt-8 pb-20 sm:pt-10 lg:grid-cols-[minmax(0,1fr)_25rem]">
+      {/* A: identity and the headline figures */}
+      <div className="min-w-0 lg:col-start-1">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-soft">
+          <AppLink href="/" className="hover:text-ink">
+            Markets
+          </AppLink>
+          <ChevronRight className="size-3.5" aria-hidden />
+          <span className="text-ink-2" aria-current="page">
+            {metadata.symbol}
+          </span>
+        </nav>
 
-      {/* Identity */}
-      <header className="mt-4 flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
-        <div className="flex min-w-0 items-center gap-4">
-          <MemeIcon icon={metadata.icon} symbol={metadata.symbol} size={56} />
-          <div className="min-w-0">
-            <h1 className="type-h1 flex flex-wrap items-center gap-x-3 gap-y-1 break-all">
-              {metadata.symbol}
-              <ZoneBadge zone={row.zone} fallback={seeded ? "New" : "Not seeded"} className="!text-xs" />
-            </h1>
-            <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-soft">
-              {metadata.name}, a treasury company holding
-              <StockLogo ticker={ticker} size={18} decorative />
-              <span className="font-medium text-ink">{stockName ?? ticker}</span>
-              {stockName && <span>({ticker})</span>}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-col items-start gap-1.5 text-sm sm:items-end">
-          <a className="link inline-flex items-center gap-1 break-all" href={`${NEARBLOCKS}/address/${account}`} target="_blank" rel="noreferrer">
-            {account}
-            <ExternalLink className="size-3.5 shrink-0" aria-hidden />
-            <span className="sr-only"> on NearBlocks (opens in a new tab)</span>
-          </a>
-          {info && (
-            <span className="text-soft" title={info.creator}>
-              Created by {shortAddr(info.creator, 16, 10)}
+        <header className="mt-8">
+          <h1 className="flex flex-wrap items-center gap-x-4 gap-y-3 text-[clamp(2.5rem,5vw,4rem)] leading-none font-light tracking-[-0.035em]">
+            <span className="flex min-w-0 items-center gap-3.5">
+              <MemeIcon icon={metadata.icon} symbol={metadata.symbol} size={64} className="max-sm:!size-12" />
+              <span className="break-all">{metadata.symbol}</span>
             </span>
-          )}
-          <Button variant="ghost" size="sm" className="-mr-2" onClick={reload} disabled={snap.loading}>
-            <RefreshCw className={cn(snap.loading && "animate-spin")} aria-hidden />
-            Refresh data
-          </Button>
-        </div>
-      </header>
+            <span className="h-12 w-px bg-line-strong max-sm:hidden" aria-hidden />
+            <span className="flex items-center gap-3.5">
+              <span className="sr-only">holds</span>
+              <StockLogo ticker={ticker} size={64} decorative className="max-sm:!size-12" />
+              <span>{ticker}</span>
+            </span>
+            <ZoneBadge zone={row.zone} fallback={seeded ? "New" : "Not seeded"} className="self-center" />
+          </h1>
 
-      <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line shadow-[var(--shadow-sm)] lg:grid-cols-4">
-        <Stat
-          label={
-            nav.usesTwap ? (
-              <>
-                Price, <Term k="twap" align="start">30-min TWAP</Term>
-              </>
-            ) : (
-              "Price, spot"
-            )
-          }
-          value={seeded ? nav.priceUsd : null}
-          format={fmtPrice}
-          title={seeded ? fmtPriceLong(nav.priceUsd) : undefined}
-          note={seeded && spotUsd !== null && nav.usesTwap ? `Spot ${fmtPrice(spotUsd)}` : seeded ? undefined : "Pool not seeded"}
-        />
-        <Stat
-          label={
-            <>
-              <Term k="nav" align="start">NAV</Term> per token
-            </>
-          }
-          value={nav.navUsd}
-          format={fmtPrice}
-          title={nav.navUsd !== null ? fmtPriceLong(nav.navUsd) : undefined}
-          note={nav.navUsd === null ? "Starts once tokens circulate" : "Live, from the ledger and the oracle"}
-        />
-        <Stat
-          label={<Term k="mnav">mNAV now</Term>}
-          value={nav.mnav}
-          format={fmtTimes}
-          note={
-            contractMnav !== null
-              ? `Last rebalance ${fmtTimes(contractMnav)}${treasury?.last_rebalance ? `, ${timeAgo(treasury.last_rebalance)}` : ""}`
-              : "No rebalance yet"
-          }
-        />
-        <Stat label="Treasury value" value={nav.assetsUsd} format={fmtUsd} note={`${fmtAmount(nav.circulating)} ${metadata.symbol} circulating`} />
-      </dl>
-
-      <nav aria-label="On this page" className="mt-6 flex gap-1.5 overflow-x-auto pb-1">
-        {[
-          ["#trade", "Trade", "lg:hidden"],
-          ["#treasury", "Treasury", ""],
-          ["#cash", "Cash buffer", ""],
-          ["#sheet", "Balance sheet", ""],
-          ["#rules", "Locked rules", ""],
-          ["#activity", "Activity", ""],
-        ].map(([href, label, cls]) => (
-          <a key={href} href={href} className={cn("chip shrink-0", cls)}>
-            {label}
-          </a>
-        ))}
-      </nav>
-
-      <div className="mt-6 grid gap-x-8 gap-y-10 lg:grid-cols-[minmax(0,1fr)_24.5rem]">
-        {/* A: the mNAV story */}
-        <div className="min-w-0 lg:col-start-1">
-          <div className="card p-5 sm:p-6">
-            <p className="max-w-[60ch] text-[1.0625rem] leading-snug font-medium">{mnavSentence(shownMnav, thresholds, ticker)}</p>
-            <MnavGauge value={shownMnav} thresholds={thresholds} label={nav.mnav !== null ? "mNAV now" : "Last mNAV"} legend className="mt-3" />
-            <p className="mt-5 flex flex-wrap items-center gap-2 border-t border-line pt-4 text-sm text-soft">
-              <span className={cn("pill", treasury?.redemption_open ? "pill-green" : "")}>
-                Redemption window {treasury?.redemption_open ? "open" : "closed"}
-              </span>
-              The floor defends NAV, not the price.
-            </p>
+          <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-[0.9375rem]">
+            <span className="flex items-center gap-1 text-ink-2" title={account}>
+              <span className="max-w-[16rem] truncate">{account}</span>
+              <CopyButton value={account} label="contract account" />
+              <ExplorerLink href={`${NEARBLOCKS}/address/${account}`} label={`${account} on NearBlocks`} />
+            </span>
+            <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              {chainsHeld.map((c) => (
+                <span key={c.key} className="flex items-center gap-2 text-ink-2">
+                  <ChainLogo chain={c.key} size={18} decorative />
+                  {c.meta.label.replace(/ (testnet|devnet|Sepolia)$/, "")}
+                </span>
+              ))}
+            </span>
+            <button type="button" onClick={reload} disabled={snap.loading} className="icon-btn !w-auto gap-1.5 px-2 text-sm" aria-label="Refresh data">
+              <RefreshCw className={cn(snap.loading && "animate-spin")} aria-hidden />
+              <span className="max-sm:hidden">Refresh</span>
+            </button>
           </div>
-        </div>
+        </header>
 
-        {/* B: actions, sticky on desktop, right after the story on mobile */}
-        <aside id="trade" aria-label="Trade and rebalance" className="scroll-mt-28 lg:col-start-2 lg:row-span-2 lg:row-start-1">
-          <div className="grid gap-4 lg:sticky lg:top-24">
-            <TradePanel snap={d} user={user.data ?? null} onDone={reload} />
+        <StatRow className="mt-12">
+          <Stat
+            label={nav.usesTwap ? "Price (TWAP)" : "Price (spot)"}
+            hint={nav.usesTwap ? GLOSSARY.twap : "The pool's spot price. The 30-minute average appears once the pool has history."}
+            value={seeded ? nav.priceUsd : null}
+            format={fmtPrice}
+            title={seeded ? fmtPriceLong(nav.priceUsd) : undefined}
+            sub={seeded ? (spotUsd !== null && nav.usesTwap ? `Spot ${fmtPrice(spotUsd)}` : "USDC per token") : "Pool not seeded"}
+          />
+          <Stat
+            label="NAV / token"
+            hint={GLOSSARY.nav}
+            value={nav.navUsd}
+            format={fmtPrice}
+            title={nav.navUsd !== null ? fmtPriceLong(nav.navUsd) : undefined}
+            sub={nav.navUsd === null ? "Starts once tokens circulate" : "Ledger at the oracle price"}
+          />
+          <Stat
+            label="mNAV"
+            hint={GLOSSARY.mnav}
+            value={nav.mnav}
+            format={fmtTimes}
+            sub={contractMnav !== null ? `Last rebalance ${fmtTimes(contractMnav)}` : "No rebalance yet"}
+          />
+          <Stat
+            label="Treasury value"
+            hint="Everything the treasury holds: USDC on NEAR, plus USDC and stock on every chain from the ledger, with the stock at the oracle price."
+            value={nav.assetsUsd}
+            format={fmtUsdCompact}
+            sub={`${fmtCompact(nav.circulating)} ${metadata.symbol} circulating`}
+          />
+        </StatRow>
 
-            <div className="card p-4 sm:p-5">
-              <p className="type-h3 flex items-center gap-2">
-                <Scale className="size-4" aria-hidden />
+        <p className="mt-10 flex flex-wrap items-center gap-2 text-[0.9375rem] text-soft">
+          {metadata.name} is a treasury company holding
+          <span className="inline-flex items-center gap-1.5 text-ink-2">
+            <StockLogo ticker={ticker} size={18} decorative />
+            {stockName ?? ticker}.
+          </span>
+          {info && <span title={info.creator}>Created by {shortAddr(info.creator, 16, 10)}.</span>}
+        </p>
+      </div>
+
+      {/* B: the action panel, sticky on desktop, right after the headline on phones */}
+      <aside id="trade" aria-label="Trade and rebalance" className="mt-10 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0">
+        <div className="grid gap-3 lg:sticky lg:top-[calc(var(--header-h)+1.5rem)]">
+          <TradePanel snap={d} user={user.data ?? null} onDone={reload} />
+
+          <div className="panel mt-3 px-5 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="flex items-center gap-2 text-[0.9375rem]">
+                <Scale className="size-4 text-soft" aria-hidden />
                 Run the rules
-              </p>
-              <p className="mt-1.5 text-sm text-soft">
-                A rebalance reads the oracle and the average price, then issues, buys back, opens
-                redemption or does nothing. Anyone can call it once per {fmtSecs(params.rebalance_cooldown_secs)}.
-              </p>
-              <p className="mt-3 text-sm font-medium">
-                {!treasury
-                  ? "Treasury view unavailable."
-                  : treasury.last_rebalance === 0
-                    ? "Never rebalanced. Available now."
-                    : canRebalance
-                      ? `Last run ${timeAgo(treasury.last_rebalance)}. Available now.`
-                      : `Next run available in ${Math.ceil((treasury.next_rebalance - now) / 60)} min.`}
+                <Hint
+                  tip={`A rebalance reads the oracle and the average price, then issues, buys back, opens redemption or does nothing. Anyone can call it once per ${fmtSecs(params.rebalance_cooldown_secs)}.`}
+                  align="start"
+                />
               </p>
               {accountId ? (
-                <Button className="mt-4 w-full" variant="outline" disabled={!canRebalance || rebalancing} onClick={rebalance}>
-                  {rebalancing ? <span className="dots">Waiting for your wallet</span> : canRebalance ? "Rebalance now" : "Cooling down"}
+                <Button size="sm" variant="outline" disabled={!canRebalance || rebalancing} onClick={rebalance}>
+                  {rebalancing ? <span className="dots">Waiting</span> : canRebalance ? "Rebalance now" : "Cooling down"}
                 </Button>
               ) : (
-                <Button className="mt-4 w-full" variant="outline" onClick={() => connect().catch(() => undefined)}>
-                  Connect a wallet to rebalance
+                <Button size="sm" variant="outline" onClick={() => connect().catch(() => undefined)}>
+                  Connect to rebalance
                 </Button>
               )}
-              {rebalanceMsg && (
-                <p
-                  role={rebalanceMsg.error ? "alert" : "status"}
-                  className={cn(
-                    "mt-3 rounded-xl p-2.5 text-sm break-words",
-                    rebalanceMsg.error ? "bg-red-wash text-red-ink" : "bg-green-wash text-green-ink",
-                  )}
-                >
-                  {rebalanceMsg.text}
-                </p>
-              )}
             </div>
-          </div>
-        </aside>
-
-        {/* C: the proof dashboard */}
-        <div className="grid min-w-0 gap-12 lg:col-start-1">
-          <Section
-            id="treasury"
-            title="Treasury per chain"
-            intro={
-              <>
-                Addresses only this contract can sign for, through NEAR Chain Signatures
-                {d.chains?.mpc ? ` (MPC ${d.chains.mpc})` : ""}. It signs two shapes per chain: an
-                approval to the locked router and a swap from USDC into {ticker}. The ledger books
-                the minimum out of every swap; on-chain is read live by your browser.
-                {d.chains?.signing ? " A signature request is in flight." : ""}
-              </>
-            }
-          >
-            <TreasuryChains chains={chains} price={d.price} ticker={ticker} note={d.chainsNote} raw={d.chains} />
-          </Section>
-
-          <Section
-            id="cash"
-            title="Cash buffer"
-            intro={
-              <>
-                Redemptions are paid from USDC on NEAR. The target is {bufferTarget * 100}% of assets;
-                below {refillAt * 100}% a stock sale refills it. Buybacks only spend cash above the{" "}
-                <Term k="buffer">buffer</Term>.
-              </>
-            }
-          >
-            <div className="card p-5 sm:p-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="type-num text-4xl">{nav.cashShare !== null ? `${cashPct.toFixed(1)}%` : "–"}</p>
-                <p className="flex items-center gap-2 text-sm font-medium">
-                  <LogoTile logo={PLATFORM_LOGOS.usdc} size={20} decorative rounded="full" className="!ring-0" />
-                  {fmtUsd(nav.cashUsd)} in USDC on NEAR
-                </p>
-              </div>
-              <div className="relative mt-9 mb-7">
-                <div
-                  className="bar !h-2.5"
-                  role="meter"
-                  aria-label="Cash as a share of assets"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={Number(cashPct.toFixed(1))}
-                  aria-valuetext={`Cash is ${cashPct.toFixed(1)}% of assets. Target ${bufferTarget * 100}%, refill below ${refillAt * 100}%.`}
-                >
-                  <div
-                    className="bar-fill"
-                    style={{
-                      width: barAt(nav.cashShare ?? 0),
-                      background: (nav.cashShare ?? 0) < refillAt ? "var(--orange)" : "var(--green)",
-                    }}
-                  />
-                </div>
-                {(
-                  [
-                    [bufferTarget, `Target ${bufferTarget * 100}%`, "top"],
-                    [refillAt, `Refill ${refillAt * 100}%`, "bottom"],
-                  ] as const
-                ).map(([x, label, side]) => (
-                  <span key={label} className="absolute inset-y-[-5px] w-px -translate-x-1/2 bg-ink" style={{ left: barAt(x) }} aria-hidden>
-                    <span
-                      className={cn(
-                        "absolute left-1/2 -translate-x-1/2 text-xs font-medium whitespace-nowrap",
-                        side === "top" ? "bottom-full mb-1" : "top-full mt-1",
-                      )}
-                    >
-                      {label}
-                    </span>
-                  </span>
-                ))}
-              </div>
-              <p className="text-sm text-soft">
-                {nav.cashShare === null
-                  ? "No assets yet."
-                  : nav.cashShare >= bufferTarget
-                    ? "Above target: only this surplus can fund buybacks."
-                    : nav.cashShare >= refillAt
-                      ? "Below target but above the refill line: new fees rebuild the buffer."
-                      : "Below the refill line: a stock sale refills the buffer."}
+            <p className="mt-1.5 text-sm text-soft">
+              {!treasury
+                ? "Treasury view unavailable."
+                : treasury.last_rebalance === 0
+                  ? "Never rebalanced. Available now."
+                  : canRebalance
+                    ? `Last run ${timeAgo(treasury.last_rebalance)}. Available now.`
+                    : `Next run in ${Math.ceil((treasury.next_rebalance - now) / 60)} min.`}
+            </p>
+            {rebalanceMsg && (
+              <p
+                role={rebalanceMsg.error ? "alert" : "status"}
+                className={cn("mt-3 rounded-xl p-2.5 text-sm break-words", rebalanceMsg.error ? "bg-red-wash text-red-ink" : "bg-green-wash text-green-ink")}
+              >
+                {rebalanceMsg.text}
               </p>
-            </div>
-          </Section>
+            )}
+          </div>
+        </div>
+      </aside>
 
-          <Section id="sheet" title="Balance sheet">
-            <div className="card p-5 sm:p-6">
-              <table className="w-full text-sm">
-                <caption className="sr-only">Treasury assets and NAV per token</caption>
-                <tbody className="[&>tr:first-child]:border-t-0">
-                  <SheetRow k="USDC cash on NEAR" v={fmtUsd(nav.cashUsd)} />
-                  <SheetRow k="USDC on treasury chains (ledger)" v={fmtUsd(nav.chainUsdcUsd)} />
-                  <SheetRow
-                    k={`${ticker} on treasury chains (ledger, at ${stockPrice !== null ? fmtUsd(stockPrice) : "no price"})`}
-                    v={fmtUsd(nav.stockUsd)}
-                  />
-                  <SheetRow k="Total assets" v={fmtUsd(nav.assetsUsd)} strong />
-                  <SheetRow k="Circulating supply" v={`${fmtAmount(nav.circulating)} ${metadata.symbol}`} />
-                  <SheetRow k="NAV per token" v={nav.navUsd !== null ? fmtPriceLong(nav.navUsd) : "–"} strong />
-                </tbody>
-              </table>
+      {/* C: sections */}
+      <div className="min-w-0 lg:col-start-1">
+        <SectionNav items={SECTIONS} className="mt-14 -mx-1 px-1" />
+
+        <Section id="overview" title="Overview">
+          <div className="panel p-5 sm:p-8">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="flex items-center gap-1.5 text-[0.9375rem] text-soft">
+                  {mnavView === "last" ? "mNAV at the last rebalance" : "mNAV now"}
+                  <Hint k="mnav" align="start" />
+                </p>
+                <p className="stat-value mt-2">
+                  {fmtTimes(shownMnav).replace("×", "")}
+                  <span className="fig-dim">{shownMnav !== null ? "×" : ""}</span>
+                </p>
+              </div>
+              <div className="seg" role="group" aria-label="Which mNAV">
+                <button type="button" aria-pressed={mnavView === "live"} onClick={() => setMnavView("live")}>
+                  Live
+                </button>
+                <button type="button" aria-pressed={mnavView === "last"} onClick={() => setMnavView("last")} disabled={contractMnav === null}>
+                  Last rebalance
+                </button>
+              </div>
+            </div>
+            <MnavGauge value={shownMnav} thresholds={thresholds} label={mnavView === "last" ? "Last mNAV" : "mNAV now"} className="mt-6" />
+            <p className="mt-2 max-w-[62ch] text-[0.9375rem] text-ink-2">{mnavSentence(shownMnav, thresholds, ticker)}</p>
+            <ul className="mt-6 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-line pt-5 text-sm sm:grid-cols-4">
+              {ZONES.map((z) => (
+                <li key={z.zone} className={cn("transition-opacity", row.zone && row.zone !== z.zone && "opacity-50")}>
+                  <span className="flex items-center gap-2">
+                    <span className="gauge-zone h-1.5 w-3 shrink-0 !rounded-full" data-zone={z.zone} aria-hidden />
+                    {z.name}
+                  </span>
+                  <span className="mt-0.5 block text-[0.8125rem] text-soft">{z.rule}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {history.length >= 3 && (
+            <div className="panel mt-6 p-5 sm:p-8">
+              <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+                <p className="flex items-center gap-1.5 text-[0.9375rem] text-soft">
+                  mNAV at each rebalance
+                  <Hint tip="Read from the contract's own rebalance events in its latest transactions. No points are interpolated." align="start" />
+                </p>
+                <p className="text-sm text-soft">{history.length} rebalances</p>
+              </div>
+              <MnavChart points={history} thresholds={thresholds} />
+            </div>
+          )}
+
+          <div className="mt-12 grid gap-x-12 gap-y-10 xl:grid-cols-2">
+            <div>
+              <h3 className="type-h3 font-normal">Where the treasury sits</h3>
+              <div className="mt-5">
+                <Composition slices={slices} total={nav.assetsUsd} />
+              </div>
+            </div>
+            <div>
+              <h3 className="type-h3 font-normal">Balance sheet</h3>
+              <dl className="mt-2">
+                <Attr k="USDC cash on NEAR" v={fmtUsd(nav.cashUsd)} />
+                <Attr k="USDC on treasury chains" hint={GLOSSARY.ledger} v={fmtUsd(nav.chainUsdcUsd)} />
+                <Attr k={`${ticker} on treasury chains`} hint={GLOSSARY.ledger} v={fmtUsd(nav.stockUsd)} />
+                <Attr k="Total assets" v={<span className="text-ink">{fmtUsd(nav.assetsUsd)}</span>} />
+                <Attr k="Circulating supply" v={`${fmtAmount(nav.circulating)} ${metadata.symbol}`} />
+                <Attr k="NAV per token" v={nav.navUsd !== null ? fmtPriceLong(nav.navUsd) : "–"} />
+                <Attr
+                  k="Oracle price"
+                  v={
+                    <span className={cn(stale && "text-orange-ink")} title={d.price ? `Published ${timeAgo(d.price.publish_time)}` : undefined}>
+                      {d.price ? `1 ${ticker} = ${fmtUsd(stockPrice)}` : "No price yet"}
+                    </span>
+                  }
+                />
+              </dl>
               <p className={cn("mt-3 text-[0.8125rem]", stale ? "text-orange-ink" : "text-soft")}>
                 {d.price
-                  ? `Oracle ${info?.oracle}: ${ticker} ${fmtUsd(stockPrice)}, published ${timeAgo(d.price.publish_time)}.${stale ? " Older than 15 minutes: every mNAV action pauses until it updates; trading continues." : ""}`
-                  : `No price for ${ticker} from the oracle${info ? ` ${info.oracle}` : ""}. Stock is valued at zero here until one is published.`}
+                  ? `Published ${timeAgo(d.price.publish_time)} by ${info?.oracle}.${stale ? " Older than 15 minutes: every mNAV action pauses until it updates; trading continues." : ""}`
+                  : `No price for ${ticker} from the oracle. Stock is valued at zero here until one is published.`}
               </p>
             </div>
-          </Section>
+          </div>
 
-          <Section
-            id="rules"
-            title="Locked rules"
-            intro={d.paramsFromContract ? "Read from get_params. No owner, no setter." : "get_params unavailable: showing the SPEC defaults."}
-          >
-            <div className="card p-5 sm:p-6">
-              <table className="w-full text-sm">
-                <caption className="sr-only">Locked parameters</caption>
-                <tbody className="[&>tr:first-child]:border-t-0">
-                  <SheetRow k="Issuance above" v={`${fmtTimes(thresholds.issuance)}, at most ${params.max_issuance_bps_per_epoch / 100}% of supply per ${fmtSecs(params.epoch_secs)}`} />
-                  <SheetRow k="Issued this epoch" v={epochCap > 0n ? `${fmtRaw(epochIssued, MEME_DECIMALS)} of ${fmtRaw(epochCap, MEME_DECIMALS)}` : "Epoch starts at the first rebalance"} />
-                  <SheetRow k="Buyback below" v={`${fmtTimes(thresholds.buyback)}, cash above the ${bufferTarget * 100}% buffer only`} />
-                  <SheetRow k="Redemption below" v={`${fmtTimes(thresholds.redemption)}, at NAV per token`} />
-                  <SheetRow k="Pool fee" v={`${params.pool_fee_bps / 100}% (${params.treasury_fee_bps / 100}% treasury, ${params.creator_fee_bps / 100}% creator)`} />
-                  <SheetRow k="Price for mNAV" v={`${fmtSecs(params.twap_window_secs)} TWAP`} />
-                  <SheetRow k="Oracle staleness limit" v={fmtSecs(params.oracle_max_age_secs)} />
-                  <SheetRow k="Rebalance cooldown" v={`${fmtSecs(params.rebalance_cooldown_secs)}, caller tip ${params.caller_tip_bps / 100}%`} />
-                </tbody>
-              </table>
+          <div className="mt-12">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <h3 className="type-h3 flex items-center gap-1.5 font-normal">
+                Cash buffer
+                <Hint k="buffer" align="start" />
+              </h3>
+              <p className="text-[0.9375rem] tabular-nums">
+                {nav.cashShare !== null ? `${cashPct.toFixed(1)}%` : "–"} <span className="text-soft">of assets in USDC on NEAR</span>
+              </p>
             </div>
-          </Section>
+            <div className="relative mt-9 mb-8">
+              <div
+                className="bar !h-2"
+                role="meter"
+                aria-label="Cash as a share of assets"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Number(cashPct.toFixed(1))}
+                aria-valuetext={`Cash is ${cashPct.toFixed(1)}% of assets. Target ${bufferTarget * 100}%, refill below ${refillAt * 100}%.`}
+              >
+                <div className="bar-fill" style={{ width: barAt(nav.cashShare ?? 0), background: (nav.cashShare ?? 0) < refillAt ? "var(--orange)" : "var(--green)" }} />
+              </div>
+              {(
+                [
+                  [bufferTarget, `Target ${bufferTarget * 100}%`, "top"],
+                  [refillAt, `Refill ${refillAt * 100}%`, "bottom"],
+                ] as const
+              ).map(([x, label, side]) => (
+                <span key={label} className="absolute inset-y-[-5px] w-px -translate-x-1/2 bg-soft" style={{ left: barAt(x) }} aria-hidden>
+                  <span className={cn("absolute left-1/2 -translate-x-1/2 text-xs whitespace-nowrap text-soft", side === "top" ? "bottom-full mb-1" : "top-full mt-1")}>
+                    {label}
+                  </span>
+                </span>
+              ))}
+            </div>
+            <p className="text-sm text-soft">
+              {nav.cashShare === null
+                ? "No assets yet."
+                : nav.cashShare >= bufferTarget
+                  ? "Above target: only this surplus can fund buybacks."
+                  : nav.cashShare >= refillAt
+                    ? "Below target but above the refill line: new fees rebuild the buffer."
+                    : "Below the refill line: a stock sale refills the buffer."}
+            </p>
+          </div>
+        </Section>
 
-          <Section id="activity" title="Activity">
-            <div className="card p-3 sm:p-4">
-              <EventLog account={account} symbol={metadata.symbol} />
+        <Section
+          id="treasury"
+          title="Treasury"
+          intro={
+            <>
+              Addresses only this contract can sign for, through NEAR Chain Signatures
+              {d.chains?.mpc ? ` (MPC ${d.chains.mpc})` : ""}. The ledger books the minimum out of every
+              swap; on-chain is read live by your browser.
+              {d.chains?.signing ? " A signature request is in flight." : ""}
+            </>
+          }
+        >
+          <TreasuryChains chains={chains} price={d.price} ticker={ticker} note={d.chainsNote} raw={d.chains} />
+        </Section>
+
+        <Section
+          id="rules"
+          title="Rules"
+          intro={d.paramsFromContract ? "Locked at launch and read from get_params. No owner, no setter." : "get_params is unavailable on this meme: showing the SPEC defaults."}
+        >
+          <dl className="grid gap-x-12 md:grid-cols-2">
+            <div>
+              <Attr k="Issuance above" v={fmtTimes(thresholds.issuance)} hint="Above this mNAV a rebalance mints new tokens into the pool and the proceeds buy more stock." />
+              <Attr k="Issuance cap" v={`${params.max_issuance_bps_per_epoch / 100}% of supply per ${fmtSecs(params.epoch_secs)}`} />
+              <Attr k="Issued this epoch" v={epochCap > 0n ? `${fmtRaw(epochIssued, MEME_DECIMALS)} of ${fmtRaw(epochCap, MEME_DECIMALS)}` : "Starts at the first rebalance"} />
+              <Attr k="Buyback below" v={fmtTimes(thresholds.buyback)} hint={`Spare cash above the ${bufferTarget * 100}% buffer buys tokens back and burns them.`} />
+              <Attr k="Redemption below" v={fmtTimes(thresholds.redemption)} hint="Holders can burn tokens for NAV per token in USDC." />
+              <Attr k="Cash buffer" v={`${bufferTarget * 100}% target, refill below ${refillAt * 100}%`} />
             </div>
-          </Section>
-        </div>
+            <div>
+              <Attr k="Pool fee" v={`${params.pool_fee_bps / 100}% (${params.treasury_fee_bps / 100}% treasury, ${params.creator_fee_bps / 100}% creator)`} />
+              {capText && <Attr k="Swap cap" v={capText} hint="The most USDC one signed treasury swap may spend." />}
+              <Attr k="Price for mNAV" v={`${fmtSecs(params.twap_window_secs)} TWAP`} hint={GLOSSARY.twap} />
+              <Attr
+                k="Oracle"
+                v={
+                  info ? (
+                    <span className="inline-flex items-center gap-1" title={info.oracle}>
+                      <span className="max-w-[12rem] truncate">{info.oracle}</span>
+                      <ExplorerLink href={`${NEARBLOCKS}/address/${info.oracle}`} label={`${info.oracle} on NearBlocks`} />
+                    </span>
+                  ) : (
+                    "–"
+                  )
+                }
+              />
+              <Attr k="Oracle staleness limit" v={fmtSecs(params.oracle_max_age_secs)} />
+              <Attr k="Rebalance cooldown" v={`${fmtSecs(params.rebalance_cooldown_secs)}, caller tip ${params.caller_tip_bps / 100}%`} />
+            </div>
+          </dl>
+          <p className="mt-4 flex flex-wrap items-center gap-2 text-sm text-soft">
+            <span className={cn("pill", treasury?.redemption_open ? "pill-green" : "")}>
+              Redemption window {treasury?.redemption_open ? "open" : "closed"}
+            </span>
+            The floor defends NAV, not the price.
+          </p>
+        </Section>
+
+        <Section id="activity" title="Activity">
+          <EventLog account={account} symbol={metadata.symbol} log={events} />
+        </Section>
       </div>
     </div>
   );

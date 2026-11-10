@@ -21,7 +21,7 @@ const TABS: { href: string; label: string; icon: LucideIcon; match: (p: string) 
 function DesktopTabs({ path }: { path: string | null }) {
   const reduce = useReducedMotion();
   return (
-    <nav aria-label="App" className="hidden items-center gap-1 rounded-full border border-line bg-card p-1 shadow-[var(--shadow-xs)] md:flex">
+    <nav aria-label="App" className="hidden items-center gap-1 md:flex">
       {TABS.map((t) => {
         const on = path !== null && t.match(path);
         return (
@@ -29,12 +29,12 @@ function DesktopTabs({ path }: { path: string | null }) {
             key={t.href}
             href={t.href}
             aria-current={on ? "page" : undefined}
-            className={cn("relative rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors", on ? "text-white" : "text-soft hover:text-ink")}
+            className={cn("relative rounded-[10px] px-4 py-2.5 text-[0.9375rem] transition-colors", on ? "text-ink" : "text-ink-2 hover:text-ink")}
           >
             {on && (
               <motion.span
                 layoutId="app-tab"
-                className="absolute inset-0 rounded-full bg-ink"
+                className="absolute inset-0 rounded-[10px] bg-page-deep"
                 transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34 }}
                 aria-hidden
               />
@@ -52,7 +52,7 @@ function MobileTabs({ path }: { path: string | null }) {
   return (
     <nav
       aria-label="App"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-page/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
     >
       <ul className="grid grid-cols-3">
         {TABS.map((t) => {
@@ -63,7 +63,7 @@ function MobileTabs({ path }: { path: string | null }) {
               <AppLink
                 href={t.href}
                 aria-current={on ? "page" : undefined}
-                className={cn("flex flex-col items-center gap-0.5 py-2 text-[0.6875rem] font-medium", on ? "text-ink" : "text-soft")}
+                className={cn("flex flex-col items-center gap-0.5 py-2 text-[0.6875rem]", on ? "text-blue-ink" : "text-soft")}
               >
                 <span className={cn("flex h-7 w-12 items-center justify-center rounded-full transition-colors", on && "bg-page-deep")}>
                   <Icon className="size-[1.125rem]" strokeWidth={on ? 2.25 : 1.75} aria-hidden />
@@ -91,14 +91,14 @@ export function AppHeader() {
   return (
     <>
       {NETWORK === "testnet" && (
-        <p className="on-ink px-4 py-1.5 text-center text-xs text-white/80">
+        <p className="px-4 pt-2 text-center text-xs text-faint">
           NEAR testnet: synthetic stocks and test USDC with no value.
           <span className="hidden sm:inline"> Factory {FACTORY}.</span>
         </p>
       )}
-      <header className="sticky top-0 z-40 border-b border-line bg-page/85 backdrop-blur-xl backdrop-saturate-150">
-        <div className="wrap flex h-[var(--header-h)] items-center justify-between gap-3">
-          <div className="flex items-center gap-6">
+      <header className="sticky top-0 z-40 bg-page/90 backdrop-blur-xl backdrop-saturate-150">
+        <div className="flex h-[var(--header-h)] items-center justify-between gap-3 px-4 sm:px-6">
+          <div className="flex items-center gap-8">
             <AppLink href="/" aria-label="Solidon app, Markets" className="rounded-lg">
               <Logo suffix="app" />
             </AppLink>

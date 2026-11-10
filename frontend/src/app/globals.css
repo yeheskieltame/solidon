@@ -2,14 +2,15 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Single light theme: the `dark:` variants in the shadcn primitives never match. */
+/* Single dark theme, styled by tokens: the `dark:` variants in the shadcn primitives never match. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
   --color-background: var(--page);
   --color-foreground: var(--ink);
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-bricolage), var(--font-geist), system-ui, sans-serif;
+  --font-heading: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-brand: var(--font-bricolage), var(--font-geist), system-ui, sans-serif;
   --color-ring: var(--focus);
   --color-input: var(--line-strong);
   --color-border: var(--line);
@@ -21,7 +22,7 @@
   --color-secondary-foreground: var(--ink);
   --color-secondary: var(--page-deep);
   --color-primary-foreground: #fff;
-  --color-primary: var(--ink);
+  --color-primary: var(--blue);
   --color-popover-foreground: var(--ink);
   --color-popover: var(--card);
   --color-card-foreground: var(--ink);
@@ -29,6 +30,7 @@
 
   --color-page: var(--page);
   --color-page-deep: var(--page-deep);
+  --color-panel: var(--panel);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-soft: var(--soft);
@@ -67,43 +69,46 @@
 }
 
 /*
- * Solidon: a modern treasury terminal with a friendly coin (see frontend/README.md "Design system").
- *   page    #F6F7FB  cool porcelain           ink    #0B1020  text and primary actions
- *   card    #FFFFFF  surfaces                 soft   #586074  secondary text (AA on page and card)
- *   line    #E4E7EE  1px hairlines            golden #F5B700  the coin: brand moments only
- * Data colours carry meaning only: green up / healthy, red down / redemption, orange caution /
- * buyback, lilac issuance, blue links and info. Each has an -ink (AA text) and a -wash (quiet fill).
+ * Solidon, dark (after app.morpho.org; see frontend/README.md "Design system").
+ *   page   #0E0E10  the chrome around the content     ink   #F4F4F6  text
+ *   card   #151518  the one large content surface      soft  #9C9CA6  secondary text (AA)
+ *   panel  #1C1C20  charts, input cards, table heads   line  #24242A  hairlines
+ *   blue   #3A6FF7  the one accent: primary actions, active nav, focus, chart lines
+ * Zone colours carry meaning only: green free band / healthy, orange buyback, red redemption,
+ * lilac issuance. Each data colour has an -ink (AA text on dark) and a -wash (quiet fill).
  */
 :root {
-  --page: #f6f7fb;
-  --page-deep: #eceef4;
-  --card: #ffffff;
-  --ink: #0b1020;
-  --ink-2: #1b2236;
-  --soft: #586074;
-  --faint: #8a91a3;
-  --line: #e4e7ee;
-  --line-strong: #cfd4de;
-  --focus: #3355ff;
+  color-scheme: dark;
+  --page: #0e0e10;
+  --card: #151518;
+  --panel: #1c1c20;
+  --page-deep: #26262b;
+  --ink: #f4f4f6;
+  --ink-2: #d4d4da;
+  --soft: #9c9ca6;
+  --faint: #6c6c76;
+  --line: #24242a;
+  --line-strong: #34343b;
+  --focus: #3a6ff7;
 
-  --lilac: #7457e8;
-  --lilac-ink: #5a3fd0;
-  --lilac-wash: #f1edfe;
-  --green: #12a46b;
-  --green-ink: #0b7a4f;
-  --green-wash: #e7f7ef;
-  --blue: #3355ff;
-  --blue-ink: #2442d6;
-  --blue-wash: #edf0ff;
+  --lilac: #8f7cff;
+  --lilac-ink: #b9adff;
+  --lilac-wash: #1f1b35;
+  --green: #2fbf71;
+  --green-ink: #5fdc9b;
+  --green-wash: #10261b;
+  --blue: #3a6ff7;
+  --blue-ink: #86a6ff;
+  --blue-wash: #16203a;
   --golden: #f5b700;
-  --golden-ink: #7d5a00;
-  --golden-wash: #fff6d6;
-  --orange: #f08a24;
-  --orange-ink: #a2530a;
-  --orange-wash: #fff1e3;
-  --red: #e5484d;
-  --red-ink: #c4282d;
-  --red-wash: #fdecec;
+  --golden-ink: #ffd35c;
+  --golden-wash: #2a220f;
+  --orange: #f2994a;
+  --orange-ink: #ffb878;
+  --orange-wash: #2b1d10;
+  --red: #ef5350;
+  --red-ink: #ff8f8c;
+  --red-wash: #2c1515;
 
   /* Treasury chain identities (from each network's own mark). */
   --chain-base: #0000ff;
@@ -111,15 +116,15 @@
   --chain-sol-a: #9945ff;
   --chain-sol-b: #14f195;
 
-  --shadow-xs: 0 1px 2px rgb(16 24 40 / 0.05);
-  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.04), 0 2px 6px -2px rgb(16 24 40 / 0.06);
-  --shadow-md: 0 1px 2px rgb(16 24 40 / 0.04), 0 12px 32px -14px rgb(16 24 40 / 0.18);
-  --shadow-lg: 0 2px 4px rgb(16 24 40 / 0.04), 0 28px 60px -24px rgb(16 24 40 / 0.28);
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 12px 32px -14px rgb(0 0 0 / 0.6);
+  --shadow-lg: 0 28px 60px -24px rgb(0 0 0 / 0.75);
 
   --background: var(--page);
   --foreground: var(--ink);
   --radius: 12px;
-  --header-h: 4rem;
+  --header-h: 4.25rem;
 }
 
 @layer base {
@@ -131,7 +136,7 @@
     font-feature-settings: "tnum" 1, "cv11" 1;
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
-    scroll-padding-top: calc(var(--header-h) + 1.5rem);
+    scroll-padding-top: calc(var(--header-h) + 5rem);
   }
   body {
     background: var(--page);
@@ -141,7 +146,7 @@
     overflow-x: clip;
   }
   ::selection {
-    background: var(--golden-wash);
+    background: rgb(58 111 247 / 0.4);
   }
   :focus-visible {
     outline: 2px solid var(--focus);
@@ -181,65 +186,97 @@
   /* Layout */
   .wrap {
     width: 100%;
-    max-width: 76rem;
+    max-width: 78rem;
     margin-inline: auto;
     padding-inline: 1rem;
   }
   @media (min-width: 640px) {
     .wrap {
-      padding-inline: 1.5rem;
+      padding-inline: 1.75rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .wrap {
+      padding-inline: 3rem;
+    }
+  }
+  /* The one large rounded content surface that sits inside the dark chrome. */
+  .surface {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    margin-inline: 0.375rem;
+  }
+  @media (min-width: 640px) {
+    .surface {
+      margin-inline: 0.75rem;
     }
   }
 
-  /* Type: Bricolage Grotesque for display, Geist for UI and figures. */
+  /* Type: one grotesk (Geist), light weights for big figures. */
   .type-display {
-    font-family: var(--font-heading);
-    font-weight: 650;
-    font-size: clamp(2.6rem, 6.8vw, 5.25rem);
-    line-height: 0.98;
-    letter-spacing: -0.02em;
-    font-variation-settings: "opsz" 96, "wdth" 96;
+    font-weight: 400;
+    font-size: clamp(2.6rem, 6.6vw, 5.4rem);
+    line-height: 1;
+    letter-spacing: -0.045em;
   }
   .type-h1 {
-    font-family: var(--font-heading);
-    font-weight: 650;
-    font-size: clamp(1.9rem, 3.6vw, 2.6rem);
-    line-height: 1.05;
-    letter-spacing: -0.015em;
-    font-variation-settings: "opsz" 48, "wdth" 98;
+    font-weight: 400;
+    font-size: clamp(1.9rem, 3.4vw, 2.75rem);
+    line-height: 1.08;
+    letter-spacing: -0.035em;
   }
   .type-h2 {
-    font-family: var(--font-heading);
-    font-weight: 650;
-    font-size: clamp(1.9rem, 4.2vw, 3.1rem);
-    line-height: 1.04;
+    font-weight: 400;
+    font-size: clamp(1.75rem, 3.6vw, 2.75rem);
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+  }
+  .type-section {
+    font-weight: 400;
+    font-size: 1.5rem;
+    line-height: 1.2;
     letter-spacing: -0.02em;
-    font-variation-settings: "opsz" 64, "wdth" 97;
   }
   .type-h3 {
-    font-weight: 600;
+    font-weight: 500;
     font-size: 1.0625rem;
     line-height: 1.3;
-    letter-spacing: -0.012em;
+    letter-spacing: -0.01em;
   }
   .type-num {
-    font-weight: 600;
-    letter-spacing: -0.02em;
+    font-weight: 300;
+    letter-spacing: -0.03em;
     font-variant-numeric: tabular-nums;
     line-height: 1.05;
   }
   .lede {
-    font-size: clamp(1.0625rem, 1.5vw, 1.1875rem);
+    font-size: clamp(1.0625rem, 1.4vw, 1.1875rem);
     line-height: 1.55;
     color: var(--soft);
   }
   .kicker {
-    font-size: 0.8125rem;
-    font-weight: 500;
+    font-size: 0.875rem;
     color: var(--soft);
   }
 
-  /* Buttons: pill-shaped, ink primary, a soft spring on hover. */
+  /* Open stats (no boxes): label + (i), a big light figure with a dimmed tail, a small line. */
+  .stat-value {
+    font-weight: 300;
+    font-size: clamp(1.875rem, 3.2vw, 2.875rem);
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .stat-value[data-size="md"] {
+    font-size: clamp(1.75rem, 2.6vw, 2.25rem);
+  }
+  .fig-dim {
+    color: var(--faint);
+  }
+
+  /* Buttons: rounded rectangles, blue primary. */
   .btn {
     display: inline-flex;
     align-items: center;
@@ -247,112 +284,122 @@
     gap: 0.5rem;
     min-height: 2.5rem;
     padding: 0.5rem 1.125rem;
-    border-radius: 999px;
+    border-radius: 10px;
     border: 1px solid transparent;
-    background: var(--ink);
+    background: var(--blue);
     color: #fff;
-    font-weight: 550;
+    font-weight: 500;
     font-size: 0.9375rem;
     line-height: 1.2;
     text-align: center;
     cursor: pointer;
     white-space: nowrap;
-    box-shadow: var(--shadow-xs), inset 0 1px 0 rgb(255 255 255 / 0.12);
     transition:
-      transform 0.25s var(--ease-spring),
+      transform 0.2s var(--ease-spring),
       background-color 0.15s,
-      box-shadow 0.25s,
       border-color 0.15s,
-      color 0.15s;
+      color 0.15s,
+      opacity 0.15s;
   }
   .btn:hover:not(:disabled) {
-    transform: translateY(-1px);
-    background: var(--ink-2);
-    box-shadow: var(--shadow-md);
+    background: #4f7ffa;
   }
   .btn:active:not(:disabled) {
-    transform: translateY(0) scale(0.98);
+    transform: scale(0.98);
   }
   .btn:disabled {
     cursor: not-allowed;
-    opacity: 0.45;
+    opacity: 0.4;
   }
   .btn-blue {
     background: var(--blue);
   }
-  .btn-blue:hover:not(:disabled) {
-    background: var(--blue-ink);
-  }
   .btn-golden {
     background: var(--golden);
-    color: var(--ink);
-    box-shadow: var(--shadow-xs), inset 0 -1px 0 rgb(0 0 0 / 0.08);
+    color: #16130a;
   }
   .btn-golden:hover:not(:disabled) {
-    background: #ffc31f;
+    background: #ffc72e;
   }
   .btn-red {
-    background: var(--red-ink);
+    background: #d8403d;
   }
   .btn-red:hover:not(:disabled) {
-    background: #a81f24;
+    background: #e85350;
   }
   .btn-white {
-    background: var(--card);
+    background: var(--page-deep);
     color: var(--ink);
-    border-color: var(--line-strong);
-    box-shadow: var(--shadow-xs);
   }
   .btn-white:hover:not(:disabled) {
-    background: var(--card);
-    border-color: var(--ink);
+    background: #303036;
   }
   .btn-ink {
     background: var(--ink);
+    color: var(--page);
+  }
+  .btn-ink:hover:not(:disabled) {
+    background: #fff;
   }
   .btn-ghost {
     background: transparent;
     color: var(--ink);
-    box-shadow: none;
   }
   .btn-ghost:hover:not(:disabled) {
     background: var(--page-deep);
-    box-shadow: none;
-    transform: none;
   }
   .btn-sm {
     min-height: 2.125rem;
-    padding: 0.375rem 0.875rem;
+    padding: 0.375rem 0.8125rem;
     font-size: 0.875rem;
+    border-radius: 9px;
   }
   .btn-lg {
-    min-height: 3rem;
+    min-height: 3.375rem;
     padding: 0.75rem 1.5rem;
-    font-size: 1rem;
+    font-size: 1.0625rem;
+    border-radius: 12px;
   }
 
-  /* Surfaces */
+  /* Small square icon buttons: copy, external link. */
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.625rem;
+    height: 1.625rem;
+    border-radius: 7px;
+    color: var(--soft);
+    cursor: pointer;
+    transition:
+      color 0.15s,
+      background-color 0.15s;
+  }
+  .icon-btn:hover {
+    color: var(--ink);
+    background: var(--page-deep);
+  }
+  .icon-btn svg {
+    width: 0.9375rem;
+    height: 0.9375rem;
+  }
+
+  /* Surfaces: panels are a step lighter than the surface, no borders. */
+  .panel {
+    background: var(--panel);
+    border-radius: 18px;
+  }
   .card {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    box-shadow: var(--shadow-sm);
+    background: var(--panel);
+    border-radius: 18px;
   }
   .card-lift {
     transition:
-      transform 0.35s var(--ease-spring),
-      box-shadow 0.3s,
-      border-color 0.2s;
+      background-color 0.2s,
+      transform 0.3s var(--ease-spring);
   }
   .card-lift:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-md);
-    border-color: var(--line-strong);
-  }
-  .panel {
-    background: var(--page);
-    border: 1px solid var(--line);
-    border-radius: 12px;
+    background: #212126;
   }
 
   /* Badges */
@@ -362,13 +409,12 @@
     gap: 0.3rem;
     min-height: 1.5rem;
     padding: 0.125rem 0.5rem;
-    border-radius: 999px;
+    border-radius: 7px;
     background: var(--page-deep);
     color: var(--ink-2);
-    font-family: var(--font-sans);
     letter-spacing: 0;
     font-size: 0.75rem;
-    font-weight: 550;
+    font-weight: 500;
     line-height: 1.2;
     white-space: nowrap;
   }
@@ -422,7 +468,7 @@
     animation: ping 1.8s var(--ease-out-soft) infinite;
   }
 
-  /* Segmented chips: quick amounts, slippage, filters. */
+  /* Filter chips and quick amounts: quiet until pressed. */
   .chip {
     display: inline-flex;
     align-items: center;
@@ -430,36 +476,64 @@
     gap: 0.375rem;
     min-height: 2.125rem;
     padding: 0.25rem 0.75rem;
-    border-radius: 999px;
-    border: 1px solid var(--line);
-    background: var(--card);
+    border-radius: 9px;
+    background: var(--panel);
     color: var(--soft);
     font-size: 0.8125rem;
-    font-weight: 550;
+    font-weight: 500;
     cursor: pointer;
     white-space: nowrap;
     transition:
       color 0.15s,
-      border-color 0.15s,
       background-color 0.15s,
       transform 0.2s var(--ease-spring);
   }
   .chip:hover:not(:disabled) {
     color: var(--ink);
-    border-color: var(--line-strong);
+    background: var(--page-deep);
   }
   .chip[aria-pressed="true"],
   .chip[aria-current="true"] {
-    background: var(--ink);
-    border-color: var(--ink);
-    color: #fff;
+    background: var(--page-deep);
+    color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--line-strong);
   }
   .chip:active:not(:disabled) {
     transform: scale(0.97);
   }
   .chip:disabled {
-    opacity: 0.45;
+    opacity: 0.4;
     cursor: not-allowed;
+  }
+
+  /* Segmented toggle (Morpho's Borrow | Supply): a dark track, the active key a step lighter. */
+  .seg {
+    display: inline-flex;
+    gap: 0.125rem;
+    padding: 0.25rem;
+    border-radius: 11px;
+    background: var(--page);
+  }
+  .seg > button,
+  .seg > a {
+    padding: 0.3125rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: var(--soft);
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+      color 0.15s,
+      background-color 0.15s;
+  }
+  .seg > button:hover,
+  .seg > a:hover {
+    color: var(--ink);
+  }
+  .seg > [aria-pressed="true"],
+  .seg > [aria-current="true"] {
+    background: var(--page-deep);
+    color: var(--ink);
   }
 
   /* Fields */
@@ -467,9 +541,9 @@
     width: 100%;
     min-height: 2.75rem;
     padding: 0.5rem 0.875rem;
-    border-radius: 12px;
-    border: 1px solid var(--line-strong);
-    background: var(--card);
+    border-radius: 11px;
+    border: 1px solid var(--line);
+    background: var(--panel);
     color: var(--ink);
     font-size: 0.9375rem;
     transition:
@@ -480,33 +554,148 @@
     color: var(--faint);
   }
   .field:hover:not(:disabled) {
-    border-color: var(--faint);
+    border-color: var(--line-strong);
   }
   .field:focus-visible {
     outline: none;
     border-color: var(--blue);
-    box-shadow: 0 0 0 4px rgb(51 85 255 / 0.14);
   }
   .field[aria-invalid="true"] {
     border-color: var(--red);
-    box-shadow: 0 0 0 4px rgb(229 72 77 / 0.1);
   }
   .field:disabled {
-    background: var(--page);
     color: var(--faint);
     cursor: not-allowed;
+  }
+  select.field option {
+    background: var(--panel);
+  }
+
+  /* Morpho-style input card: label, big light figure, $ line, balance + MAX, blue when focused. */
+  .input-card {
+    position: relative;
+    display: block;
+    padding: 1.125rem 1.25rem 1rem;
+    border-radius: 18px;
+    background: var(--panel);
+    border: 1px solid transparent;
+    transition: border-color 0.15s;
+  }
+  .input-card:focus-within {
+    border-color: var(--blue);
+  }
+  .input-card[data-invalid="true"] {
+    border-color: var(--red);
+  }
+  .input-card input {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    outline: none;
+    color: var(--ink);
+    font-weight: 300;
+    font-size: 2.125rem;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    padding: 0;
+  }
+  .input-card input::placeholder {
+    color: var(--faint);
+  }
+  .input-card input:disabled {
+    color: var(--faint);
+    cursor: not-allowed;
+  }
+  .max-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.75rem;
+    padding: 0 0.625rem;
+    border-radius: 7px;
+    background: var(--page-deep);
+    color: var(--soft);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .max-chip:hover:not(:disabled) {
+    color: var(--ink);
+  }
+  .max-chip:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .max-chip[aria-pressed="true"] {
+    color: var(--blue-ink);
   }
 
   .link {
     color: var(--blue-ink);
     font-weight: 500;
-    text-decoration: underline;
-    text-decoration-color: rgb(36 66 214 / 0.3);
-    text-underline-offset: 3px;
-    transition: text-decoration-color 0.15s;
+    text-decoration: none;
+    transition: color 0.15s;
   }
   .link:hover {
-    text-decoration-color: currentColor;
+    color: #b3c7ff;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* Attribute rows (key on the left, value on the right, a hairline under each). */
+  .attr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 3.5rem;
+    padding-block: 0.75rem;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.9375rem;
+  }
+  .attr > dt {
+    color: var(--ink-2);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+  .attr > dd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.375rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    min-width: 0;
+  }
+
+  /* The page's section nav: blue when active, sticky with a blurred backdrop. */
+  .subnav {
+    position: sticky;
+    top: var(--header-h);
+    z-index: 30;
+    background: rgb(21 21 24 / 0.78);
+    backdrop-filter: blur(14px) saturate(1.4);
+    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    border-bottom: 1px solid var(--line);
+  }
+  .subnav a {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding-block: 1rem;
+    font-size: 1.0625rem;
+    color: var(--ink-2);
+    white-space: nowrap;
+    transition: color 0.15s;
+  }
+  .subnav a:hover {
+    color: var(--ink);
+  }
+  .subnav a[aria-current="true"] {
+    color: var(--blue-ink);
   }
 
   /* Thin progress bars */
@@ -524,13 +713,24 @@
     animation: bar-grow 0.9s var(--ease-out-soft) both;
   }
 
-  /* Jargon with a tooltip */
+  /* Jargon with a tooltip, and the (i) hint */
   .term {
     position: relative;
     cursor: help;
     text-decoration: underline dotted;
     text-decoration-color: var(--faint);
     text-underline-offset: 3px;
+  }
+  .hint {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    color: var(--soft);
+    cursor: help;
+    border-radius: 999px;
+  }
+  .hint:hover {
+    color: var(--ink);
   }
   .term-tip {
     position: absolute;
@@ -541,14 +741,15 @@
     max-width: min(18rem, 80vw);
     padding: 0.5rem 0.75rem;
     border-radius: 10px;
-    background: var(--ink);
-    color: #fff;
+    background: #2c2c32;
+    color: var(--ink);
     font-size: 0.8125rem;
     font-weight: 400;
     line-height: 1.45;
     text-align: left;
     white-space: normal;
     letter-spacing: 0;
+    text-decoration: none;
     box-shadow: var(--shadow-lg);
     opacity: 0;
     pointer-events: none;
@@ -557,30 +758,32 @@
       opacity 0.15s,
       transform 0.2s var(--ease-out-soft);
   }
-  .term[data-align="start"] .term-tip {
+  [data-align="start"] > .term-tip {
     left: -0.5rem;
     transform: translate(0, 4px);
   }
-  .term[data-align="end"] .term-tip {
+  [data-align="end"] > .term-tip {
     left: auto;
     right: -0.5rem;
     transform: translate(0, 4px);
   }
-  .term:hover .term-tip,
-  .term:focus-visible .term-tip {
+  .term:hover > .term-tip,
+  .term:focus-visible > .term-tip,
+  .hint:hover > .term-tip,
+  .hint:focus-visible > .term-tip {
     opacity: 1;
     transform: translate(-50%, 0);
   }
-  .term[data-align="start"]:hover .term-tip,
-  .term[data-align="start"]:focus-visible .term-tip,
-  .term[data-align="end"]:hover .term-tip,
-  .term[data-align="end"]:focus-visible .term-tip {
+  [data-align="start"]:hover > .term-tip,
+  [data-align="start"]:focus-visible > .term-tip,
+  [data-align="end"]:hover > .term-tip,
+  [data-align="end"]:focus-visible > .term-tip {
     transform: translate(0, 0);
   }
 
   .skeleton {
     border-radius: 10px;
-    background: linear-gradient(90deg, var(--page-deep) 0%, #f4f5f9 50%, var(--page-deep) 100%);
+    background: linear-gradient(90deg, var(--panel) 0%, #24242a 50%, var(--panel) 100%);
     background-size: 200% 100%;
     animation: shimmer 1.4s linear infinite;
   }
@@ -588,7 +791,7 @@
   /* mNAV gauge: a thin segmented bar with precise ticks and a needle. */
   .gauge {
     position: relative;
-    padding-top: 1.75rem;
+    padding-top: 2rem;
     padding-bottom: 1.5rem;
   }
   .gauge[data-size="sm"] {
@@ -598,10 +801,10 @@
   .gauge-track {
     display: flex;
     gap: 3px;
-    height: 0.5rem;
+    height: 0.375rem;
   }
   .gauge[data-size="sm"] .gauge-track {
-    height: 0.3125rem;
+    height: 0.25rem;
     gap: 2px;
   }
   .gauge-zone {
@@ -631,7 +834,7 @@
   }
   .gauge-needle {
     position: absolute;
-    top: 1.75rem;
+    top: 2rem;
     left: calc(var(--pos) * 1%);
     width: 0;
     transition: left 0.9s var(--ease-spring);
@@ -644,7 +847,7 @@
     content: "";
     position: absolute;
     left: -1px;
-    top: -0.375rem;
+    top: -0.4375rem;
     width: 2px;
     height: 1.25rem;
     border-radius: 2px;
@@ -652,19 +855,19 @@
   }
   .gauge[data-size="sm"] .gauge-needle::before {
     top: -0.25rem;
-    height: 0.8125rem;
+    height: 0.75rem;
   }
   .gauge-value {
     position: absolute;
-    bottom: calc(100% + 0.5rem);
+    bottom: calc(100% + 0.625rem);
     left: 0;
     transform: translateX(calc(-50% + var(--nudge, 0%)));
-    padding: 0.125rem 0.5rem;
-    border-radius: 6px;
-    background: var(--ink);
-    color: #fff;
-    font-size: 0.75rem;
-    font-weight: 600;
+    padding: 0.1875rem 0.5rem;
+    border-radius: 7px;
+    background: var(--page-deep);
+    color: var(--ink);
+    font-size: 0.8125rem;
+    font-weight: 500;
     white-space: nowrap;
   }
   .gauge-ticks {
@@ -679,8 +882,7 @@
     top: 0;
     transform: translateX(-50%);
     padding-top: 0.375rem;
-    font-size: 0.6875rem;
-    font-weight: 500;
+    font-size: 0.75rem;
     color: var(--soft);
   }
   .gauge-ticks span::before {
@@ -703,109 +905,135 @@
   .slider::-webkit-slider-runnable-track {
     height: 0.25rem;
     border-radius: 999px;
-    background: var(--line);
+    background: var(--page-deep);
   }
   .slider::-moz-range-track {
     height: 0.25rem;
     border-radius: 999px;
-    background: var(--line);
+    background: var(--page-deep);
   }
   .slider::-webkit-slider-thumb {
     appearance: none;
-    width: 1.25rem;
-    height: 1.25rem;
-    margin-top: -0.5rem;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-top: -0.4375rem;
     border-radius: 999px;
-    background: var(--card);
-    border: 1px solid var(--line-strong);
-    box-shadow: var(--shadow-md);
+    background: var(--ink);
+    border: 3px solid var(--blue);
     transition: transform 0.2s var(--ease-spring);
   }
   .slider::-moz-range-thumb {
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 1.125rem;
+    height: 1.125rem;
     border-radius: 999px;
-    background: var(--card);
-    border: 1px solid var(--line-strong);
-    box-shadow: var(--shadow-md);
+    background: var(--ink);
+    border: 3px solid var(--blue);
   }
   .slider:active::-webkit-slider-thumb {
     transform: scale(1.15);
   }
 
-  /* Data table */
+  /* Data table: a soft header row, hairlines, hover rows. Sits on a panel. */
   .table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
   }
   .table th {
-    padding: 0.625rem 1rem;
+    padding: 0.875rem 1.25rem;
     text-align: left;
-    font-size: 0.75rem;
-    font-weight: 500;
+    font-size: 0.875rem;
+    font-weight: 400;
     color: var(--soft);
-    background: var(--page);
     border-bottom: 1px solid var(--line);
     white-space: nowrap;
   }
   .table td {
-    padding: 0.875rem 1rem;
+    padding: 1rem 1.25rem;
     border-bottom: 1px solid var(--line);
     vertical-align: middle;
   }
-  .table tbody tr:last-child td {
+  .table tbody:last-child tr:last-child td {
     border-bottom: 0;
   }
   .table tbody tr {
     transition: background-color 0.15s;
   }
-  .table tbody tr:hover {
-    background: #fafbfd;
+  .table tbody tr[data-hover="true"]:hover {
+    background: #212126;
   }
   .table .num {
     text-align: right;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
-
-  /* Landing: halftone dot field and soft chain-coloured glows (after the "Ledgely" showcase). */
-  .halftone {
-    background-image: radial-gradient(rgb(11 16 32 / 0.16) 1px, transparent 1.2px);
-    background-size: 14px 14px;
-    mask-image: radial-gradient(60% 55% at 50% 45%, #000 0%, transparent 75%);
+  .table .group td {
+    padding-block: 0.625rem;
+    font-size: 0.8125rem;
+    color: var(--soft);
+    background: rgb(255 255 255 / 0.015);
   }
+  .sort-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    cursor: pointer;
+    color: inherit;
+    transition: color 0.15s;
+  }
+  .sort-btn:hover,
+  .sort-btn[aria-pressed="true"] {
+    color: var(--ink);
+  }
+  .num-link {
+    text-decoration: underline;
+    text-decoration-color: var(--faint);
+    text-underline-offset: 4px;
+    transition: text-decoration-color 0.15s;
+  }
+  .num-link:hover {
+    text-decoration-color: var(--ink);
+  }
+
+  /* Chart panels: thin line, soft gradient fill, dotted guides. */
+  .chart-grid {
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .chart-guide {
+    stroke: var(--faint);
+    stroke-width: 1;
+    stroke-dasharray: 2 4;
+  }
+
+  /* Landing: a soft accent glow behind the product frame. */
   .glow {
     position: absolute;
     border-radius: 999px;
-    filter: blur(80px);
-    opacity: 0.45;
+    filter: blur(90px);
+    opacity: 0.35;
     pointer-events: none;
   }
   .showcase-frame {
     position: relative;
-    border-radius: 24px;
+    border-radius: 26px;
     padding: 6px;
-    background: linear-gradient(180deg, rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.55));
-    border: 1px solid rgb(255 255 255 / 0.9);
-    box-shadow:
-      0 0 0 1px var(--line),
-      var(--shadow-lg);
-    backdrop-filter: blur(12px);
+    background: rgb(255 255 255 / 0.03);
+    border: 1px solid var(--line);
   }
 
   .marquee {
     display: flex;
     width: max-content;
-    gap: 0.75rem;
-    animation: marquee 48s linear infinite;
+    gap: 2.5rem;
+    animation: marquee 56s linear infinite;
   }
   .marquee[data-reverse="true"] {
     animation-direction: reverse;
   }
   .marquee-mask {
-    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
   }
   .marquee-mask:hover .marquee {
     animation-play-state: paused;
@@ -823,11 +1051,6 @@
     overflow: hidden;
   }
 
-  .on-ink {
-    background: var(--ink);
-    color: #fff;
-  }
-
   .toast {
     animation: toast-in 0.45s var(--ease-spring) both;
   }
@@ -839,7 +1062,7 @@
     height: 0.625rem;
     border-radius: 999px;
     background: var(--c);
-    box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.12);
+    box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.2);
     animation: coin 0.9s var(--ease-out-soft) var(--d) both;
   }
 
@@ -897,6 +1120,17 @@
     transform: translateY(48px) scale(0.98);
   }
 }
+/* Chart line draws in once. */
+.draw-in {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw-in 1.2s var(--ease-out-soft) 0.1s forwards;
+}
+@keyframes draw-in {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
 
 /* Table rows settle in one after another (delay set inline). */
 .row-in {
@@ -933,7 +1167,7 @@
 }
 @keyframes marquee {
   to {
-    transform: translateX(calc(-50% - 0.375rem));
+    transform: translateX(calc(-50% - 1.25rem));
   }
 }
 @keyframes toast-in {

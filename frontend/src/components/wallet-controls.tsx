@@ -108,21 +108,21 @@ export function WalletControls() {
   return (
     <div className="flex items-center justify-end gap-2">
       <GetTestUsdcButton onDone={usdc.reload} className="max-md:hidden" />
-      <div className="flex min-h-[2.125rem] items-center gap-2 rounded-full border border-line bg-card py-0.5 pr-0.5 pl-1 shadow-[var(--shadow-xs)]">
-        <span className="flex items-center gap-1.5 rounded-full bg-page px-2 py-1 max-sm:hidden" title={`USDC on ${USDC}`}>
+      <div className="flex min-h-[2.5rem] items-center gap-2 rounded-[10px] bg-panel py-1 pr-1 pl-1.5">
+        <span className="flex items-center gap-1.5 rounded-[7px] bg-page-deep px-2 py-1 max-sm:hidden" title={`USDC on ${USDC}`}>
           <LogoTile logo={PLATFORM_LOGOS.usdc} size={16} decorative rounded="full" className="!ring-0" />
-          <span className="text-[0.8125rem] font-medium tabular-nums">
+          <span className="text-[0.8125rem] tabular-nums">
             {usdc.data != null ? fmtRaw(usdc.data, USDC_DECIMALS) : "…"}
           </span>
         </span>
-        <span className="flex items-center gap-1.5 text-[0.8125rem] font-medium" title={accountId}>
+        <span className="flex items-center gap-1.5 text-[0.8125rem]" title={accountId}>
           <span className="size-2 rounded-full bg-green max-sm:ml-2" aria-hidden />
           {shortAddr(accountId, 10, 6)}
         </span>
         <button
           type="button"
           onClick={() => disconnect()}
-          className="flex size-8 cursor-pointer items-center justify-center rounded-full text-soft transition-colors hover:bg-red-wash hover:text-red-ink"
+          className="flex size-8 cursor-pointer items-center justify-center rounded-[7px] text-soft transition-colors hover:bg-red-wash hover:text-red-ink"
           aria-label={`Disconnect ${accountId}`}
           title="Disconnect"
         >
