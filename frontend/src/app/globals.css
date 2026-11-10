@@ -195,9 +195,9 @@
   .type-display {
     font-family: var(--font-heading);
     font-weight: 650;
-    font-size: clamp(2.6rem, 7.4vw, 5.6rem);
+    font-size: clamp(2.6rem, 6.8vw, 5.25rem);
     line-height: 0.98;
-    letter-spacing: -0.032em;
+    letter-spacing: -0.02em;
     font-variation-settings: "opsz" 96, "wdth" 96;
   }
   .type-h1 {
@@ -205,7 +205,7 @@
     font-weight: 650;
     font-size: clamp(1.9rem, 3.6vw, 2.6rem);
     line-height: 1.05;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.015em;
     font-variation-settings: "opsz" 48, "wdth" 98;
   }
   .type-h2 {
@@ -213,7 +213,7 @@
     font-weight: 650;
     font-size: clamp(1.9rem, 4.2vw, 3.1rem);
     line-height: 1.04;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.02em;
     font-variation-settings: "opsz" 64, "wdth" 97;
   }
   .type-h3 {
@@ -224,7 +224,7 @@
   }
   .type-num {
     font-weight: 600;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
     line-height: 1.05;
   }

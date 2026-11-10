@@ -1,7 +1,8 @@
 "use client";
 
-import { ArrowUpRight, HandCoins, LockOpen, RefreshCw, Wallet } from "lucide-react";
-import { useState } from "react";
+import { ArrowUpRight, Eye, HandCoins, LockOpen, RefreshCw, Wallet } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useId, useState } from "react";
 import { cn } from "cn";
 import { LogoTile, StockLogo } from "@/components/brand-logo";
 import { CountUp } from "@/components/count-up";
@@ -27,9 +28,15 @@ import { errorText, useWallet } from "@/lib/wallet";
 const pct = (n: number | null) =>
   n === null ? "–" : n === 0 ? "0%" : n < 0.0001 ? "<0.01%" : `${(n * 100).toLocaleString("en-US", { maximumFractionDigits: 2 })}%`;
 
-/** The Dashboard tab: the connected account's USDC, positions in every meme, claims and activity. */
+/**
+ * The Dashboard tab: the connected account's USDC, positions in every meme, claims and activity.
+ * `?account=<id>` shows any account read-only (no claims), which also works without a wallet.
+ */
 export function Dashboard() {
-  const { accountId, ready, connect, send } = useWallet();
+  const { accountId: wallet, ready, connect, send } = useWallet();
+  const viewAs = useSearchParams().get("account")?.trim().toLowerCase() || null;
+  const accountId = viewAs ?? wallet;
+  const readOnly = !!viewAs && viewAs !== wallet;
   const toast = useToast();
   const [tick, setTick] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
@@ -45,13 +52,18 @@ export function Dashboard() {
     if (!accountId || held.length === 0) return [];
     const out: (MemeEvent & { symbol: string; account: string })[] = [];
     // Sequential: the NearBlocks public API is rate limited.
+    let failed: unknown = null;
     for (const p of held) {
-      const events = await fetchMemeEvents(p.row.account, 8).catch(() => []);
+      const events = await fetchMemeEvents(p.row.account, 8).catch((e: unknown) => {
+        failed = e;
+        return [];
+      });
       for (const e of events) {
         const who = [e.data.account, e.data.old_owner_id, e.data.new_owner_id, e.data.owner_id];
         if (who.includes(accountId)) out.push({ ...e, symbol: p.row.symbol, account: p.row.account });
       }
     }
+    if (out.length === 0 && failed) throw failed;
     return out.sort((a, b) => b.time - a.time).slice(0, 12);
   }, [accountId, held.map((p) => p.row.account).join(",")]);
 
@@ -101,6 +113,7 @@ export function Dashboard() {
               Explore markets
             </AppLink>
           </div>
+          <ViewAsForm />
         </div>
       </Shell>
     );
@@ -118,6 +131,14 @@ export function Dashboard() {
         </Button>
       }
     >
+      {readOnly && (
+        <p className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-blue-wash px-3.5 py-2.5 text-sm text-blue-ink" role="status">
+          <Eye className="size-4 shrink-0" aria-hidden />
+          <span>
+            Read-only view of <span className="font-medium">{accountId}</span>. Connect that wallet to claim or trade.
+          </span>
+        </p>
+      )}
       {data.error ? (
         <Notice tone="error" title="Could not read your portfolio" action={<Button variant="outline" onClick={() => setTick((t) => t + 1)}>Try again</Button>}>
           {data.error}
@@ -135,7 +156,7 @@ export function Dashboard() {
               label="USDC on NEAR"
               value={pf ? Number(pf.usdc) / 10 ** USDC_DECIMALS : null}
               icon={<LogoTile logo={PLATFORM_LOGOS.usdc} size={18} decorative rounded="full" className="!ring-0" />}
-              extra={<GetTestUsdcButton onDone={() => setTick((t) => t + 1)} label="Get test USDC" />}
+              extra={readOnly ? undefined : <GetTestUsdcButton onDone={() => setTick((t) => t + 1)} label="Get test USDC" />}
             />
             <Tile label="Claimable USDC" value={pf ? pf.totals.claimableUsd : null} note="Creator fees, tips and failed payouts" />
           </dl>
@@ -167,7 +188,7 @@ export function Dashboard() {
               ) : (
                 <ul className="card divide-y divide-line overflow-hidden">
                   {positions.map((p) => (
-                    <PositionRow key={p.row.account} p={p} busy={busy === p.row.account} onClaim={() => claim(p)} />
+                    <PositionRow key={p.row.account} p={p} busy={busy === p.row.account} onClaim={readOnly ? null : () => claim(p)} />
                   ))}
                 </ul>
               )}
@@ -183,6 +204,13 @@ export function Dashboard() {
                 <p className="text-sm text-soft">Trades on memes you hold appear here.</p>
               ) : activity.loading && !activity.data ? (
                 <Skeleton className="h-24 rounded-2xl" />
+              ) : activity.error ? (
+                <Notice title="Activity is unavailable right now">
+                  {activity.error}.{" "}
+                  <a className="link" href={`${NEARBLOCKS}/address/${accountId}`} target="_blank" rel="noreferrer">
+                    The account on NearBlocks
+                  </a>
+                </Notice>
               ) : (activity.data?.length ?? 0) === 0 ? (
                 <Notice title="Nothing recent">
                   No trades by {accountId} in the latest transactions of your memes.{" "}
@@ -266,7 +294,7 @@ function Tile({
   );
 }
 
-function PositionRow({ p, busy, onClaim }: { p: Position; busy: boolean; onClaim: () => void }) {
+function PositionRow({ p, busy, onClaim }: { p: Position; busy: boolean; onClaim: (() => void) | null }) {
   const r = p.row;
   return (
     <li className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1.3fr)_repeat(4,minmax(0,1fr))_auto] lg:items-center">
@@ -294,7 +322,13 @@ function PositionRow({ p, busy, onClaim }: { p: Position; busy: boolean; onClaim
             Redeemable
           </span>
         )}
-        {p.claimable > 0n && (
+        {p.claimable > 0n && !onClaim && (
+          <span className="pill pill-golden">
+            <HandCoins aria-hidden />
+            {fmtRaw(p.claimable, USDC_DECIMALS, 4)} USDC claimable
+          </span>
+        )}
+        {p.claimable > 0n && onClaim && (
           <Button size="sm" variant="golden" disabled={busy} onClick={onClaim}>
             <HandCoins aria-hidden />
             {busy ? <span className="dots">Waiting</span> : `Claim ${fmtRaw(p.claimable, USDC_DECIMALS, 4)}`}
@@ -318,5 +352,38 @@ function Cell({ k, v, sub }: { k: string; v: string; sub?: string }) {
         {sub && <span className="block text-xs text-soft">{sub}</span>}
       </p>
     </div>
+  );
+}
+
+/** Look up any account's portfolio without connecting: sets ?account= on the URL. */
+function ViewAsForm() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const id = useId();
+  const [value, setValue] = useState("");
+  return (
+    <form
+      className="mx-auto mt-8 flex max-w-md flex-wrap items-center justify-center gap-2 border-t border-line pt-6"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const v = value.trim().toLowerCase();
+        if (v) router.push(`${pathname}?account=${encodeURIComponent(v)}`);
+      }}
+    >
+      <label htmlFor={id} className="w-full text-sm text-soft">
+        Or look at any account, read-only
+      </label>
+      <input
+        id={id}
+        className="field !min-h-10 min-w-0 flex-1 !rounded-full"
+        placeholder="name.testnet"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        autoComplete="off"
+      />
+      <Button type="submit" variant="outline" disabled={!value.trim()}>
+        View
+      </Button>
+    </form>
   );
 }
