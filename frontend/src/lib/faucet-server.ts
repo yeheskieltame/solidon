@@ -10,7 +10,6 @@ import "server-only";
 import {
   Account,
   actions,
-  FailoverRpcProvider,
   JsonRpcProvider,
   KeyPairSigner,
   type KeyPairString,
@@ -118,7 +117,7 @@ function faucet(): Account {
   if (!id || !key || !key.startsWith("ed25519:")) {
     throw new FaucetError("The faucet is not configured on this server.", 503);
   }
-  const provider = new FailoverRpcProvider(NEAR_RPCS.map((url) => new JsonRpcProvider({ url })));
+  const provider = new JsonRpcProvider({ url: NEAR_RPCS[0] });
   faucetAccount = new Account(id, provider, KeyPairSigner.fromSecretKey(key as KeyPairString));
   return faucetAccount;
 }
