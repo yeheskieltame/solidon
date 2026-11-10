@@ -305,7 +305,7 @@ export function TradePanel({
     const waiting = busy === busyKey;
     return (
       <Button variant={variant} size="lg" className="w-full whitespace-normal" disabled={!!blocked || !!busy} onClick={onClick}>
-        {waiting ? <span className="dots">Waiting for your wallet</span> : (blocked ?? label)}
+        {waiting ? <span className="dots">{kind === "demo" ? "Signing" : "Waiting for your wallet"}</span> : (blocked ?? label)}
       </Button>
     );
   }
