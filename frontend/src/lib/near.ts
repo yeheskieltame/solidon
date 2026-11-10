@@ -89,6 +89,25 @@ export async function view<T>(
   return JSON.parse(text) as T;
 }
 
+/**
+ * Liquid NEAR of an account in yoctoNEAR: 0n when the account does not exist yet (a fresh
+ * implicit account), null when the RPC is unreachable.
+ */
+export async function nearBalance(accountId: string): Promise<bigint | null> {
+  try {
+    const r = (await rpc({
+      jsonrpc: "2.0",
+      id: "solidon",
+      method: "query",
+      params: { request_type: "view_account", finality: "optimistic", account_id: accountId },
+    })) as { result?: { amount?: string }; error?: unknown };
+    if (r.result?.amount) return BigInt(r.result.amount);
+    return JSON.stringify(r.error ?? "").match(/UNKNOWN_ACCOUNT|does not exist/) ? 0n : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Like `view`, but resolves to `null` instead of throwing. */
 export async function tryView<T>(
   contract: string,

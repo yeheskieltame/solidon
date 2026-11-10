@@ -8,7 +8,7 @@ import { MemeIcon } from "./meme-icon";
 import { Notice } from "./notice";
 import { Hint } from "./term";
 import { useToast } from "./toast";
-import { GetTestUsdcButton } from "./wallet-controls";
+import { FaucetLine, GetTestFundsButton } from "./wallet-controls";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CHAIN_LOGOS, PLATFORM_LOGOS } from "@/lib/brands";
@@ -162,7 +162,7 @@ export function TradePanel({
   user: UserBalances | null;
   onDone: () => void;
 }) {
-  const { accountId, connect, send } = useWallet();
+  const { accountId, connect, send, signHint, kind } = useWallet();
   const toast = useToast();
   const { pool, params, treasury, metadata, account } = snap;
   const sym = metadata.symbol;
@@ -182,16 +182,17 @@ export function TradePanel({
   async function run(label: string, pending: string, done: string, calls: FnCall[], detail?: string) {
     setBusy(label);
     setMsg(null);
-    const id = toast.show({ tone: "pending", title: pending, body: "Confirm it in your wallet." });
+    const id = toast.show({ tone: "pending", title: pending, body: signHint });
     try {
-      await send(calls);
+      const hashes = await send(calls);
+      const hash = hashes.filter(Boolean).at(-1);
       setMsg({ tone: "quiet", text: detail ? `${done}. ${detail}` : `${done}.` });
       toast.update(id, {
         tone: "success",
         title: done,
         body: detail,
-        href: explorer,
-        hrefLabel: "Your transactions on NearBlocks",
+        href: hash ? `${NEARBLOCKS}/txns/${hash}` : explorer,
+        hrefLabel: hash ? "The transaction on NearBlocks" : "Your transactions on NearBlocks",
         confetti: true,
       });
     } catch (e) {
@@ -381,11 +382,14 @@ export function TradePanel({
           )}
           {accountId && (buyShort || (user && user.usdc === 0n)) && (
             <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-              <p className="text-sm text-soft">Out of USDC? It is free on testnet.</p>
-              <GetTestUsdcButton onDone={onDone} />
+              <div>
+                <p className="text-sm text-ink-2">Out of USDC? It is free on testnet.</p>
+                <FaucetLine />
+              </div>
+              <GetTestFundsButton onDone={onDone} memeId={account} />
             </div>
           )}
-          {accountId && user && !user.registered && (
+          {accountId && user && !user.registered && kind === "wallet" && (
             <p className="px-1 text-[0.8125rem] text-soft">
               Your first buy also registers your account on {sym} (0.00125 NEAR storage), so the wallet asks twice.
             </p>
