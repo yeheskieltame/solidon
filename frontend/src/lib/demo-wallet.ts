@@ -54,8 +54,8 @@ const TGAS = 1_000_000_000_000n;
 
 /** Signs and sends each call as its own transaction, in order. Returns the transaction hashes. */
 export async function sendWithDemo(demo: DemoWallet, calls: FnCall[]): Promise<string[]> {
-  const { Account, FailoverRpcProvider, JsonRpcProvider, KeyPairSigner, actions } = await import("near-api-js");
-  const provider = new FailoverRpcProvider(NEAR_RPCS.map((url) => new JsonRpcProvider({ url })));
+  const { Account, JsonRpcProvider, KeyPairSigner, actions } = await import("near-api-js");
+  const provider = new JsonRpcProvider({ url: NEAR_RPCS[0] });
   const account = new Account(
     demo.accountId,
     provider,
