@@ -25,7 +25,7 @@ All settings are public `NEXT_PUBLIC_*` variables read at build time. Copy `.env
 | `NEXT_PUBLIC_NETWORK` | `testnet` | NEAR network for RPC, wallets and explorer links |
 | `NEXT_PUBLIC_FACTORY` | `solidon.testnet` | Factory account: `get_memes`, `get_stocks`, `launch_cost`, `create_meme` |
 | `NEXT_PUBLIC_USDC` | `usdc.solidon.testnet` | USDC token on NEAR (testnet: `mock-ft` with an open `mint`) |
-| `NEXT_PUBLIC_NEAR_RPC` | `rpc.testnet.near.org`, then `test.rpc.fastnear.com` | Comma-separated, tried in order |
+| `NEXT_PUBLIC_NEAR_RPC` | `test.rpc.fastnear.com`, then `rpc.testnet.near.org` (deprecated, rate-limited) | Comma-separated, tried in order |
 | `NEXT_PUBLIC_NEARBLOCKS_API` | `https://api-testnet.nearblocks.io` | Event log (v3 API) |
 | `NEXT_PUBLIC_BASE_RPC` | `https://sepolia.base.org` | On-chain treasury balances, Base Sepolia |
 | `NEXT_PUBLIC_ROBINHOOD_RPC` | `https://rpc.testnet.chain.robinhood.com` | On-chain treasury balances, Robinhood Chain testnet |
