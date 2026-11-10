@@ -11,6 +11,7 @@ import { MemeIcon } from "./meme-icon";
 import { MnavChart } from "./mnav-chart";
 import { MnavGauge, ZoneBadge } from "./mnav-gauge";
 import { Notice } from "./notice";
+import { RulesSection, fmtSecs } from "./rules-section";
 import { SectionNav } from "./section-nav";
 import { Stat, StatRow } from "./stat";
 import { GLOSSARY, Hint } from "./term";
@@ -21,10 +22,10 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppLink } from "@/lib/app-link";
 import { STOCK_LOGOS } from "@/lib/brands";
-import { MEME_DECIMALS, NEARBLOCKS } from "@/lib/config";
+import { NEARBLOCKS } from "@/lib/config";
 import { fetchMemeEvents } from "@/lib/events";
 import { fmtCompact, fmtUsdCompact } from "@/lib/figure";
-import { fmtAmount, fmtRaw, fmtUsd, shortAddr, timeAgo, toBig, toNumber } from "@/lib/format";
+import { fmtAmount, fmtUsd, shortAddr, timeAgo, toBig, toNumber } from "@/lib/format";
 import { lastMnav, oracleUsd } from "@/lib/math";
 import { loadMemeCached, summarize } from "@/lib/market";
 import { fmtPrice, fmtPriceLong } from "@/lib/price";
@@ -62,12 +63,6 @@ function Attr({ k, v, hint }: { k: ReactNode; v: ReactNode; hint?: string }) {
       <dd>{v}</dd>
     </div>
   );
-}
-
-function fmtSecs(s: number) {
-  if (s % 86_400 === 0) return `${s / 86_400} day${s === 86_400 ? "" : "s"}`;
-  if (s % 3600 === 0) return `${s / 3600} hour${s === 3600 ? "" : "s"}`;
-  return `${Math.round(s / 60)} minutes`;
 }
 
 function PageSkeleton() {
@@ -159,7 +154,6 @@ export function MemePage({ account }: { account: string }) {
       return toNumber(toBig(cap), dec);
     })
     .filter((n): n is number => n !== null);
-  const capText = caps.length === 0 ? null : new Set(caps).size === 1 ? `${fmtAmount(caps[0])} USDC per swap, each chain` : caps.map((c) => `${fmtAmount(c)} USDC`).join(" / ");
 
   const reload = () => {
     setFresh((f) => f + 1);
@@ -484,47 +478,18 @@ export function MemePage({ account }: { account: string }) {
           <TreasuryChains chains={chains} price={d.price} ticker={ticker} note={d.chainsNote} raw={d.chains} />
         </Section>
 
-        <Section
-          id="rules"
-          title="Rules"
-          intro={d.paramsFromContract ? "Locked at launch and read from get_params. No owner, no setter." : "get_params is unavailable on this meme: showing the SPEC defaults."}
-        >
-          <dl className="grid gap-x-12 md:grid-cols-2">
-            <div>
-              <Attr k="Issuance above" v={fmtTimes(thresholds.issuance)} hint="Above this mNAV a rebalance mints new tokens into the pool and the proceeds buy more stock." />
-              <Attr k="Issuance cap" v={`${params.max_issuance_bps_per_epoch / 100}% of supply per ${fmtSecs(params.epoch_secs)}`} />
-              <Attr k="Issued this epoch" v={epochCap > 0n ? `${fmtRaw(epochIssued, MEME_DECIMALS)} of ${fmtRaw(epochCap, MEME_DECIMALS)}` : "Starts at the first rebalance"} />
-              <Attr k="Buyback below" v={fmtTimes(thresholds.buyback)} hint={`Spare cash above the ${bufferTarget * 100}% buffer buys tokens back and burns them.`} />
-              <Attr k="Redemption below" v={fmtTimes(thresholds.redemption)} hint="Holders can burn tokens for NAV per token in USDC." />
-              <Attr k="Cash buffer" v={`${bufferTarget * 100}% target, refill below ${refillAt * 100}%`} />
-            </div>
-            <div>
-              <Attr k="Pool fee" v={`${params.pool_fee_bps / 100}% (${params.treasury_fee_bps / 100}% treasury, ${params.creator_fee_bps / 100}% creator)`} />
-              {capText && <Attr k="Swap cap" v={capText} hint="The most USDC one signed treasury swap may spend." />}
-              <Attr k="Price for mNAV" v={`${fmtSecs(params.twap_window_secs)} TWAP`} hint={GLOSSARY.twap} />
-              <Attr
-                k="Oracle"
-                v={
-                  info ? (
-                    <span className="inline-flex items-center gap-1" title={info.oracle}>
-                      <span className="max-w-[12rem] truncate">{info.oracle}</span>
-                      <ExplorerLink href={`${NEARBLOCKS}/address/${info.oracle}`} label={`${info.oracle} on NearBlocks`} />
-                    </span>
-                  ) : (
-                    "–"
-                  )
-                }
-              />
-              <Attr k="Oracle staleness limit" v={fmtSecs(params.oracle_max_age_secs)} />
-              <Attr k="Rebalance cooldown" v={`${fmtSecs(params.rebalance_cooldown_secs)}, caller tip ${params.caller_tip_bps / 100}%`} />
-            </div>
-          </dl>
-          <p className="mt-4 flex flex-wrap items-center gap-2 text-sm text-soft">
-            <span className={cn("pill", treasury?.redemption_open ? "pill-green" : "")}>
-              Redemption window {treasury?.redemption_open ? "open" : "closed"}
-            </span>
-            The floor defends NAV, not the price.
-          </p>
+        <Section id="rules" title="Rules">
+          <RulesSection
+            thresholds={thresholds}
+            mnav={nav.mnav ?? contractMnav}
+            params={params}
+            oracle={info?.oracle ?? null}
+            epochCap={epochCap}
+            epochIssued={epochIssued}
+            swapCap={caps}
+            redemptionOpen={!!treasury?.redemption_open}
+            fromContract={d.paramsFromContract}
+          />
         </Section>
 
         <Section id="activity" title="Activity">

@@ -196,7 +196,7 @@
   --btn-white-hover: #dcdce1;
   --btn-ink-hover: #000000;
   --link-hover: #1a44b8;
-  --glass: rgb(255 255 255 / 0.82);
+  --glass: rgb(255 255 255 / 0.92);
   --tint: rgb(16 16 24 / 0.02);
   --frame: rgb(16 16 24 / 0.02);
   --selection: rgb(58 111 247 / 0.22);
@@ -1154,6 +1154,36 @@
 
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Rules axis: the current mNAV as a quiet label over a short needle. */
+  .rules-now {
+    position: absolute;
+    bottom: 0.5rem;
+    left: var(--pos);
+    transform: translateX(-50%);
+    padding: 0.125rem 0.5rem;
+    border-radius: 7px;
+    background: var(--page-deep);
+    color: var(--ink);
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .rules-now[data-edge="end"] {
+    transform: translateX(calc(-100% + 0.75rem));
+  }
+  .rules-now[data-edge="start"] {
+    transform: translateX(-0.75rem);
+  }
+  .rules-needle {
+    position: absolute;
+    top: -0.5rem;
+    width: 2px;
+    height: 1.125rem;
+    margin-left: -1px;
+    border-radius: 2px;
+    background: var(--ink);
   }
 
   /* Theme toggle: the sun shows in dark (switch to light), the moon in light. */
