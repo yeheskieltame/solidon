@@ -131,7 +131,6 @@
   --btn-white-hover: #303036;
   --btn-ink-hover: #ffffff;
   --link-hover: #b3c7ff;
-  --glass: rgb(21 21 24 / 0.78);
   --tint: rgb(255 255 255 / 0.015);
   --frame: rgb(255 255 255 / 0.03);
   --selection: rgb(58 111 247 / 0.4);
@@ -196,7 +195,6 @@
   --btn-white-hover: #dcdce1;
   --btn-ink-hover: #000000;
   --link-hover: #1a44b8;
-  --glass: rgb(255 255 255 / 0.92);
   --tint: rgb(16 16 24 / 0.02);
   --frame: rgb(16 16 24 / 0.02);
   --selection: rgb(58 111 247 / 0.22);
@@ -749,33 +747,6 @@
     min-width: 0;
   }
 
-  /* The page's section nav: blue when active, sticky with a blurred backdrop. */
-  .subnav {
-    position: sticky;
-    top: var(--header-h);
-    z-index: 30;
-    background: var(--glass);
-    backdrop-filter: blur(14px) saturate(1.4);
-    -webkit-backdrop-filter: blur(14px) saturate(1.4);
-    border-bottom: 1px solid var(--line);
-  }
-  .subnav a {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    padding-block: 1rem;
-    font-size: 1.0625rem;
-    color: var(--ink-2);
-    white-space: nowrap;
-    transition: color 0.15s;
-  }
-  .subnav a:hover {
-    color: var(--ink);
-  }
-  .subnav a[aria-current="true"] {
-    color: var(--blue-ink);
-  }
-
   /* Thin progress bars */
   .bar {
     position: relative;
@@ -875,6 +846,12 @@
   .gauge[data-size="sm"] {
     padding-top: 0;
     padding-bottom: 0;
+  }
+  .gauge[data-bare] {
+    padding-top: 0.625rem;
+  }
+  .gauge[data-bare] .gauge-needle {
+    top: 0.625rem;
   }
   .gauge-track {
     display: flex;
