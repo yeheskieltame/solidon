@@ -1,18 +1,19 @@
 "use client";
 
-import { ArrowDown, Plus, RefreshCw, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, RefreshCw, Search } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { cn } from "cn";
 import { ChainStack, StockLogo } from "@/components/brand-logo";
-import { CountUp } from "@/components/count-up";
 import { MemeIcon } from "@/components/meme-icon";
 import { MnavGauge, ZoneBadge } from "@/components/mnav-gauge";
 import { Notice } from "@/components/notice";
+import { Stat, StatRow } from "@/components/stat";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppLink } from "@/lib/app-link";
 import { STOCK_LOGOS } from "@/lib/brands";
 import { FACTORY } from "@/lib/config";
+import { fmtUsdCompact } from "@/lib/figure";
 import { fmtUsd } from "@/lib/format";
 import { loadMarket, type MarketRow } from "@/lib/market";
 import { fmtTimes } from "@/lib/mnav";
@@ -47,6 +48,8 @@ function sortValue(r: MarketRow, k: SortKey): number | string {
   }
 }
 
+const int = (n: number) => String(Math.round(n));
+
 /** The Markets tab: every meme on the factory as a sortable, searchable table. */
 export function Markets() {
   const [fresh, setFresh] = useState(0);
@@ -54,6 +57,7 @@ export function Markets() {
   const [query, setQuery] = useState("");
   const [stock, setStock] = useState<string | null>(null);
   const [sort, setSort] = useState<SortKey>("treasury");
+  const [asc, setAsc] = useState(false);
   const searchId = useId();
   const sortId = useId();
 
@@ -65,35 +69,42 @@ export function Markets() {
         (!stock || r.ticker === stock) &&
         (!q || r.symbol.toLowerCase().includes(q) || r.name.toLowerCase().includes(q) || r.account.includes(q) || (r.ticker ?? "").toLowerCase().includes(q)),
     );
-    return [...list].sort((a, b) => {
+    const sorted = [...list].sort((a, b) => {
       const x = sortValue(a, sort);
       const y = sortValue(b, sort);
       if (typeof x === "string" && typeof y === "string") return x.localeCompare(y);
       return (y as number) - (x as number);
     });
-  }, [rows, query, stock, sort]);
+    return asc ? sorted.reverse() : sorted;
+  }, [rows, query, stock, sort, asc]);
 
   const tickers = useMemo(() => {
-    const present = new Set(rows.map((r) => r.ticker).filter(Boolean) as string[]);
-    return Object.keys(TESTNET_VENUES).map((t) => ({ t, count: rows.filter((r) => r.ticker === t).length, present: present.has(t) }));
+    return Object.keys(TESTNET_VENUES).map((t) => ({ t, count: rows.filter((r) => r.ticker === t).length }));
   }, [rows]);
 
   const total = rows.reduce((s, r) => s + r.nav.assetsUsd, 0);
   const holding = rows.filter((r) => r.chainsHeld.length > 0).length;
+  const stockTotal = rows.reduce((s, r) => s + r.nav.stockUsd, 0);
+
+  const sortBy = (k: SortKey) => {
+    if (k === sort) setAsc((a) => !a);
+    else {
+      setSort(k);
+      setAsc(k === "name");
+    }
+  };
 
   return (
-    <div className="wrap pt-8 pb-16 sm:pt-10">
+    <div className="wrap pt-10 pb-20 sm:pt-14">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="type-h1">Markets</h1>
-          <p className="mt-1.5 text-soft" aria-live="polite">
-            {market.data
-              ? `${rows.length} ${rows.length === 1 ? "meme" : "memes"} on ${FACTORY}, read live from NEAR.`
-              : "Reading the factory on NEAR…"}
+          <p className="mt-2 text-soft" aria-live="polite">
+            {market.data ? `Every meme on ${FACTORY}, read live from NEAR.` : "Reading the factory on NEAR…"}
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setFresh((f) => f + 1)} disabled={market.loading}>
+          <Button variant="ghost" size="sm" onClick={() => setFresh((f) => f + 1)} disabled={market.loading}>
             <RefreshCw className={cn(market.loading && "animate-spin")} aria-hidden />
             Refresh
           </Button>
@@ -104,25 +115,28 @@ export function Markets() {
         </div>
       </div>
 
-      <dl className="mt-6 grid grid-cols-3 gap-px overflow-hidden rounded-2xl border border-line bg-line shadow-[var(--shadow-xs)]">
-        {[
-          { k: "Memes", v: market.data ? rows.length : null, f: (n: number) => String(Math.round(n)) },
-          { k: "Treasury value", v: market.data ? total : null, f: fmtUsd },
-          { k: "Holding stock", v: market.data ? holding : null, f: (n: number) => String(Math.round(n)) },
-        ].map((s) => (
-          <div key={s.k} className="bg-card px-4 py-3.5 sm:px-5">
-            <dt className="text-xs text-soft">{s.k}</dt>
-            <dd className="type-num mt-1 text-xl sm:text-2xl">
-              <CountUp value={s.v} format={s.f} />
-            </dd>
-          </div>
-        ))}
-      </dl>
+      <StatRow className="mt-12">
+        <Stat
+          label="Treasury value"
+          hint="Everything every meme's treasury holds: USDC on NEAR plus USDC and stock on each chain, from the ledgers, with stock at the oracle price."
+          value={market.data ? total : null}
+          format={fmtUsdCompact}
+          sub={market.data ? `${fmtUsd(stockTotal)} of it in stock` : undefined}
+        />
+        <Stat label="Memes" hint="Memes deployed by the factory." value={market.data ? rows.length : null} format={int} sub={`on ${FACTORY}`} />
+        <Stat
+          label="Holding stock"
+          hint="Memes whose ledger holds stock on at least one treasury chain."
+          value={market.data ? holding : null}
+          format={int}
+          sub={market.data && rows.length ? `${Math.round((holding / rows.length) * 100)}% of memes` : undefined}
+        />
+        <Stat label="Stocks listed" hint="Stocks a new meme can pick as its thesis." value={Object.keys(TESTNET_VENUES).length} format={int} sub="Tradable on three chains" />
+      </StatRow>
 
       {/* Toolbar */}
-      <div className="mt-6 grid gap-3">
-        <div className="flex items-center gap-2">
-        <div className="relative w-full max-w-sm">
+      <div className="mt-14 flex flex-wrap items-center gap-3">
+        <div className="relative w-full sm:w-72">
           <label htmlFor={searchId} className="sr-only">
             Search memes
           </label>
@@ -130,53 +144,47 @@ export function Markets() {
           <input
             id={searchId}
             type="search"
-            className="field !min-h-10 !rounded-full pl-10"
+            className="field !min-h-10 pl-10"
             placeholder="Search memes or stocks"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-          <label htmlFor={sortId} className="sr-only">
-            Sort by
-          </label>
-          <div className="relative ml-auto shrink-0">
-            <select
-              id={sortId}
-              value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
-              className="field !min-h-10 cursor-pointer appearance-none !rounded-full !py-1 pr-8 !text-[0.8125rem]"
+        <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]" role="group" aria-label="Filter by thesis stock">
+          <button type="button" className="chip" aria-pressed={stock === null} onClick={() => setStock(null)}>
+            All
+          </button>
+          {tickers.map(({ t, count }) => (
+            <button
+              key={t}
+              type="button"
+              className="chip !pl-1.5"
+              aria-pressed={stock === t}
+              onClick={() => setStock(stock === t ? null : t)}
+              title={`${STOCK_LOGOS[t]?.name ?? t}: ${count} ${count === 1 ? "meme" : "memes"}`}
             >
-              {SORTS.map((s) => (
-                <option key={s.key} value={s.key}>
-                  Sort: {s.label}
-                </option>
-              ))}
-            </select>
-            <ArrowDown className="pointer-events-none absolute top-1/2 right-3 size-3.5 -translate-y-1/2 text-soft" aria-hidden />
-          </div>
-        </div>
-          <div className="-mx-1 flex min-w-0 gap-1.5 overflow-x-auto px-1 pb-1" role="group" aria-label="Filter by thesis stock">
-            <button type="button" className="chip" aria-pressed={stock === null} onClick={() => setStock(null)}>
-              All stocks
+              <StockLogo ticker={t} size={20} decorative />
+              {t}
+              {count > 0 && <span className="tabular-nums text-faint">{count}</span>}
             </button>
-            {tickers.map(({ t, count }) => (
-              <button
-                key={t}
-                type="button"
-                className="chip !pl-1.5"
-                aria-pressed={stock === t}
-                onClick={() => setStock(stock === t ? null : t)}
-                title={`${STOCK_LOGOS[t]?.name ?? t}: ${count} ${count === 1 ? "meme" : "memes"}`}
-              >
-                <StockLogo ticker={t} size={20} decorative />
-                {t}
-                {count > 0 && <span className="tabular-nums opacity-60">{count}</span>}
-              </button>
+          ))}
+        </div>
+        <label htmlFor={sortId} className="sr-only">
+          Sort by
+        </label>
+        <div className="relative shrink-0 md:hidden">
+          <select id={sortId} value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="field !min-h-10 cursor-pointer appearance-none !py-1 pr-8 !text-[0.8125rem]">
+            {SORTS.map((s) => (
+              <option key={s.key} value={s.key}>
+                Sort: {s.label}
+              </option>
             ))}
-          </div>
+          </select>
+          <ArrowDown className="pointer-events-none absolute top-1/2 right-3 size-3.5 -translate-y-1/2 text-soft" aria-hidden />
+        </div>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-5">
         {market.loading && !market.data ? (
           <TableSkeleton />
         ) : market.error ? (
@@ -204,7 +212,7 @@ export function Markets() {
           </Notice>
         ) : (
           <>
-            <MarketTable rows={shown} />
+            <MarketTable rows={shown} sort={sort} asc={asc} onSort={sortBy} />
             <MarketCards rows={shown} />
             {shown.length === 0 && (
               <Notice className="mt-3" title="No meme matches">
@@ -220,97 +228,95 @@ export function Markets() {
         )}
       </div>
 
-      <AppLink
-        href="/launch"
-        className="card-lift mt-4 flex items-center justify-between gap-4 rounded-2xl border border-dashed border-line-strong bg-card/60 p-4 sm:p-5"
-      >
-        <span className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-full bg-ink text-white" aria-hidden>
-            <Plus className="size-5" />
-          </span>
-          <span>
-            <span className="block font-medium">Launch your own</span>
-            <span className="block text-sm text-soft">Three transactions, one small treasury company.</span>
-          </span>
-        </span>
-        <span className="text-sm font-medium text-blue-ink max-sm:hidden">Start</span>
-      </AppLink>
+      <p className="mt-6 text-sm text-soft">
+        Missing yours?{" "}
+        <AppLink href="/launch" className="link">
+          Launch a meme
+        </AppLink>{" "}
+        in three transactions.
+      </p>
     </div>
   );
 }
 
-function MarketTable({ rows }: { rows: MarketRow[] }) {
+function SortHead({ k, label, sort, asc, onSort, num }: { k: SortKey; label: string; sort: SortKey; asc: boolean; onSort: (k: SortKey) => void; num?: boolean }) {
+  const on = sort === k;
+  const Icon = asc ? ArrowUp : ArrowDown;
   return (
-    <div className="card overflow-hidden max-md:hidden">
+    <th scope="col" className={num ? "num" : undefined} aria-sort={on ? (asc ? "ascending" : "descending") : "none"}>
+      <button type="button" className="sort-btn" aria-pressed={on} onClick={() => onSort(k)}>
+        {label}
+        <Icon className={cn("size-3.5", !on && "opacity-0")} aria-hidden />
+      </button>
+    </th>
+  );
+}
+
+function MarketTable({ rows, sort, asc, onSort }: { rows: MarketRow[]; sort: SortKey; asc: boolean; onSort: (k: SortKey) => void }) {
+  const head = { sort, asc, onSort };
+  return (
+    <div className="panel overflow-hidden max-md:hidden">
       <table className="table">
         <caption className="sr-only">Memes and their treasuries</caption>
         <thead>
           <tr>
-            <th scope="col">Meme</th>
+            <SortHead k="name" label="Meme" {...head} />
             <th scope="col">Thesis</th>
-            <th scope="col" className="num">
-              Price
-            </th>
-            <th scope="col" className="num">
-              NAV / token
-            </th>
-            <th scope="col">mNAV</th>
-            <th scope="col" className="num">
-              Treasury
-            </th>
+            <SortHead k="price" label="Price" num {...head} />
+            <SortHead k="nav" label="NAV / token" num {...head} />
+            <SortHead k="mnav" label="mNAV" {...head} />
+            <SortHead k="treasury" label="Treasury" num {...head} />
             <th scope="col">Chains held</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r, i) => (
-              <tr key={r.account} className="row-in relative" style={{ animationDelay: `${Math.min(i, 12) * 40}ms` }}>
-                <td>
-                  <div className="flex items-center gap-3">
-                    <MemeIcon icon={r.icon} symbol={r.symbol} size={36} />
-                    <div className="min-w-0">
-                      <AppLink href={`/meme/${r.account}`} className="font-medium after:absolute after:inset-0 hover:underline">
-                        {r.symbol}
-                      </AppLink>
-                      <p className="max-w-[14rem] truncate text-xs text-soft">{r.name}</p>
-                    </div>
+            <tr key={r.account} data-hover="true" className="row-in relative" style={{ animationDelay: `${Math.min(i, 12) * 40}ms` }}>
+              <td>
+                <div className="flex items-center gap-3">
+                  <MemeIcon icon={r.icon} symbol={r.symbol} size={34} />
+                  <div className="min-w-0">
+                    <AppLink href={`/meme/${r.account}`} className="after:absolute after:inset-0">
+                      {r.symbol}
+                    </AppLink>
+                    <p className="max-w-[14rem] truncate text-xs text-soft">{r.name}</p>
                   </div>
-                </td>
-                <td>
-                  {r.ticker ? (
-                    <span className="flex items-center gap-2">
-                      <StockLogo ticker={r.ticker} size={24} decorative />
-                      <span className="leading-tight">
-                        <span className="block text-sm font-medium">{r.ticker}</span>
-                        <span className="block text-xs text-soft">{STOCK_LOGOS[r.ticker]?.name ?? "Listed stock"}</span>
-                      </span>
+                </div>
+              </td>
+              <td>
+                {r.ticker ? (
+                  <span className="flex items-center gap-2">
+                    <StockLogo ticker={r.ticker} size={22} decorative />
+                    <span className="leading-tight">
+                      <span className="block text-sm">{r.ticker}</span>
+                      <span className="block text-xs text-soft">{STOCK_LOGOS[r.ticker]?.name ?? "Listed stock"}</span>
                     </span>
-                  ) : (
-                    <span className="text-soft">Unknown</span>
-                  )}
-                </td>
-                <td className="num font-medium" title={r.spotUsd !== null ? fmtPriceLong(r.spotUsd) : undefined}>
-                  {r.spotUsd !== null ? fmtPrice(r.spotUsd) : <span className="text-soft">Not seeded</span>}
-                </td>
-                <td className="num" title={r.nav.navUsd !== null ? fmtPriceLong(r.nav.navUsd) : undefined}>
-                  {fmtPrice(r.nav.navUsd)}
-                </td>
-                <td>
-                  <div className="flex w-36 flex-col gap-1.5">
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="font-medium tabular-nums">{fmtTimes(r.mnav)}</span>
-                      <ZoneBadge zone={r.zone} fallback={r.seeded ? "New" : "Not seeded"} />
-                    </span>
-                    <MnavGauge value={r.mnav} thresholds={r.thresholds} size="sm" label={`${r.symbol} mNAV`} />
-                  </div>
-                </td>
-                <td className="num font-medium">{fmtUsd(r.nav.assetsUsd)}</td>
-                <td>
-                  <ChainStack chains={CHAINS} active={r.chainsHeld} />
-                  <span className="sr-only">
-                    {r.chainsHeld.length ? `Holds stock on ${r.chainsHeld.join(", ")}` : "No stock bought yet"}
                   </span>
-                </td>
-              </tr>
+                ) : (
+                  <span className="text-soft">Unknown</span>
+                )}
+              </td>
+              <td className="num" title={r.spotUsd !== null ? fmtPriceLong(r.spotUsd) : undefined}>
+                {r.spotUsd !== null ? fmtPrice(r.spotUsd) : <span className="text-soft">Not seeded</span>}
+              </td>
+              <td className="num" title={r.nav.navUsd !== null ? fmtPriceLong(r.nav.navUsd) : undefined}>
+                {fmtPrice(r.nav.navUsd)}
+              </td>
+              <td>
+                <div className="flex w-36 flex-col gap-1.5">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="tabular-nums">{fmtTimes(r.mnav)}</span>
+                    <ZoneBadge zone={r.zone} fallback={r.seeded ? "New" : "Not seeded"} />
+                  </span>
+                  <MnavGauge value={r.mnav} thresholds={r.thresholds} size="sm" label={`${r.symbol} mNAV`} />
+                </div>
+              </td>
+              <td className="num">{fmtUsd(r.nav.assetsUsd)}</td>
+              <td>
+                <ChainStack chains={CHAINS} active={r.chainsHeld} />
+                <span className="sr-only">{r.chainsHeld.length ? `Holds stock on ${r.chainsHeld.join(", ")}` : "No stock bought yet"}</span>
+              </td>
+            </tr>
           ))}
         </tbody>
       </table>
@@ -320,14 +326,14 @@ function MarketTable({ rows }: { rows: MarketRow[] }) {
 
 function MarketCards({ rows }: { rows: MarketRow[] }) {
   return (
-    <ul className="grid gap-3 md:hidden">
+    <ul className="grid md:hidden">
       {rows.map((r) => (
-        <li key={r.account}>
-          <AppLink href={`/meme/${r.account}`} className="card card-lift block p-4">
+        <li key={r.account} className="border-b border-line last:border-b-0">
+          <AppLink href={`/meme/${r.account}`} className="block py-4">
             <div className="flex items-center gap-3">
-              <MemeIcon icon={r.icon} symbol={r.symbol} size={40} />
+              <MemeIcon icon={r.icon} symbol={r.symbol} size={38} />
               <div className="min-w-0 flex-1">
-                <p className="font-medium">{r.symbol}</p>
+                <p>{r.symbol}</p>
                 <p className="flex items-center gap-1.5 truncate text-xs text-soft">
                   <StockLogo ticker={r.ticker} size={14} decorative />
                   Holds {r.ticker ?? "?"}
@@ -338,22 +344,18 @@ function MarketCards({ rows }: { rows: MarketRow[] }) {
             <dl className="mt-4 grid grid-cols-3 gap-2 text-sm">
               <div>
                 <dt className="text-xs text-soft">Price</dt>
-                <dd className="font-medium tabular-nums">{fmtPrice(r.spotUsd)}</dd>
+                <dd className="tabular-nums">{fmtPrice(r.spotUsd)}</dd>
               </div>
               <div>
                 <dt className="text-xs text-soft">mNAV</dt>
-                <dd className="font-medium tabular-nums">{fmtTimes(r.mnav)}</dd>
+                <dd className="tabular-nums">{fmtTimes(r.mnav)}</dd>
               </div>
               <div>
                 <dt className="text-xs text-soft">Treasury</dt>
-                <dd className="font-medium tabular-nums">{fmtUsd(r.nav.assetsUsd)}</dd>
+                <dd className="tabular-nums">{fmtUsd(r.nav.assetsUsd)}</dd>
               </div>
             </dl>
             <MnavGauge value={r.mnav} thresholds={r.thresholds} size="sm" label={`${r.symbol} mNAV`} className="mt-3" />
-            <div className="mt-3 flex items-center justify-between text-xs text-soft">
-              <span>Chains held</span>
-              <ChainStack chains={CHAINS} active={r.chainsHeld} size={20} />
-            </div>
           </AppLink>
         </li>
       ))}
@@ -363,11 +365,11 @@ function MarketCards({ rows }: { rows: MarketRow[] }) {
 
 function TableSkeleton() {
   return (
-    <div className="card grid gap-0 overflow-hidden" aria-busy aria-label="Loading memes">
-      <Skeleton className="h-10 rounded-none" />
+    <div className="panel grid gap-0 overflow-hidden" aria-busy aria-label="Loading memes">
+      <Skeleton className="h-12 rounded-none" />
       {[0, 1, 2].map((i) => (
-        <div key={i} className="flex items-center gap-4 border-t border-line p-4">
-          <Skeleton className="size-9 rounded-xl" />
+        <div key={i} className="flex items-center gap-4 border-t border-line p-5">
+          <Skeleton className="size-9 rounded-full" />
           <Skeleton className="h-4 w-32" />
           <Skeleton className="ml-auto h-4 w-24" />
           <Skeleton className="h-4 w-24 max-sm:hidden" />
