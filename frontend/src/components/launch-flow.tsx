@@ -1,19 +1,24 @@
 "use client";
 
+import { ArrowRight, Check, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { cn } from "cn";
+import { MemeIcon } from "./meme-icon";
+import { MnavGauge } from "./mnav-gauge";
 import { Notice } from "./notice";
-import { Step, type StepStatus } from "./step";
+import { Sticker } from "./sticker";
+import { useToast } from "./toast";
 import { GetTestUsdcButton, useUsdcBalance } from "./wallet-controls";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { KNOWN_CHAINS, chainMeta } from "@/lib/chains";
-import { FACTORY, USDC, USDC_DECIMALS } from "@/lib/config";
-import { fmtAmount, fmtRaw, parseUnits, toBig, toNumber } from "@/lib/format";
-import { factory, tryView, type MemeInfo, type PoolView, type Stock, type StorageBalance, type TreasuryChainsRaw } from "@/lib/near";
+import { FACTORY, NEARBLOCKS, USDC, USDC_DECIMALS } from "@/lib/config";
+import { fmtAmount, fmtRaw, parseUnits, toBig, toDecimalString, toNumber } from "@/lib/format";
+import { factory, tryView, type FtMetadata, type MemeInfo, type PoolView, type Stock, type StorageBalance, type TreasuryChainsRaw } from "@/lib/near";
 import { useAsync } from "@/lib/use-async";
 import { TESTNET_VENUES } from "@/lib/venues";
 import { errorText, useWallet } from "@/lib/wallet";
@@ -64,12 +69,15 @@ type Progress = {
   usdcReserve: bigint;
   treasury: "ready" | "missing" | "unsupported";
   usdcRegistered: boolean;
+  /** For the preview card when a launch is resumed. */
+  meta: FtMetadata | null;
+  ticker: string | null;
 };
 
 async function loadProgress(account: string): Promise<Progress> {
-  const meta = await tryView<{ symbol: string }>(account, "ft_metadata");
+  const meta = await tryView<FtMetadata>(account, "ft_metadata");
   if (!meta) {
-    return { exists: false, creator: null, seeded: false, usdcReserve: 0n, treasury: "missing", usdcRegistered: false };
+    return { exists: false, creator: null, seeded: false, usdcReserve: 0n, treasury: "missing", usdcRegistered: false, meta: null, ticker: null };
   }
   const [info, pool, chains, storage] = await Promise.all([
     tryView<MemeInfo>(account, "get_info"),
@@ -85,11 +93,83 @@ async function loadProgress(account: string): Promise<Progress> {
     usdcReserve: reserve,
     treasury: !chains ? "unsupported" : chains.address || chains.evm_address ? "ready" : "missing",
     usdcRegistered: !!storage,
+    meta,
+    ticker: info?.stock.ticker ?? null,
   };
+}
+
+const STEPS = [
+  { title: "Create", hint: "Name it, pick its stock" },
+  { title: "Seed", hint: "Add the first USDC" },
+  { title: "Open treasury", hint: "Derive its addresses" },
+];
+
+/** The visible stepper: done steps get a green tick, the current one is raised. */
+function Stepper({ current }: { current: number }) {
+  return (
+    <ol className="grid grid-cols-3 gap-2 sm:gap-3" aria-label="Launch steps">
+      {STEPS.map((s, i) => {
+        const state = i < current ? "done" : i === current ? "active" : "todo";
+        return (
+          <li
+            key={s.title}
+            aria-current={state === "active" ? "step" : undefined}
+            className={cn(
+              "relative flex flex-col items-start gap-1.5 rounded-2xl border-2 p-2.5 transition-colors sm:flex-row sm:items-center sm:gap-2.5 sm:p-3",
+              state === "active" && "border-ink bg-white shadow-[0_4px_0_var(--ink)]",
+              state === "done" && "border-green bg-green-wash",
+              state === "todo" && "border-dashed border-line-strong",
+            )}
+          >
+            <span
+              className={cn(
+                "flex size-9 shrink-0 items-center justify-center rounded-xl border-2 font-heading text-lg font-black",
+                state === "active" && "border-ink bg-golden",
+                state === "done" && "border-ink bg-green",
+                state === "todo" && "border-line-strong text-soft",
+              )}
+              aria-hidden
+            >
+              {state === "done" ? <Check className="size-5" strokeWidth={3.5} /> : i + 1}
+            </span>
+            <span className="min-w-0 leading-tight">
+              <span className={cn("block text-[0.8125rem] font-extrabold sm:text-base", state === "todo" && "text-soft")}>
+                {s.title}
+                <span className="sr-only">
+                  {state === "done" ? " (done)" : state === "active" ? " (current step)" : " (not yet)"}
+                </span>
+              </span>
+              <span className="hidden truncate text-[0.8125rem] font-semibold text-soft sm:block">{s.hint}</span>
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function StepCard({ n, title, intro, children, next }: { n: number; title: string; intro: ReactNode; children: ReactNode; next: string }) {
+  return (
+    <section className="card pop p-5 sm:p-7" aria-labelledby={`step-${n}`}>
+      <h2 id={`step-${n}`} className="type-h2 !text-[clamp(1.6rem,3vw,2.1rem)]">
+        {title}
+      </h2>
+      <p className="mt-2 max-w-[56ch] font-semibold text-soft">{intro}</p>
+      <div className="mt-6">{children}</div>
+      <p className="mt-6 flex items-start gap-2 rounded-2xl bg-page p-3 text-sm font-bold">
+        <ArrowRight className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <span>
+          <span className="text-soft">What happens next: </span>
+          {next}
+        </span>
+      </p>
+    </section>
+  );
 }
 
 export function LaunchFlow() {
   const { accountId, connect, send } = useWallet();
+  const toast = useToast();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -128,22 +208,31 @@ export function LaunchFlow() {
   }, [candidate]);
 
   const costNear = cost.data ? toNumber(toBig(cost.data), 24) : null;
+  const costLabel = costNear !== null ? `${fmtAmount(costNear, 3)} NEAR` : "the launch cost";
   const p = progress.data;
-  const step1: StepStatus = p?.exists ? "done" : "active";
-  const step2: StepStatus = !p?.exists ? "todo" : p.seeded ? "done" : "active";
-  const step3: StepStatus =
-    !p?.exists || !p.seeded ? "todo" : p.treasury === "missing" ? "active" : "done";
+  const resuming = !!target && progress.loading && !p;
+  const current = !p?.exists ? 0 : !p.seeded ? 1 : p.treasury === "missing" ? 2 : 3;
   const isCreator = !!accountId && p?.creator === accountId;
   const seedRaw = parseUnits(seed, USDC_DECIMALS);
   const selected = stocks.data?.find((s) => s.ticker === ticker) ?? null;
+  const seedShort = !!seedRaw && (usdc.data ?? 0n) < seedRaw;
 
-  async function run(label: string, fn: () => Promise<void>) {
+  async function run(label: string, pending: string, done: string, fn: () => Promise<void>) {
     setBusy(label);
     setTxErr(null);
+    const id = toast.show({ tone: "pending", title: pending, body: "Confirm it in your wallet." });
     try {
       await fn();
+      toast.update(id, {
+        tone: "success",
+        title: done,
+        href: accountId ? `${NEARBLOCKS}/address/${accountId}` : undefined,
+        hrefLabel: "Your transactions on NearBlocks",
+        confetti: true,
+      });
     } catch (e) {
       setTxErr(errorText(e));
+      toast.update(id, { tone: "error", title: "That did not go through", body: errorText(e) });
     } finally {
       setBusy(null);
       progress.reload();
@@ -152,7 +241,7 @@ export function LaunchFlow() {
   }
 
   const launch = () =>
-    run("launch", async () => {
+    run("launch", `Creating ${symbol}`, `${symbol} is live`, async () => {
       if (!candidate || !cost.data) return;
       // Put the account in the URL first, so a redirecting wallet returns to step 2.
       router.replace(`${pathname}?meme=${candidate}`);
@@ -168,7 +257,7 @@ export function LaunchFlow() {
     });
 
   const seedPool = () =>
-    run("seed", async () => {
+    run("seed", "Seeding the pool", "Pool seeded", async () => {
       if (!target || !seedRaw) return;
       const calls = [];
       if (!p?.usdcRegistered) {
@@ -192,128 +281,162 @@ export function LaunchFlow() {
     });
 
   const initTreasury = () =>
-    run("treasury", async () => {
+    run("treasury", "Opening the treasury", "Treasury opened", async () => {
       if (!target) return;
       await send([{ receiverId: target, methodName: "init_treasury", args: {}, gas: 100, deposit: "0" }]);
     });
 
   const formValid =
     name.trim().length > 0 && symbolOk && taken.data === false && !!ticker && !!cost.data;
+  const formBlocked = !name.trim()
+    ? "Give it a name"
+    : !symbolOk
+      ? "Pick a ticker (2 to 10 letters)"
+      : taken.loading || taken.data === null || taken.data === undefined
+        ? "Checking the ticker…"
+        : taken.data
+          ? "That ticker is taken"
+          : !ticker
+            ? "Pick a stock"
+            : !cost.data
+              ? "Reading the launch cost…"
+              : null;
+
+  const connectBtn = (label: string) => (
+    <Button
+      type="button"
+      variant="blue"
+      size="lg"
+      onClick={() => connect().catch((e) => toast.show({ tone: "error", title: "Could not open the wallet picker", body: errorText(e) }))}
+    >
+      <Wallet aria-hidden />
+      {label}
+    </Button>
+  );
+
+  // Preview: the form while creating, the on-chain metadata once the meme exists.
+  const pvSymbol = p?.meta?.symbol ?? (symbol || "TICKER");
+  const pvName = p?.meta?.name ?? (name.trim() || "Your meme's name");
+  const pvIcon = p?.meta ? p.meta.icon : icon;
+  const pvTicker = p?.ticker ?? (ticker || null);
+  const pvSeed = p?.seeded ? toNumber(p.usdcReserve, USDC_DECIMALS) : seedRaw ? toNumber(seedRaw, USDC_DECIMALS) : null;
 
   return (
-    <div className="grid gap-12 lg:grid-cols-[1fr_18rem]">
-      <ol aria-label="Launch steps">
-        <Step
-          n={1}
-          title="Create the meme"
-          status={step1}
-          summary={
-            p?.exists ? (
-              <>
-                <Link className="underline underline-offset-4" href={`/meme/${target}`}>
-                  {target}
-                </Link>{" "}
-                is live with every parameter locked.
-              </>
-            ) : (
-              "Pick a name, a ticker and the stock its treasury will hold. The factory deploys it as its own contract."
-            )
-          }
-        >
-          <form
-            className="grid max-w-xl gap-5"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (formValid) launch();
-            }}
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_21rem]">
+      <div className="grid min-w-0 content-start gap-5">
+        <Stepper current={current} />
+
+        {txErr && (
+          <Notice tone="error" title="The transaction did not go through">
+            {txErr}
+          </Notice>
+        )}
+
+        {resuming ? (
+          <div className="card grid gap-4 p-7" aria-busy aria-label="Loading your launch">
+            <Skeleton className="h-10 w-1/2" />
+            <Skeleton className="h-5 w-3/4" />
+            <Skeleton className="h-40" />
+          </div>
+        ) : current === 0 ? (
+          <StepCard
+            n={1}
+            title="Create your meme"
+            intro="Pick a name, a ticker and the stock its treasury will hold. The factory deploys it as its own contract with every rule locked."
+            next="you seed its pool with USDC, which sets the opening price."
           >
-            <div className="grid gap-2">
-              <Label htmlFor={ids.name}>Name</Label>
-              <Input
-                id={ids.name}
-                value={name}
-                maxLength={40}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nvidia Meme"
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor={ids.symbol}>Ticker</Label>
-              <Input
-                id={ids.symbol}
-                value={symbol}
-                maxLength={10}
-                onChange={(e) => setSymbol(e.target.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase())}
-                placeholder="GPUDOGE"
-                aria-describedby={`${ids.symbol}-hint`}
-                aria-invalid={symbol.length > 0 && (!symbolOk || taken.data === true)}
-                required
-                className="type-wide uppercase"
-              />
-              <p id={`${ids.symbol}-hint`} className="text-xs text-graphite">
-                {!symbol
-                  ? "2 to 10 letters or digits. The ticker becomes the contract address."
-                  : !symbolOk
-                    ? "Use 2 to 10 letters or digits."
-                    : taken.loading
-                      ? `Checking ${candidate}…`
-                      : taken.data
-                        ? `${candidate} is taken. Pick another ticker.`
-                        : `Contract address: ${candidate}`}
-              </p>
-            </div>
-
-            <fieldset className="grid gap-2">
-              <legend className="mb-2 text-sm font-medium">Thesis stock</legend>
-              {stocks.error ? (
-                <Notice tone="error" title="Could not load the stock list">
-                  {stocks.error}
-                </Notice>
-              ) : !stocks.data ? (
-                <p className="text-sm text-graphite">Loading the factory&apos;s stock list…</p>
-              ) : (
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {stocks.data.map((s) => (
-                    <label
-                      key={s.ticker}
-                      className={cn(
-                        "cursor-pointer border border-ink p-3 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink",
-                        ticker === s.ticker && "bg-ink text-paper",
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name="stock"
-                        value={s.ticker}
-                        checked={ticker === s.ticker}
-                        onChange={() => setTicker(s.ticker)}
-                        className="sr-only"
-                      />
-                      <span className="type-wide block text-lg">{s.ticker}</span>
-                      <span className="block text-xs opacity-75">
-                        {TESTNET_VENUES[s.ticker]?.name ?? "Listed stock"}
-                      </span>
-                    </label>
-                  ))}
+            <form
+              className="grid gap-6"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (formValid && accountId) launch();
+              }}
+            >
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div className="grid content-start gap-2">
+                  <Label htmlFor={ids.name}>Name</Label>
+                  <Input id={ids.name} value={name} maxLength={40} onChange={(e) => setName(e.target.value)} placeholder="Nvidia Meme" required />
                 </div>
-              )}
-              {selected && (
-                <p className="text-xs text-graphite">
-                  Treasury chains for {selected.ticker}:{" "}
-                  {stockChains(selected).join(", ") || "none listed"}.
-                  {!selected.venues && " This factory runs earlier code that lists no treasury venues."}
-                </p>
-              )}
-            </fieldset>
+                <div className="grid content-start gap-2">
+                  <Label htmlFor={ids.symbol}>Ticker</Label>
+                  <Input
+                    id={ids.symbol}
+                    value={symbol}
+                    maxLength={10}
+                    onChange={(e) => setSymbol(e.target.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase())}
+                    placeholder="GPUDOGE"
+                    aria-describedby={`${ids.symbol}-hint`}
+                    aria-invalid={symbol.length > 0 && (!symbolOk || taken.data === true)}
+                    required
+                    className="font-heading font-extrabold tracking-tight uppercase"
+                  />
+                  <p
+                    id={`${ids.symbol}-hint`}
+                    className={cn("text-sm font-semibold [overflow-wrap:anywhere]", symbol && (!symbolOk || taken.data) ? "text-red-ink" : symbolOk && taken.data === false ? "text-green-ink" : "text-soft")}
+                  >
+                    {!symbol
+                      ? "2 to 10 letters or digits. It becomes the contract address."
+                      : !symbolOk
+                        ? "Use 2 to 10 letters or digits."
+                        : taken.loading
+                          ? `Checking ${candidate}…`
+                          : taken.data
+                            ? `${candidate} is taken. Pick another ticker.`
+                            : `Free: ${candidate}`}
+                  </p>
+                </div>
+              </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor={ids.icon}>Icon (optional)</Label>
-              <div className="flex items-center gap-3">
-                {icon && (
-                  // eslint-disable-next-line @next/next/no-img-element -- local data URL preview
-                  <img src={icon} alt="Icon preview" width={40} height={40} className="border border-ink" />
+              <fieldset>
+                <legend className="mb-2 text-sm font-extrabold">Which stock does it believe in?</legend>
+                {stocks.error ? (
+                  <Notice tone="error" title="Could not load the stock list">
+                    {stocks.error}
+                  </Notice>
+                ) : !stocks.data ? (
+                  <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4" aria-busy>
+                    {[0, 1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-[4.25rem]" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                    {stocks.data.map((s) => (
+                      <label
+                        key={s.ticker}
+                        className={cn(
+                          "cursor-pointer rounded-2xl border-2 p-3 transition-[transform,box-shadow,border-color,background-color] duration-150 ease-[var(--ease-spring)] has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink",
+                          ticker === s.ticker
+                            ? "-translate-y-0.5 border-ink bg-golden shadow-[0_4px_0_var(--ink)]"
+                            : "border-line bg-white shadow-[0_3px_0_var(--line)] hover:-translate-y-0.5 hover:border-line-strong",
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name="stock"
+                          value={s.ticker}
+                          checked={ticker === s.ticker}
+                          onChange={() => setTicker(s.ticker)}
+                          className="sr-only"
+                        />
+                        <span className="block font-heading text-lg font-black tracking-tight">{s.ticker}</span>
+                        <span className={cn("block truncate text-[0.8125rem] font-bold", ticker === s.ticker ? "text-ink" : "text-soft")}>
+                          {TESTNET_VENUES[s.ticker]?.name ?? "Listed stock"}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 )}
+                {selected && (
+                  <p className="mt-2 text-sm font-semibold text-soft">
+                    The treasury buys {selected.ticker} on: {stockChains(selected).join(", ") || "none listed"}.
+                    {!selected.venues && " This factory runs earlier code that lists no treasury venues."}
+                  </p>
+                )}
+              </fieldset>
+
+              <div className="grid gap-2">
+                <Label htmlFor={ids.icon}>Icon (optional)</Label>
                 <Input
                   id={ids.icon}
                   type="file"
@@ -331,141 +454,239 @@ export function LaunchFlow() {
                     }
                   }}
                 />
+                <p id={`${ids.icon}-hint`} className={cn("text-sm font-semibold", iconErr ? "text-red-ink" : "text-soft")}>
+                  {iconErr ?? "Resized to 64×64 and stored on-chain in the token metadata (8 KB max)."}
+                </p>
               </div>
-              <p id={`${ids.icon}-hint`} className="text-xs text-graphite">
-                {iconErr ?? "Resized to 64×64 and stored on-chain in the token metadata (8 KB max)."}
+
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-t-2 border-line pt-5">
+                {accountId ? (
+                  <Button type="submit" size="lg" className="whitespace-normal" disabled={!formValid || !!busy}>
+                    {busy === "launch" ? <span className="dots">Waiting for your wallet</span> : (formBlocked ?? `Create ${symbol} for ${costLabel}`)}
+                  </Button>
+                ) : (
+                  connectBtn("Connect a wallet to launch")
+                )}
+                <span className="text-sm font-semibold text-soft">
+                  Costs {costLabel}, which pays for the contract&apos;s storage.
+                </span>
+              </div>
+            </form>
+          </StepCard>
+        ) : current === 1 ? (
+          <StepCard
+            n={2}
+            title="Seed the pool"
+            intro={
+              <>
+                <Link className="link" href={`/meme/${target}`}>
+                  {target}
+                </Link>{" "}
+                is live with every rule locked. Your USDC becomes its first liquidity. Only the creator can seed, once.
+              </>
+            }
+            next="you open the treasury, and trading fees start buying stock."
+          >
+            <div className="grid max-w-xl gap-5">
+              {!isCreator && (
+                <Notice title="Only the creator can seed this pool">
+                  {p?.creator ? `Connect ${p.creator} to continue.` : "Connect the account that launched this meme."}
+                </Notice>
+              )}
+              <div className="grid gap-2">
+                <Label htmlFor={ids.seed}>How much USDC goes in?</Label>
+                <div className="relative">
+                  <Input
+                    id={ids.seed}
+                    inputMode="decimal"
+                    autoComplete="off"
+                    value={seed}
+                    onChange={(e) => setSeed(e.target.value)}
+                    aria-describedby={`${ids.seed}-hint`}
+                    aria-invalid={seed !== "" && !seedRaw}
+                    className="h-14 pr-20 font-heading text-2xl font-extrabold tracking-tight"
+                  />
+                  <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-sm font-extrabold text-soft">USDC</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quick seed amounts">
+                  {["100", "500", "1000"].map((v) => (
+                    <button key={v} type="button" className="chip flex-1" aria-pressed={seed === v} onClick={() => setSeed(v)}>
+                      {Number(v).toLocaleString("en-US")}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className="chip flex-1"
+                    disabled={!usdc.data}
+                    onClick={() => usdc.data && setSeed(toDecimalString(usdc.data, USDC_DECIMALS))}
+                  >
+                    Max
+                  </button>
+                </div>
+                <p id={`${ids.seed}-hint`} className="text-sm font-semibold text-soft">
+                  All 1,000,000,000 tokens start in the pool, so the opening price is{" "}
+                  <span className="font-extrabold text-ink">
+                    {seedRaw ? `$${fmtAmount(toNumber(seedRaw, USDC_DECIMALS) / 1e9)}` : "seed ÷ 1,000,000,000"}
+                  </span>{" "}
+                  per token. Your balance: {usdc.data != null ? `${fmtRaw(usdc.data, USDC_DECIMALS)} USDC` : "–"}.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                {accountId ? (
+                  <Button
+                    size="lg"
+                    className="whitespace-normal"
+                    disabled={!isCreator || !seedRaw || seedRaw <= 0n || seedShort || !!busy}
+                    onClick={seedPool}
+                  >
+                    {busy === "seed" ? (
+                      <span className="dots">Waiting for your wallet</span>
+                    ) : !isCreator ? (
+                      "Only the creator can seed"
+                    ) : !seedRaw || seedRaw <= 0n ? (
+                      "Enter an amount"
+                    ) : seedShort ? (
+                      "Not enough USDC"
+                    ) : (
+                      `Seed the pool with ${fmtRaw(seedRaw, USDC_DECIMALS)} USDC`
+                    )}
+                  </Button>
+                ) : (
+                  connectBtn("Connect a wallet to seed")
+                )}
+                <GetTestUsdcButton onDone={usdc.reload} size="default" />
+              </div>
+              <p className="text-sm font-semibold text-soft">
+                {p?.usdcRegistered
+                  ? "One transaction: the USDC transfer that seeds the pool."
+                  : "Two transactions: registering the meme on USDC (0.00125 NEAR storage), then the transfer that seeds the pool."}
               </p>
             </div>
-
-            <div className="flex flex-wrap items-center gap-4 border-t border-rule pt-5">
+          </StepCard>
+        ) : current === 2 ? (
+          <StepCard
+            n={3}
+            title="Open the treasury"
+            intro={`Seeded with ${fmtRaw(p?.usdcReserve ?? 0n, USDC_DECIMALS)} USDC. Now the meme derives its own addresses on Base, Robinhood Chain and Solana through NEAR Chain Signatures. Anyone can do this, once.`}
+            next="your meme is tradable, and every trade starts filling its balance sheet."
+          >
+            <div className="flex flex-wrap items-center gap-3">
               {accountId ? (
-                <Button type="submit" size="lg" className="h-11 px-5 text-base" disabled={!formValid || !!busy}>
-                  {busy === "launch" ? "Waiting for the wallet…" : `Launch ${symbol || "meme"}`}
+                <Button size="lg" disabled={!!busy} onClick={initTreasury}>
+                  {busy === "treasury" ? <span className="dots">Waiting for your wallet</span> : "Open the treasury"}
                 </Button>
               ) : (
-                <Button type="button" size="lg" className="h-11 px-5 text-base" onClick={() => connect().catch((e) => setTxErr(errorText(e)))}>
-                  Connect wallet to launch
-                </Button>
+                connectBtn("Connect a wallet to open it")
               )}
-              <span className="text-sm text-graphite">
-                Attaches {costNear !== null ? `${fmtAmount(costNear, 3)} NEAR` : "the launch cost"} for
-                the contract&apos;s storage.
-              </span>
+              <span className="text-sm font-semibold text-soft">Free apart from gas. Calls init_treasury().</span>
             </div>
-          </form>
-        </Step>
-
-        <Step
-          n={2}
-          title="Seed the pool"
-          status={step2}
-          summary={
-            p?.seeded
-              ? `Seeded with ${fmtRaw(p.usdcReserve, USDC_DECIMALS)} USDC.`
-              : "Your USDC becomes the pool's first liquidity. Only the creator can seed, once."
-          }
-        >
-          <div className="grid max-w-xl gap-5">
-            {!isCreator && (
-              <Notice title="Only the creator can seed this pool">
-                {p?.creator
-                  ? `Connect ${p.creator} to continue.`
-                  : "Connect the account that launched this meme."}
-              </Notice>
-            )}
-            <div className="grid gap-2">
-              <Label htmlFor={ids.seed}>Seed amount (USDC)</Label>
-              <Input
-                id={ids.seed}
-                inputMode="decimal"
-                value={seed}
-                onChange={(e) => setSeed(e.target.value)}
-                aria-describedby={`${ids.seed}-hint`}
-                aria-invalid={seed !== "" && !seedRaw}
-              />
-              <p id={`${ids.seed}-hint`} className="text-xs text-graphite">
-                All 1,000,000,000 tokens start in the pool, so the opening price is{" "}
-                {seedRaw ? `$${fmtAmount(toNumber(seedRaw, USDC_DECIMALS) / 1e9)}` : "seed ÷ 1,000,000,000"} per
-                token. Your balance: {usdc.data != null ? `${fmtRaw(usdc.data, USDC_DECIMALS)} USDC` : "–"}.
+          </StepCard>
+        ) : (
+          <section className="card pop relative overflow-hidden p-6 sm:p-8" aria-labelledby="launched">
+            <Sticker name="rocket" className="absolute -right-6 -bottom-8 w-44 rotate-12 opacity-90 sm:w-56" />
+            <div className="relative max-w-[32rem]">
+              <span className="pill pill-green">All three steps done</span>
+              <h2 id="launched" className="type-h2 mt-3">
+                {p?.meta?.symbol ?? "Your meme"} has lifted off.
+              </h2>
+              <p className="mt-3 font-semibold text-soft">
+                {p?.treasury === "unsupported"
+                  ? "It is seeded and tradable. This meme runs earlier contract code without a multichain treasury."
+                  : "It is seeded, its treasury addresses exist, and every trade now feeds the balance sheet."}
               </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link href={`/meme/${target}`} className={buttonVariants({ size: "lg" })}>
+                  Open {p?.meta?.symbol ?? "the meme"}
+                </Link>
+                <Link href="/launch" className={buttonVariants({ variant: "outline", size: "lg" })}>
+                  Launch another
+                </Link>
+              </div>
             </div>
-            <div className="flex flex-wrap items-start gap-3">
-              <Button
-                size="lg"
-                className="h-11 px-5 text-base"
-                disabled={!isCreator || !seedRaw || seedRaw <= 0n || (usdc.data ?? 0n) < (seedRaw ?? 0n) || !!busy}
-                onClick={seedPool}
-              >
-                {busy === "seed" ? "Waiting for the wallet…" : "Seed pool"}
-              </Button>
-              <GetTestUsdcButton onDone={usdc.reload} />
+          </section>
+        )}
+      </div>
+
+      <aside className="grid content-start gap-5" aria-label="Preview and details">
+        <div>
+          <p className="mb-2 text-sm font-extrabold">{p?.exists ? "Your meme" : "Live preview"}</p>
+          <div className="card flex flex-col gap-4 p-5">
+            <div className="flex items-start gap-3">
+              <MemeIcon icon={pvIcon} symbol={pvSymbol} size={56} />
+              <div className="min-w-0 flex-1">
+                <p className={cn("truncate font-heading text-2xl leading-tight font-black tracking-tight", !p?.meta && !symbol && "text-soft")}>{pvSymbol}</p>
+                <p className="truncate text-sm font-semibold text-soft">{pvName}</p>
+              </div>
             </div>
-            <p className="text-xs text-graphite">
-              {p?.usdcRegistered
-                ? "Sends one transaction: ft_transfer_call on USDC with msg {\"action\":\"seed\"}."
-                : "Sends two transactions: registers the meme on USDC (storage_deposit, 0.00125 NEAR), then ft_transfer_call with msg {\"action\":\"seed\"}."}
+            <p className="text-[0.9375rem] font-semibold">
+              {pvTicker ? (
+                <>
+                  Holds <span className="font-extrabold">{pvTicker}</span>
+                  {TESTNET_VENUES[pvTicker] && <span className="text-soft"> ({TESTNET_VENUES[pvTicker].name})</span>}
+                </>
+              ) : (
+                <span className="text-soft">Pick a stock to hold</span>
+              )}
             </p>
+            <dl className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl bg-page px-2.5 py-2">
+                <dt className="text-xs font-bold text-soft">Opening price</dt>
+                <dd className="type-num mt-1 text-[1.0625rem]">{pvSeed ? `$${fmtAmount(pvSeed / 1e9)}` : "–"}</dd>
+              </div>
+              <div className="rounded-xl bg-page px-2.5 py-2">
+                <dt className="text-xs font-bold text-soft">Supply</dt>
+                <dd className="type-num mt-1 text-[1.0625rem]">1B</dd>
+              </div>
+            </dl>
+            <MnavGauge value={null} size="sm" />
+            <p className="text-xs font-semibold break-all text-soft">
+              {target && p?.exists ? target : (candidate ?? `ticker.${FACTORY}`)}
+            </p>
+            {p?.exists && target && (
+              <Link href={`/meme/${target}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+                Open its page
+              </Link>
+            )}
           </div>
-        </Step>
+        </div>
 
-        <Step
-          n={3}
-          title="Open the treasury"
-          status={step3}
-          summary={
-            p?.treasury === "ready"
-              ? "Treasury addresses derived through Chain Signatures."
-              : p?.treasury === "unsupported" && p.seeded
-                ? "This meme runs earlier contract code without a multichain treasury."
-                : "Derives the meme's own treasury address through Chain Signatures. Anyone can call it, once."
-          }
-        >
-          <div className="flex flex-wrap items-center gap-3">
-            <Button size="lg" className="h-11 px-5 text-base" disabled={!accountId || !!busy} onClick={initTreasury}>
-              {busy === "treasury" ? "Waiting for the wallet…" : "Open the treasury"}
-            </Button>
-            <span className="text-sm text-graphite">Calls init_treasury() with 100 TGas.</span>
-          </div>
-        </Step>
-      </ol>
+        <div className="card p-5">
+          <p className="type-h3">What it costs</p>
+          <ul className="mt-2 grid gap-1.5 text-sm font-semibold text-soft">
+            <li>
+              <span className="font-extrabold text-ink">{costLabel}</span> to create the contract (storage)
+            </li>
+            <li>
+              <span className="font-extrabold text-ink">Your seed USDC</span>, which becomes the pool&apos;s liquidity
+            </li>
+            <li>Gas for three transactions</li>
+          </ul>
+        </div>
 
-      <aside className="flex flex-col gap-6 lg:pt-8">
-        {txErr && (
-          <Notice tone="error" title="The transaction did not go through">
-            {txErr}
-          </Notice>
-        )}
-        {p?.exists && (
-          <Link href={`/meme/${target}`} className={cn(buttonVariants({ variant: "outline" }), "h-10")}>
-            Open {target}
-          </Link>
-        )}
-        {accountId && (mine.data?.length ?? 0) > 0 && (
-          <div>
-            <p className="text-sm font-semibold">Your memes</p>
-            <ul className="mt-2 grid gap-1 text-sm">
-              {mine.data!.map((m) => (
-                <li key={m}>
-                  <Link
-                    href={`/launch?meme=${m}`}
-                    className={cn("underline-offset-4 hover:underline", m === target && "font-semibold")}
-                  >
-                    {m}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-2 text-xs text-graphite">Pick one to continue its setup.</p>
-          </div>
-        )}
-        <div className="text-sm text-graphite">
-          <p className="font-semibold text-ink">What gets locked</p>
-          <p className="mt-1">
+        <div className="card p-5">
+          <p className="type-h3">What gets locked</p>
+          <p className="mt-2 text-sm font-semibold text-soft">
             1% pool fee (0.8% treasury, 0.2% creator), issuance above 2.0× mNAV capped at 1% of
             supply a day, buyback below 1.0×, redemption below 0.9×, 20% cash buffer. The meme has
             no owner and no setter.
           </p>
         </div>
+
+        {accountId && (mine.data?.length ?? 0) > 0 && (
+          <div className="card p-5">
+            <p className="type-h3">Your memes</p>
+            <ul className="mt-2 grid gap-1 text-sm">
+              {mine.data!.map((m) => (
+                <li key={m}>
+                  <Link href={`/launch?meme=${m}`} className={cn("link break-all", m === target && "text-ink")} aria-current={m === target ? "page" : undefined}>
+                    {m}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs font-semibold text-soft">Pick one to continue its setup.</p>
+          </div>
+        )}
       </aside>
     </div>
   );
