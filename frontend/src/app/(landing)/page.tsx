@@ -16,12 +16,12 @@ export default function Landing() {
     <>
       <Hero />
 
-      <section aria-labelledby="stocks-title" className="border-y border-line bg-card/60 py-10 sm:py-12">
-        <div className="wrap mb-6 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="stocks-title" className="text-sm font-medium">
+      <section aria-labelledby="stocks-title" className="py-10 sm:py-14">
+        <div className="wrap mb-8 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="stocks-title" className="text-[0.9375rem] text-ink-2">
             Pick the stock your meme believes in
           </h2>
-          <p className="text-sm text-soft">Eight listed, each tradable on all three treasury chains</p>
+          <p className="text-sm text-soft">Eight listed, each on all three chains</p>
         </div>
         <StockMarquee />
       </section>
@@ -35,16 +35,15 @@ export default function Landing() {
               One number runs the whole company.
             </h2>
             <p className="lede">
-              mNAV compares the meme&apos;s price with what its treasury holds per token. The
-              thresholds are locked in every meme, and the price used is a 30-minute average.
+              mNAV is the meme&apos;s price over what its treasury holds per token. The thresholds are
+              locked in every meme.
             </p>
           </div>
           <div className="mt-10">
             <RulesPlayground />
           </div>
-          <p className="mt-4 max-w-[72ch] text-sm text-soft">
-            The floor defends NAV, not the price: if the stock falls, NAV falls with it. Every action
-            pauses while the oracle price is older than 15 minutes; trading continues.
+          <p className="mt-5 max-w-[72ch] text-sm text-soft">
+            The floor defends NAV, not the price: if the stock falls, NAV falls with it.
           </p>
         </div>
       </section>
@@ -60,7 +59,7 @@ export default function Landing() {
           <h2 id="faq-title" className="type-h2">
             Fair questions.
           </h2>
-          <p className="lede mt-4">The short, honest answers. The long ones live in the spec.</p>
+          <p className="lede mt-4">The short answers. The long ones live in the spec.</p>
           <a href={`${GITHUB_URL}/blob/main/docs/SPEC.md`} target="_blank" rel="noreferrer" className="link mt-4 inline-block text-sm">
             Read the spec on GitHub
             <span className="sr-only"> (opens in a new tab)</span>
@@ -70,17 +69,13 @@ export default function Landing() {
       </section>
 
       <section aria-labelledby="cta-title" className="wrap pb-20 sm:pb-28">
-        <div className="relative isolate overflow-hidden rounded-[28px] border border-line bg-card px-6 py-14 text-center shadow-[var(--shadow-md)] sm:py-20">
-          <div className="halftone absolute inset-0 -z-10 opacity-70" aria-hidden />
-          <div className="glow -z-10 -bottom-24 left-[10%] h-56 w-[40%] bg-[#6f86ff] opacity-35" aria-hidden />
-          <div className="glow -z-10 -bottom-24 right-[10%] h-56 w-[40%] bg-[#ffd76a] opacity-45" aria-hidden />
+        <div className="border-t border-line px-2 pt-20 text-center sm:pt-28">
           <LogoMark className="mx-auto size-12 transition-transform duration-500 ease-[var(--ease-spring)] hover:-rotate-12 hover:scale-110" />
           <h2 id="cta-title" className="type-h2 mx-auto mt-6 max-w-[18ch]">
             Give your meme a balance sheet.
           </h2>
           <p className="lede mx-auto mt-4 max-w-[34rem]">
-            Launch takes three transactions. After that, trading fills the treasury and the rules
-            run on their own.
+            Three transactions to launch. After that, the rules run on their own.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link href={APP_URL} className={buttonVariants({ size: "lg" })}>

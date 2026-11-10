@@ -84,15 +84,14 @@ export function Faq() {
   const base = useId();
 
   return (
-    <ul className="grid gap-3">
+    <ul className="grid border-t border-line">
       {ITEMS.map((item, i) => {
         const isOpen = open === i;
         return (
           <li
             key={item.q}
             className={cn(
-              "rounded-2xl border bg-card transition-[border-color,box-shadow] duration-300",
-              isOpen ? "border-line-strong shadow-[var(--shadow-md)]" : "border-line hover:border-line-strong",
+              "border-b border-line",
             )}
           >
             <h3>
@@ -102,13 +101,13 @@ export function Faq() {
                 aria-expanded={isOpen}
                 aria-controls={`${base}-a${i}`}
                 onClick={() => setOpen(isOpen ? null : i)}
-                className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-2xl px-5 py-4 text-left text-base font-medium"
+                className="flex w-full cursor-pointer items-center justify-between gap-4 py-5 text-left text-[1.0625rem] transition-colors hover:text-ink-2"
               >
                 {item.q}
                 <span
                   className={cn(
                     "flex size-8 shrink-0 items-center justify-center rounded-full transition-[background-color,color,transform] duration-300",
-                    isOpen ? "rotate-180 bg-ink text-white" : "bg-page-deep text-ink",
+                    isOpen ? "rotate-180 bg-blue text-white" : "bg-page-deep text-ink",
                   )}
                   aria-hidden
                 >
@@ -125,7 +124,7 @@ export function Faq() {
               inert={!isOpen}
             >
               <div>
-                <p className="max-w-[65ch] px-5 pb-5 text-[0.9375rem] text-soft">{item.a}</p>
+                <p className="max-w-[65ch] pb-6 text-[0.9375rem] text-soft">{item.a}</p>
               </div>
             </div>
           </li>

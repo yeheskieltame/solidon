@@ -32,7 +32,7 @@ export function LandingHeader() {
       className={cn(
         "sticky top-0 z-40 transition-[background-color,box-shadow,border-color] duration-300",
         scrolled || open
-          ? "border-b border-line bg-page/80 backdrop-blur-xl backdrop-saturate-150"
+          ? "border-b border-line bg-page/85 backdrop-blur-xl backdrop-saturate-150"
           : "border-b border-transparent",
       )}
     >
@@ -40,9 +40,9 @@ export function LandingHeader() {
         <Link href="/" aria-label="Solidon home" className="rounded-lg">
           <Logo />
         </Link>
-        <nav aria-label="Main" className="hidden items-center gap-1 text-sm md:flex">
+        <nav aria-label="Main" className="hidden items-center gap-1 text-[0.9375rem] md:flex">
           {NAV.map((n) => (
-            <a key={n.href} href={n.href} className="rounded-full px-3 py-1.5 text-soft transition-colors hover:bg-page-deep hover:text-ink">
+            <a key={n.href} href={n.href} className="rounded-[10px] px-3.5 py-2 text-ink-2 transition-colors hover:bg-page-deep hover:text-ink">
               {n.label}
             </a>
           ))}
@@ -50,7 +50,7 @@ export function LandingHeader() {
             href={GITHUB_URL}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-0.5 rounded-full px-3 py-1.5 text-soft transition-colors hover:bg-page-deep hover:text-ink"
+            className="inline-flex items-center gap-0.5 rounded-[10px] px-3.5 py-2 text-ink-2 transition-colors hover:bg-page-deep hover:text-ink"
           >
             Docs
             <ArrowUpRight className="size-3.5" aria-hidden />
