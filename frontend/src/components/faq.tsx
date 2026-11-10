@@ -71,7 +71,7 @@ const ITEMS: { q: string; a: ReactNode }[] = [
     q: "Who can use it?",
     a: (
       <>
-        Anyone with a NEAR testnet wallet and free test USDC from the faucet button. Tokenized
+        Anyone with a NEAR testnet wallet and free test USDC from the faucet button in the app. Tokenized
         stocks (Stock Tokens) are not offered to US persons.
       </>
     ),
@@ -91,8 +91,8 @@ export function Faq() {
           <li
             key={item.q}
             className={cn(
-              "rounded-[20px] border-2 bg-white transition-[border-color,box-shadow] duration-200",
-              isOpen ? "border-ink shadow-[0_5px_0_var(--ink)]" : "border-line shadow-[0_4px_0_var(--line)]",
+              "rounded-2xl border bg-card transition-[border-color,box-shadow] duration-300",
+              isOpen ? "border-line-strong shadow-[var(--shadow-md)]" : "border-line hover:border-line-strong",
             )}
           >
             <h3>
@@ -102,17 +102,17 @@ export function Faq() {
                 aria-expanded={isOpen}
                 aria-controls={`${base}-a${i}`}
                 onClick={() => setOpen(isOpen ? null : i)}
-                className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[18px] px-5 py-4 text-left text-lg font-extrabold"
+                className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-2xl px-5 py-4 text-left text-base font-medium"
               >
                 {item.q}
                 <span
                   className={cn(
-                    "flex size-9 shrink-0 items-center justify-center rounded-xl border-2 border-ink transition-colors",
-                    isOpen ? "bg-golden" : "bg-white",
+                    "flex size-8 shrink-0 items-center justify-center rounded-full transition-[background-color,color,transform] duration-300",
+                    isOpen ? "rotate-180 bg-ink text-white" : "bg-page-deep text-ink",
                   )}
                   aria-hidden
                 >
-                  <ChevronDown className="faq-chevron size-5" strokeWidth={3} />
+                  <ChevronDown className="size-4" strokeWidth={2} />
                 </span>
               </button>
             </h3>
@@ -125,7 +125,7 @@ export function Faq() {
               inert={!isOpen}
             >
               <div>
-                <p className="max-w-[65ch] px-5 pb-5 text-soft">{item.a}</p>
+                <p className="max-w-[65ch] px-5 pb-5 text-[0.9375rem] text-soft">{item.a}</p>
               </div>
             </div>
           </li>

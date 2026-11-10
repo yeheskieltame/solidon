@@ -7,14 +7,17 @@ function Tabs({ className, ...props }: TabsPrimitive.Root.Props) {
   return <TabsPrimitive.Root data-slot="tabs" className={cn("flex flex-col gap-4", className)} {...props} />
 }
 
-/** A fat segmented toggle: the active segment is a raised white key. */
-function TabsList({ className, ...props }: TabsPrimitive.List.Props) {
+/** A segmented control: the active segment is a white key that slides between tabs. */
+function TabsList({ className, children, ...props }: TabsPrimitive.List.Props) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
-      className={cn("flex w-full gap-1.5 rounded-[18px] bg-lilac-wash p-1.5", className)}
+      className={cn("relative flex w-full gap-1 rounded-full bg-page-deep p-1", className)}
       {...props}
-    />
+    >
+      {children}
+      <TabsPrimitive.Indicator className="absolute top-1 left-[var(--active-tab-left)] z-0 h-[var(--active-tab-height)] w-[var(--active-tab-width)] rounded-full bg-card shadow-[var(--shadow-sm)] transition-[left,width] duration-300 ease-[var(--ease-spring)]" />
+    </TabsPrimitive.List>
   )
 }
 
@@ -23,7 +26,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
     <TabsPrimitive.Tab
       data-slot="tabs-trigger"
       className={cn(
-        "inline-flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border-2 border-transparent px-3 text-base font-extrabold text-soft transition-[transform,background-color,color,box-shadow] duration-150 ease-[var(--ease-spring)] hover:text-ink data-active:border-line-strong data-active:bg-white data-active:text-ink data-active:shadow-[0_3px_0_var(--line-strong)] active:translate-y-0.5",
+        "relative z-10 inline-flex min-h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium text-soft transition-colors duration-150 hover:text-ink data-active:text-ink [&_svg]:size-3.5",
         className
       )}
       {...props}

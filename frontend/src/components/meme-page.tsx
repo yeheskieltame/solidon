@@ -1,59 +1,51 @@
 "use client";
 
-import { ArrowLeft, ExternalLink, RefreshCw, Scale } from "lucide-react";
-import Link from "next/link";
+import { ChevronRight, ExternalLink, RefreshCw, Scale } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { cn } from "cn";
+import { LogoTile, StockLogo } from "./brand-logo";
 import { CountUp } from "./count-up";
 import { EventLog } from "./event-log";
-import { ZONE_PILL } from "./meme-card";
 import { MemeIcon } from "./meme-icon";
-import { MnavGauge } from "./mnav-gauge";
+import { MnavGauge, ZoneBadge } from "./mnav-gauge";
 import { Notice } from "./notice";
 import { Term } from "./term";
 import { useToast } from "./toast";
 import { TradePanel, useUserBalances } from "./trade-panel";
 import { TreasuryChains } from "./treasury-chains";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ledgerHoldings, normaliseTreasury } from "@/lib/chains";
+import { AppLink } from "@/lib/app-link";
+import { PLATFORM_LOGOS, STOCK_LOGOS } from "@/lib/brands";
 import { MEME_DECIMALS, NEARBLOCKS } from "@/lib/config";
 import { fmtAmount, fmtRaw, fmtUsd, shortAddr, timeAgo, toBig } from "@/lib/format";
-import { estimateNav, lastMnav, oracleUsd, scaledToUsd } from "@/lib/math";
-import { loadMeme } from "@/lib/meme";
+import { lastMnav, oracleUsd } from "@/lib/math";
+import { loadMemeCached, summarize } from "@/lib/market";
 import { fmtPrice, fmtPriceLong } from "@/lib/price";
-import { fmtTimes, mnavSentence, zoneName, zoneOf } from "@/lib/mnav";
+import { fmtTimes, mnavSentence } from "@/lib/mnav";
 import { useAsync } from "@/lib/use-async";
-import { TESTNET_VENUES } from "@/lib/venues";
 import { errorText, useWallet } from "@/lib/wallet";
 
-function StatTile({
+function Stat({
   label,
   value,
   format,
   note,
-  tone,
-  badge,
   title,
 }: {
   label: ReactNode;
   value: number | null;
   format: (n: number) => string;
-  note?: string;
-  tone: string;
-  badge?: ReactNode;
+  note?: ReactNode;
   title?: string;
 }) {
   return (
-    <div className={cn("rounded-3xl border-2 border-ink p-4 shadow-[0_4px_0_var(--ink)] sm:p-5", tone)}>
-      <dt className="flex flex-wrap items-center justify-between gap-2 text-sm font-extrabold">
-        <span>{label}</span>
-        {badge}
-      </dt>
-      <dd className="type-num mt-2 text-[clamp(1.6rem,2.3vw,2rem)] whitespace-nowrap" title={title}>
+    <div className="bg-card p-4 sm:p-5">
+      <dt className="text-xs text-soft">{label}</dt>
+      <dd className="type-num mt-1.5 truncate text-2xl sm:text-[1.75rem]" title={title}>
         <CountUp value={value} format={format} />
       </dd>
-      {note && <dd className="mt-2 text-[0.8125rem] font-semibold text-soft">{note}</dd>}
+      {note && <dd className="mt-1 text-xs text-soft">{note}</dd>}
     </div>
   );
 }
@@ -61,10 +53,10 @@ function StatTile({
 function Section({ id, title, intro, children }: { id: string; title: string; intro?: ReactNode; children: ReactNode }) {
   return (
     <section aria-labelledby={id} className="scroll-mt-28">
-      <h2 id={id} className="type-h2 !text-[clamp(1.6rem,3vw,2.1rem)]">
+      <h2 id={id} className="font-heading text-[1.375rem] font-[650] tracking-[-0.025em]">
         {title}
       </h2>
-      {intro && <p className="mt-2 max-w-[62ch] text-[0.9375rem] font-semibold text-soft">{intro}</p>}
+      {intro && <p className="mt-1.5 max-w-[66ch] text-sm text-soft">{intro}</p>}
       <div className="mt-4">{children}</div>
     </section>
   );
@@ -72,11 +64,11 @@ function Section({ id, title, intro, children }: { id: string; title: string; in
 
 function SheetRow({ k, v, strong }: { k: ReactNode; v: string; strong?: boolean }) {
   return (
-    <tr className={cn("border-t-2", strong ? "border-ink" : "border-line")}>
-      <th scope="row" className={cn("py-2.5 pr-4 text-left", strong ? "font-extrabold" : "font-semibold text-soft")}>
+    <tr className={cn("border-t", strong ? "border-line-strong" : "border-line")}>
+      <th scope="row" className={cn("py-2.5 pr-4 text-left", strong ? "font-medium" : "font-normal text-soft")}>
         {k}
       </th>
-      <td className={cn("py-2.5 text-right", strong ? "font-heading text-lg font-extrabold" : "font-bold")}>{v}</td>
+      <td className={cn("py-2.5 text-right tabular-nums", strong ? "text-base font-semibold" : "font-medium")}>{v}</td>
     </tr>
   );
 }
@@ -91,29 +83,24 @@ function PageSkeleton() {
   return (
     <div className="wrap grid gap-6 pt-8 pb-20" aria-busy aria-label="Loading the meme">
       <div className="flex items-center gap-4">
-        <Skeleton className="size-20 -rotate-3 rounded-3xl" />
-        <div className="grid flex-1 gap-3">
-          <Skeleton className="h-12 w-2/5" />
-          <Skeleton className="h-5 w-3/5" />
+        <Skeleton className="size-14 rounded-2xl" />
+        <div className="grid flex-1 gap-2">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-72" />
         </div>
       </div>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
-        <div className="grid gap-4">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Skeleton className="h-32 rounded-3xl" />
-            <Skeleton className="h-32 rounded-3xl" />
-            <Skeleton className="h-32 rounded-3xl" />
-          </div>
-          <Skeleton className="h-56 rounded-3xl" />
-        </div>
-        <Skeleton className="h-[28rem] rounded-3xl" />
+      <Skeleton className="h-24 rounded-2xl" />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_23rem]">
+        <Skeleton className="h-80 rounded-2xl" />
+        <Skeleton className="h-[28rem] rounded-2xl" />
       </div>
     </div>
   );
 }
 
 export function MemePage({ account }: { account: string }) {
-  const snap = useAsync(() => loadMeme(account), [account]);
+  const [fresh, setFresh] = useState(0);
+  const snap = useAsync(() => loadMemeCached(account, fresh > 0), [account, fresh]);
   const { accountId, send, connect } = useWallet();
   const user = useUserBalances(account, accountId);
   const toast = useToast();
@@ -126,16 +113,15 @@ export function MemePage({ account }: { account: string }) {
       <div className="wrap py-16">
         <Notice
           tone="error"
-          sticker="telescope"
-          title={`We looked everywhere for ${account}`}
+          title={`Could not read ${account}`}
           action={
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={snap.reload}>
+              <Button variant="outline" onClick={() => setFresh((f) => f + 1)}>
                 Try again
               </Button>
-              <Link href="/#memes" className="btn">
-                See live memes
-              </Link>
+              <AppLink href="/" className={buttonVariants()}>
+                Back to Markets
+              </AppLink>
             </div>
           }
         >
@@ -146,19 +132,14 @@ export function MemePage({ account }: { account: string }) {
   }
 
   const d = snap.data;
-  const { metadata, info, pool, treasury, params } = d;
-  const ticker = info?.stock.ticker ?? "?";
-  const stockName = TESTNET_VENUES[ticker]?.name;
-  const chains = normaliseTreasury(d.chains, info?.stock ?? null);
-  const nav = estimateNav(pool, treasury, ledgerHoldings(chains, treasury?.stock_units), d.price);
+  const row = summarize(d);
+  const { metadata, info, treasury, params } = d;
+  const { nav, chains, thresholds } = row;
+  const ticker = row.ticker ?? "?";
+  const stockName = STOCK_LOGOS[ticker]?.name;
   const contractMnav = lastMnav(treasury);
-  const thresholds = {
-    redemption: params.redemption_mnav_bps / 10_000,
-    buyback: params.buyback_mnav_bps / 10_000,
-    issuance: params.issuance_mnav_bps / 10_000,
-  };
-  const seeded = pool ? toBig(pool.usdc_reserve) > 0n : false;
-  const spotUsd = pool ? scaledToUsd(toBig(pool.spot_price)) : null;
+  const seeded = row.seeded;
+  const spotUsd = row.spotUsd;
   const stockPrice = oracleUsd(d.price);
   const now = d.fetchedAt;
   const priceAge = d.price ? now - d.price.publish_time : null;
@@ -168,15 +149,14 @@ export function MemePage({ account }: { account: string }) {
   const refillAt = params.cash_refill_bps / 10_000;
   const epochCap = toBig(treasury?.epoch_cap);
   const epochIssued = toBig(treasury?.epoch_issued);
-  const shownMnav = nav.mnav ?? contractMnav;
-  const zone = zoneOf(shownMnav, thresholds);
+  const shownMnav = row.mnav;
   const cashPct = (nav.cashShare ?? 0) * 100;
   // The buffer bar spans 0 to twice the target, so the 20% mark sits mid-bar.
   const barMax = Math.max(bufferTarget * 2, 0.01);
   const barAt = (x: number) => `${Math.min(100, (x / barMax) * 100)}%`;
 
   const reload = () => {
-    snap.reload();
+    setFresh((f) => f + 1);
     user.reload();
   };
 
@@ -206,22 +186,31 @@ export function MemePage({ account }: { account: string }) {
   }
 
   return (
-    <div className="wrap pt-6 pb-20 sm:pt-8">
-      <Link href="/#memes" className="btn btn-ghost btn-sm -ml-3">
-        <ArrowLeft className="size-4" aria-hidden />
-        All memes
-      </Link>
+    <div className="wrap pt-6 pb-16 sm:pt-8">
+      <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-soft">
+        <AppLink href="/" className="hover:text-ink">
+          Markets
+        </AppLink>
+        <ChevronRight className="size-3.5" aria-hidden />
+        <span className="text-ink" aria-current="page">
+          {metadata.symbol}
+        </span>
+      </nav>
 
       {/* Identity */}
-      <header className="mt-3 flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
-        <div className="flex min-w-0 items-center gap-4 sm:gap-5">
-          <MemeIcon icon={metadata.icon} symbol={metadata.symbol} size={84} className="pop" />
+      <header className="mt-4 flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
+        <div className="flex min-w-0 items-center gap-4">
+          <MemeIcon icon={metadata.icon} symbol={metadata.symbol} size={56} />
           <div className="min-w-0">
-            <h1 className="type-display !text-[clamp(2.25rem,6vw,4rem)] break-all">{metadata.symbol}</h1>
-            <p className="mt-2 font-semibold text-soft">
-              {metadata.name}, a tiny treasury company holding{" "}
-              <span className="font-extrabold text-ink">{ticker}</span>
-              {stockName && ` (${stockName})`}
+            <h1 className="type-h1 flex flex-wrap items-center gap-x-3 gap-y-1 break-all">
+              {metadata.symbol}
+              <ZoneBadge zone={row.zone} fallback={seeded ? "New" : "Not seeded"} className="!text-xs" />
+            </h1>
+            <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-soft">
+              {metadata.name}, a treasury company holding
+              <StockLogo ticker={ticker} size={18} decorative />
+              <span className="font-medium text-ink">{stockName ?? ticker}</span>
+              {stockName && <span>({ticker})</span>}
             </p>
           </div>
         </div>
@@ -232,18 +221,58 @@ export function MemePage({ account }: { account: string }) {
             <span className="sr-only"> on NearBlocks (opens in a new tab)</span>
           </a>
           {info && (
-            <span className="font-semibold text-soft" title={info.creator}>
+            <span className="text-soft" title={info.creator}>
               Created by {shortAddr(info.creator, 16, 10)}
             </span>
           )}
-          <Button variant="outline" size="sm" onClick={reload} disabled={snap.loading}>
-            <RefreshCw className={cn("size-4", snap.loading && "animate-spin")} aria-hidden />
+          <Button variant="ghost" size="sm" className="-mr-2" onClick={reload} disabled={snap.loading}>
+            <RefreshCw className={cn(snap.loading && "animate-spin")} aria-hidden />
             Refresh data
           </Button>
         </div>
       </header>
 
-      <nav aria-label="On this page" className="mt-5 flex gap-2 overflow-x-auto pb-1 text-sm">
+      <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line shadow-[var(--shadow-sm)] lg:grid-cols-4">
+        <Stat
+          label={
+            nav.usesTwap ? (
+              <>
+                Price, <Term k="twap" align="start">30-min TWAP</Term>
+              </>
+            ) : (
+              "Price, spot"
+            )
+          }
+          value={seeded ? nav.priceUsd : null}
+          format={fmtPrice}
+          title={seeded ? fmtPriceLong(nav.priceUsd) : undefined}
+          note={seeded && spotUsd !== null && nav.usesTwap ? `Spot ${fmtPrice(spotUsd)}` : seeded ? undefined : "Pool not seeded"}
+        />
+        <Stat
+          label={
+            <>
+              <Term k="nav" align="start">NAV</Term> per token
+            </>
+          }
+          value={nav.navUsd}
+          format={fmtPrice}
+          title={nav.navUsd !== null ? fmtPriceLong(nav.navUsd) : undefined}
+          note={nav.navUsd === null ? "Starts once tokens circulate" : "Live, from the ledger and the oracle"}
+        />
+        <Stat
+          label={<Term k="mnav">mNAV now</Term>}
+          value={nav.mnav}
+          format={fmtTimes}
+          note={
+            contractMnav !== null
+              ? `Last rebalance ${fmtTimes(contractMnav)}${treasury?.last_rebalance ? `, ${timeAgo(treasury.last_rebalance)}` : ""}`
+              : "No rebalance yet"
+          }
+        />
+        <Stat label="Treasury value" value={nav.assetsUsd} format={fmtUsd} note={`${fmtAmount(nav.circulating)} ${metadata.symbol} circulating`} />
+      </dl>
+
+      <nav aria-label="On this page" className="mt-6 flex gap-1.5 overflow-x-auto pb-1">
         {[
           ["#trade", "Trade", "lg:hidden"],
           ["#treasury", "Treasury", ""],
@@ -258,64 +287,13 @@ export function MemePage({ account }: { account: string }) {
         ))}
       </nav>
 
-      <div className="mt-6 grid gap-x-8 gap-y-10 lg:grid-cols-[minmax(0,1fr)_24rem]">
-        {/* A: the headline story */}
-        <div className="grid min-w-0 gap-5 lg:col-start-1">
-          <dl className="grid gap-4 sm:grid-cols-3">
-            <StatTile
-              tone="bg-white"
-              label={
-                nav.usesTwap ? (
-                  <>
-                    Price (<Term k="twap" align="start">30-min TWAP</Term>)
-                  </>
-                ) : (
-                  "Price (spot)"
-                )
-              }
-              value={seeded ? nav.priceUsd : null}
-              format={fmtPrice}
-              title={seeded ? fmtPriceLong(nav.priceUsd) : undefined}
-              note={seeded && spotUsd !== null && nav.usesTwap ? `Spot ${fmtPrice(spotUsd)}` : seeded ? undefined : "Pool not seeded"}
-            />
-            <StatTile
-              tone="bg-blue-wash"
-              label={
-                <>
-                  <Term k="nav" align="start">NAV</Term> per token
-                </>
-              }
-              value={nav.navUsd}
-              format={fmtPrice}
-              title={nav.navUsd !== null ? fmtPriceLong(nav.navUsd) : undefined}
-              note={nav.navUsd === null ? "Starts once tokens circulate" : "Estimated now from the ledger and the oracle"}
-            />
-            <StatTile
-              tone="bg-golden-wash"
-              label={<Term k="mnav">mNAV now</Term>}
-              value={nav.mnav}
-              format={fmtTimes}
-              badge={zone && <span className={cn("pill border-2 border-ink !bg-white", ZONE_PILL[zone])}>{zoneName(zone)}</span>}
-              note={
-                contractMnav !== null
-                  ? `Last rebalance: ${fmtTimes(contractMnav)}${treasury?.last_rebalance ? `, ${timeAgo(treasury.last_rebalance)}` : ""}`
-                  : "No rebalance yet"
-              }
-            />
-          </dl>
-
-          <div className="card p-4 sm:p-6">
-            <p className="max-w-[60ch] text-lg leading-snug font-extrabold sm:text-xl">
-              {mnavSentence(shownMnav, thresholds, ticker)}
-            </p>
-            <MnavGauge
-              value={shownMnav}
-              thresholds={thresholds}
-              label={nav.mnav !== null ? "mNAV now" : "Last mNAV"}
-              legend
-              className="mt-4"
-            />
-            <p className="mt-4 flex flex-wrap items-center gap-2 text-sm font-semibold text-soft">
+      <div className="mt-6 grid gap-x-8 gap-y-10 lg:grid-cols-[minmax(0,1fr)_23rem]">
+        {/* A: the mNAV story */}
+        <div className="min-w-0 lg:col-start-1">
+          <div className="card p-5 sm:p-6">
+            <p className="max-w-[60ch] text-[1.0625rem] leading-snug font-medium">{mnavSentence(shownMnav, thresholds, ticker)}</p>
+            <MnavGauge value={shownMnav} thresholds={thresholds} label={nav.mnav !== null ? "mNAV now" : "Last mNAV"} legend className="mt-3" />
+            <p className="mt-5 flex flex-wrap items-center gap-2 border-t border-line pt-4 text-sm text-soft">
               <span className={cn("pill", treasury?.redemption_open ? "pill-green" : "")}>
                 Redemption window {treasury?.redemption_open ? "open" : "closed"}
               </span>
@@ -326,19 +304,19 @@ export function MemePage({ account }: { account: string }) {
 
         {/* B: actions, sticky on desktop, right after the story on mobile */}
         <aside id="trade" aria-label="Trade and rebalance" className="scroll-mt-28 lg:col-start-2 lg:row-span-2 lg:row-start-1">
-          <div className="grid gap-5 lg:sticky lg:top-24">
+          <div className="grid gap-4 lg:sticky lg:top-24">
             <TradePanel snap={d} user={user.data ?? null} onDone={reload} />
 
             <div className="card p-4 sm:p-5">
               <p className="type-h3 flex items-center gap-2">
-                <Scale className="size-5" aria-hidden />
+                <Scale className="size-4" aria-hidden />
                 Run the rules
               </p>
-              <p className="mt-1.5 text-sm font-semibold text-soft">
+              <p className="mt-1.5 text-sm text-soft">
                 A rebalance reads the oracle and the average price, then issues, buys back, opens
                 redemption or does nothing. Anyone can call it once per {fmtSecs(params.rebalance_cooldown_secs)}.
               </p>
-              <p className="mt-3 text-sm font-extrabold">
+              <p className="mt-3 text-sm font-medium">
                 {!treasury
                   ? "Treasury view unavailable."
                   : treasury.last_rebalance === 0
@@ -348,7 +326,7 @@ export function MemePage({ account }: { account: string }) {
                       : `Next run available in ${Math.ceil((treasury.next_rebalance - now) / 60)} min.`}
               </p>
               {accountId ? (
-                <Button className="mt-4 w-full" variant="golden" disabled={!canRebalance || rebalancing} onClick={rebalance}>
+                <Button className="mt-4 w-full" variant="outline" disabled={!canRebalance || rebalancing} onClick={rebalance}>
                   {rebalancing ? <span className="dots">Waiting for your wallet</span> : canRebalance ? "Rebalance now" : "Cooling down"}
                 </Button>
               ) : (
@@ -360,8 +338,8 @@ export function MemePage({ account }: { account: string }) {
                 <p
                   role={rebalanceMsg.error ? "alert" : "status"}
                   className={cn(
-                    "mt-3 rounded-xl border-2 p-2.5 text-sm font-bold break-words",
-                    rebalanceMsg.error ? "border-red bg-red-wash text-red-ink" : "border-green bg-green-wash text-green-ink",
+                    "mt-3 rounded-xl p-2.5 text-sm break-words",
+                    rebalanceMsg.error ? "bg-red-wash text-red-ink" : "bg-green-wash text-green-ink",
                   )}
                 >
                   {rebalanceMsg.text}
@@ -400,14 +378,17 @@ export function MemePage({ account }: { account: string }) {
               </>
             }
           >
-            <div className="card p-4 sm:p-6">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <div className="card p-5 sm:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="type-num text-4xl">{nav.cashShare !== null ? `${cashPct.toFixed(1)}%` : "–"}</p>
-                <p className="font-extrabold">{fmtUsd(nav.cashUsd)} in USDC on NEAR</p>
+                <p className="flex items-center gap-2 text-sm font-medium">
+                  <LogoTile logo={PLATFORM_LOGOS.usdc} size={20} decorative rounded="full" className="!ring-0" />
+                  {fmtUsd(nav.cashUsd)} in USDC on NEAR
+                </p>
               </div>
               <div className="relative mt-9 mb-7">
                 <div
-                  className="bar !h-7"
+                  className="bar !h-2.5"
                   role="meter"
                   aria-label="Cash as a share of assets"
                   aria-valuemin={0}
@@ -429,10 +410,10 @@ export function MemePage({ account }: { account: string }) {
                     [refillAt, `Refill ${refillAt * 100}%`, "bottom"],
                   ] as const
                 ).map(([x, label, side]) => (
-                  <span key={label} className="absolute inset-y-[-6px] w-1 -translate-x-1/2 rounded-full bg-ink" style={{ left: barAt(x) }} aria-hidden>
+                  <span key={label} className="absolute inset-y-[-5px] w-px -translate-x-1/2 bg-ink" style={{ left: barAt(x) }} aria-hidden>
                     <span
                       className={cn(
-                        "absolute left-1/2 -translate-x-1/2 text-xs font-extrabold whitespace-nowrap",
+                        "absolute left-1/2 -translate-x-1/2 text-xs font-medium whitespace-nowrap",
                         side === "top" ? "bottom-full mb-1" : "top-full mt-1",
                       )}
                     >
@@ -441,7 +422,7 @@ export function MemePage({ account }: { account: string }) {
                   </span>
                 ))}
               </div>
-              <p className="text-sm font-semibold text-soft">
+              <p className="text-sm text-soft">
                 {nav.cashShare === null
                   ? "No assets yet."
                   : nav.cashShare >= bufferTarget
@@ -454,10 +435,10 @@ export function MemePage({ account }: { account: string }) {
           </Section>
 
           <Section id="sheet" title="Balance sheet">
-            <div className="card p-4 sm:p-6">
-              <table className="w-full text-[0.9375rem]">
+            <div className="card p-5 sm:p-6">
+              <table className="w-full text-sm">
                 <caption className="sr-only">Treasury assets and NAV per token</caption>
-                <tbody>
+                <tbody className="[&>tr:first-child]:border-t-0">
                   <SheetRow k="USDC cash on NEAR" v={fmtUsd(nav.cashUsd)} />
                   <SheetRow k="USDC on treasury chains (ledger)" v={fmtUsd(nav.chainUsdcUsd)} />
                   <SheetRow
@@ -469,7 +450,7 @@ export function MemePage({ account }: { account: string }) {
                   <SheetRow k="NAV per token" v={nav.navUsd !== null ? fmtPriceLong(nav.navUsd) : "–"} strong />
                 </tbody>
               </table>
-              <p className={cn("mt-3 text-sm font-semibold", stale ? "text-orange-ink" : "text-soft")}>
+              <p className={cn("mt-3 text-[0.8125rem]", stale ? "text-orange-ink" : "text-soft")}>
                 {d.price
                   ? `Oracle ${info?.oracle}: ${ticker} ${fmtUsd(stockPrice)}, published ${timeAgo(d.price.publish_time)}.${stale ? " Older than 15 minutes: every mNAV action pauses until it updates; trading continues." : ""}`
                   : `No price for ${ticker} from the oracle${info ? ` ${info.oracle}` : ""}. Stock is valued at zero here until one is published.`}
@@ -482,10 +463,10 @@ export function MemePage({ account }: { account: string }) {
             title="Locked rules"
             intro={d.paramsFromContract ? "Read from get_params. No owner, no setter." : "get_params unavailable: showing the SPEC defaults."}
           >
-            <div className="card p-4 sm:p-6">
-              <table className="w-full text-[0.9375rem]">
+            <div className="card p-5 sm:p-6">
+              <table className="w-full text-sm">
                 <caption className="sr-only">Locked parameters</caption>
-                <tbody>
+                <tbody className="[&>tr:first-child]:border-t-0">
                   <SheetRow k="Issuance above" v={`${fmtTimes(thresholds.issuance)}, at most ${params.max_issuance_bps_per_epoch / 100}% of supply per ${fmtSecs(params.epoch_secs)}`} />
                   <SheetRow k="Issued this epoch" v={epochCap > 0n ? `${fmtRaw(epochIssued, MEME_DECIMALS)} of ${fmtRaw(epochCap, MEME_DECIMALS)}` : "Epoch starts at the first rebalance"} />
                   <SheetRow k="Buyback below" v={`${fmtTimes(thresholds.buyback)}, cash above the ${bufferTarget * 100}% buffer only`} />
@@ -500,7 +481,9 @@ export function MemePage({ account }: { account: string }) {
           </Section>
 
           <Section id="activity" title="Activity">
-            <EventLog account={account} symbol={metadata.symbol} />
+            <div className="card p-3 sm:p-4">
+              <EventLog account={account} symbol={metadata.symbol} />
+            </div>
           </Section>
         </div>
       </div>
