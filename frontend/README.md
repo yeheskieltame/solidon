@@ -2,7 +2,7 @@
 
 The Solidon web front: a marketing **landing site** and the **app** (Markets, Launch, Dashboard and one page per meme with trading and the proof dashboard: NAV, mNAV against the locked thresholds, cash buffer, treasury per chain with ledger vs on-chain balances, event log).
 
-Next.js 16 (App Router, TypeScript), Tailwind CSS 4, shadcn/ui on Base UI, [`motion`](https://motion.dev) for the few animations that need JavaScript, and [`@hot-labs/near-connect`](https://github.com/hot-dao/near-selector) for wallets (HOT, Meteor, MyNearWallet, Intear and others from its manifest). There is no backend: every read goes from the browser to public RPCs.
+Next.js 16 (App Router, TypeScript), Tailwind CSS 4, shadcn/ui on Base UI, [`motion`](https://motion.dev) for the few animations that need JavaScript, and [`@hot-labs/near-connect`](https://github.com/hot-dao/near-selector) for wallets (HOT, Meteor, MyNearWallet, Intear and others from its manifest). Every read goes from the browser to public RPCs. The only server code is the testnet faucet route (`/api/faucet`), which signs with a server-only key.
 
 ## Run
 
@@ -21,7 +21,7 @@ Node 20 or newer. Nothing is installed at the repo root. `*.localhost` resolves 
 | Site | Served at | Routes (`src/app`) | Layout |
 | --- | --- | --- | --- |
 | Landing | `<domain>` | `(landing)/page.tsx` at `/` | `(landing)/layout.tsx`: landing header (Product, How it works, Proof, FAQ, the theme toggle, **Open app**) and footer. No wallet |
-| App | `app.<domain>`, or `/app` on a single host | `(app)/app/*`: `/app` Markets, `/app/launch`, `/app/dashboard`, `/app/meme/[account]` | `(app)/app/layout.tsx`: wallet and toast providers, app header with the tabs, the theme toggle, wallet and "Get test USDC", the rounded content surface, a one-line footer, a bottom tab bar on phones |
+| App | `app.<domain>`, or `/app` on a single host | `(app)/app/*`: `/app` Markets, `/app/launch`, `/app/dashboard`, `/app/meme/[account]` | `(app)/app/layout.tsx`: wallet and toast providers, app header with the tabs, the theme toggle, wallet and "Get test funds", the connect modal, the no-gas banner, the rounded content surface, a one-line footer, a bottom tab bar on phones |
 
 `src/proxy.ts` (Next.js 16 renamed `middleware` to `proxy`) routes by host:
 
@@ -34,7 +34,7 @@ Inside the app, links go through `AppLink` / `useAppHref` (`src/lib/app-link.tsx
 
 ## Configuration
 
-All settings are public `NEXT_PUBLIC_*` variables read at build time. Copy `.env.example` to `.env.local` to change them; the defaults target NEAR testnet on a single host.
+All settings but two are public `NEXT_PUBLIC_*` variables read at build time. Copy `.env.example` to `.env.local` to change them; the defaults target NEAR testnet on a single host.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
@@ -49,6 +49,15 @@ All settings are public `NEXT_PUBLIC_*` variables read at build time. Copy `.env
 | `NEXT_PUBLIC_ROBINHOOD_RPC` | `https://rpc.testnet.chain.robinhood.com` | On-chain treasury balances, Robinhood Chain testnet |
 | `NEXT_PUBLIC_SOLANA_RPC` | `https://api.devnet.solana.com` | On-chain treasury balances, Solana devnet |
 
+Server-only, read at request time by the faucet route and never sent to the browser (no `NEXT_PUBLIC_` prefix, never logged). Set them in `.env.local` locally and as encrypted environment variables on the host:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `FAUCET_ACCOUNT_ID` | none | The testnet account that pays the faucet (e.g. `solidon-faucet.testnet`) |
+| `FAUCET_PRIVATE_KEY` | none | Its full-access key, `ed25519:…`. Without both, `/api/faucet` answers 503 |
+| `FAUCET_DAILY_NEAR` | `5` | NEAR the faucet may send per UTC day, all users together |
+| `FAUCET_IP_PER_HOUR` | `6` | Faucet requests per client IP per hour |
+
 ## Pages
 
 | Route | What it does |
@@ -58,7 +67,7 @@ All settings are public `NEXT_PUBLIC_*` variables read at build time. Copy `.env
 | `/app` Markets | Open stats (treasury value, memes, holding stock, stocks listed), then every meme on the factory as a table on one panel (rows on phones): meme, thesis stock logo, price, NAV per token, mNAV with zone badge and mini gauge, treasury value, chains holding stock. Search, filter chips by thesis stock, sortable column headers |
 | `/app/launch` | A three-step wizard (a stepper, Morpho-style input cards, a stock picker, a live preview panel): `create_meme` (attaches `launch_cost()`), seed the pool (`storage_deposit` of the meme on USDC + `ft_transfer_call` with `{"action":"seed"}`), `init_treasury()`. `?meme=<account>` resumes a launch |
 | `/app/dashboard` | The connected account's portfolio as open stats: value at pool price (and what a full sell returns), value at NAV, USDC balance with the faucet, claimable USDC; a positions table with one row per position with balance, share of the treasury, zone, Claim and a Redeemable badge when the window is open; recent trades by the account on the memes it holds. `?account=<id>` shows any account read-only, also without a wallet |
-| `/app/meme/[account]` | A Morpho market page. Header: the meme icon and ticker beside the thesis stock logo and ticker, the contract account with copy and explorer, the chains it holds on; open stats for price (TWAP), NAV per token, mNAV and treasury value. A sticky section nav (Overview, Treasury, Rules, Activity): the mNAV gauge with a Live / Last rebalance toggle, the mNAV chart when the event log holds at least three rebalances, where the treasury sits per chain, the balance sheet as attribute rows, the cash buffer; the treasury as one grouped table (address, proof type, ledger vs on-chain, in transit); the locked rules (`RulesSection`: the three mNAV thresholds as numbers under one thin axis with the current mNAV marked, then three quiet groups, Supply with the epoch's issuance as a thin bar, Cash and trading, Oracle and timing, and one muted line with the redemption window and "no owner, no setter"); the event table. Beside it, a sticky action panel: Buy / Sell / Redeem tabs, "You pay" and "You receive" input cards with balance and MAX, a summary (network, minimum received, average price, price impact, fee, slippage), one full-width button with the exact action, Get test USDC when short, claim, and Run the rules. One column on phones, with the action panel right after the stats |
+| `/app/meme/[account]` | A Morpho market page. Header: the meme icon and ticker beside the thesis stock logo and ticker, the contract account with copy and explorer, the chains it holds on; open stats for price (TWAP), NAV per token, mNAV and treasury value. A sticky section nav (Overview, Treasury, Rules, Activity): the mNAV gauge with a Live / Last rebalance toggle, the mNAV chart when the event log holds at least three rebalances, where the treasury sits per chain, the balance sheet as attribute rows, the cash buffer; the treasury as one grouped table (address, proof type, ledger vs on-chain, in transit); the locked rules (`RulesSection`: the three mNAV thresholds as numbers under one thin axis with the current mNAV marked, then three quiet groups, Supply with the epoch's issuance as a thin bar, Cash and trading, Oracle and timing, and one muted line with the redemption window and "no owner, no setter"); the event table. Beside it, a sticky action panel: Buy / Sell / Redeem tabs, "You pay" and "You receive" input cards with balance and MAX, a summary (network, minimum received, average price, price impact, fee, slippage), one full-width button with the exact action, Get test funds when short, claim, and Run the rules. One column on phones, with the action panel right after the stats |
 | any other path | `not-found.tsx` |
 
 ## Design system
@@ -100,11 +109,30 @@ Real marks for the eight listed stocks (NVIDIA, Apple, Microsoft, Alphabet, Amaz
 
 The layout language follows Morpho's market pages (app.morpho.org) at the maintainer's request: the dark chrome and single content surface, open stats with dimmed tails, the sticky section nav, attribute rows, chart panels with segmented toggles and the action panel with input cards. No Morpho asset or code is used; everything is rebuilt in CSS and the only images are the logos above. The hero entrance, the stock marquee and the single-open FAQ come from earlier [MotionSites](https://motionsites.ai) prompts (`ledgely`, `scroll-marquee`, `rocket-faq`), now restyled for the dark theme.
 
+## Testnet onboarding: faucet and demo wallet
+
+A new testnet wallet holds 0 NEAR, so any signed call (even the open `mint` on the mock USDC) fails with "does not have enough balance". Two things fix that.
+
+**Gasless faucet** (`src/app/api/faucet/route.ts`, logic in `src/lib/faucet-server.ts`, which imports `server-only`). `POST /api/faucet` with `{"accountId": "...", "memeId"?: "..."}`, no wallet signature. It refuses unless `NEXT_PUBLIC_NETWORK=testnet`, then, signing as `FAUCET_ACCOUNT_ID` through `NEXT_PUBLIC_NEAR_RPC`'s first endpoint (fastnear):
+
+1. validates the account id; a named account must exist on chain, a 64-hex implicit account may be new (the transfer creates it);
+2. sends 0.5 NEAR when the account holds less than 0.3 NEAR;
+3. in one transaction to USDC: `storage_deposit` for the user when it is not registered (paid by the faucet), then `mint` of 1,000 test USDC;
+4. with `memeId` (a meme under the factory account), `storage_deposit` on that meme so a first buy cannot fail on storage.
+
+Limits: one request per account per 10 minutes, `FAUCET_IP_PER_HOUR` per IP, `FAUCET_DAILY_NEAR` NEAR per day, storage deposits above 0.01 NEAR refused, requests run one at a time (one signer, one nonce sequence). The counters are in memory: they reset when the server restarts and are not shared between serverless instances, so a public deployment needs a shared store (KV) and ideally a captcha. The answer is JSON with the transaction hashes (`near`, `usdc`, `meme`) and `notes` for skipped steps; errors are `{"error": "..."}` with a friendly sentence and a status (400, 404, 429 with `retry-after`, 503). Cost per new user: 0.5 NEAR plus 0.00125 NEAR of USDC storage (and 0.00125 per meme) and about 0.001 NEAR of gas.
+
+Every faucet entry point is the same `GetTestFundsButton` ("Get test funds", with the line "Free testnet NEAR for gas + 1,000 test USDC"): the app header, the trade panel when USDC is short (it passes the meme as `memeId`), the Dashboard USDC stat, the Launch seed step, the no-gas banner and the connect modal, which also funds any account id typed in. Progress and the result are toasts with one explorer link per transaction.
+
+**Demo wallet** (`src/lib/demo-wallet.ts`, testnet only). "Try a demo wallet" in the header and the connect modal generates an ed25519 key in the browser with `near-api-js`, uses its implicit account (the hex of the public key), stores `{accountId, secretKey, active}` in `localStorage["solidon-demo-wallet-testnet"]` and calls the faucet to create and fund it. `WalletProvider` (`src/lib/wallet.tsx`) then reports `kind: "demo"`, and `send()` signs each call locally and sends it through RPC: every existing action (create_meme, seed, buy, sell, redeem, claim, rebalance, init_treasury, storage deposits) works with no popup and resolves to the transaction hashes, so success toasts link to the transaction. The header chip shows "Demo" and the account; its menu copies the id, opens NearBlocks, reveals the key behind a warning ("Export key"), disconnects while keeping the key (the button then reads "Resume demo wallet"), or forgets the key after a confirmation. Anyone with access to this browser profile can use that key: it is for free test tokens only.
+
+**Real wallets.** Connect opens Solidon's own modal: the demo wallet first, then each wallet near-connect offers on this network with one line on what it is ("Browser extension", "Web wallet, opens a new tab", "Hardware wallet over USB", …), "More wallets" for near-connect's own picker, and the faucet for any account. When the connected account holds less than 0.05 NEAR, a banner under the header says "Your wallet has no NEAR for gas" with Get test funds, instead of letting the next call fail.
+
 ## Contract calls
 
 | UI | Call |
 | --- | --- |
-| Get test USDC | `usdc.mint({account_id, amount})`: 1,000 USDC |
+| Get test funds | `POST /api/faucet`: the faucet account sends 0.5 NEAR when low, `usdc.storage_deposit` + `usdc.mint({account_id, amount})` (1,000 USDC), optionally `meme.storage_deposit` |
 | Buy | `meme.storage_deposit` on the first buy, then `usdc.ft_transfer_call({receiver_id: meme, amount, msg: {"action":"buy","min_out"}})`, 1 yocto |
 | Sell | `meme.sell({amount, min_out})`, 1 yocto |
 | Redeem (only while `redemption_open`) | `meme.redeem({amount, min_usdc})`, 1 yocto, 150 TGas |
@@ -122,14 +150,15 @@ Every view fails soft. A meme on older contract code without `get_treasury_chain
 
 ## Deploy
 
-It is a standard Next.js app with no server secrets, so any Next.js host works: Vercel with the project root set to `frontend/`, or `npm run build && npm run start` behind a proxy. For the two-domain setup, point both `<domain>` and `app.<domain>` at the same deployment and build with `NEXT_PUBLIC_SITE_URL=https://<domain>` and `NEXT_PUBLIC_APP_URL=https://app.<domain>`: the proxy serves the app on the subdomain and sends `<domain>/app/*` there. Set the `NEXT_PUBLIC_*` variables before building, and point `NEXT_PUBLIC_FACTORY` at the redeployed multichain factory.
+It is a standard Next.js app whose only secrets are the two faucet variables, so any Next.js host with a Node runtime works: Vercel with the project root set to `frontend/`, or `npm run build && npm run start` behind a proxy. For the two-domain setup, point both `<domain>` and `app.<domain>` at the same deployment and build with `NEXT_PUBLIC_SITE_URL=https://<domain>` and `NEXT_PUBLIC_APP_URL=https://app.<domain>`: the proxy serves the app on the subdomain and sends `<domain>/app/*` there. Set the `NEXT_PUBLIC_*` variables before building and `FAUCET_ACCOUNT_ID` / `FAUCET_PRIVATE_KEY` as server environment variables (Vercel: not exposed to the browser), and point `NEXT_PUBLIC_FACTORY` at the redeployed multichain factory.
 
 ## Known limits
 
 - Testnet only. The oracle is a mock with settable prices, and every stock venue is a Solidon synthetic token.
 - The NearBlocks public API is rate limited. The event log reads the latest 10 transactions and falls back to a NearBlocks link.
 - Enter from any chain (NEAR Intents 1Click) is not wired in the UI yet. Buying needs USDC on NEAR.
-- Success toasts link to the signer's account on NearBlocks, not to the transaction: the wallet layer does not return transaction hashes.
+- Success toasts link to the transaction when the signer returns its hash (the demo wallet always does, near-connect wallets usually do); otherwise to the signer's account on NearBlocks.
+- The faucet's rate limits and daily cap live in server memory (see above). The demo wallet's key sits unencrypted in `localStorage`.
 - The Markets table has no 24-hour change column: the contracts keep no price history and the UI does not index trades.
 - There is no price or NAV history chart. The only history the UI can read without an indexer is the event log (the latest 10 transactions from NearBlocks), so the meme page charts mNAV at each `rebalance` event, and only when that log holds at least three of them; otherwise it shows the gauge and the composition. No point is ever interpolated or invented.
 - The Dashboard's activity reads the latest transactions of the memes the account holds (up to three) from the rate-limited NearBlocks API, so it can be empty or unavailable for a minute.
