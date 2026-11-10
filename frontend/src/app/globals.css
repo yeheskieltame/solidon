@@ -443,7 +443,7 @@
       box-shadow 0.15s ease;
   }
   .field::placeholder {
-    color: #8b89ad;
+    color: #6f6d96;
     font-weight: 600;
   }
   .field:focus-visible {
@@ -557,16 +557,16 @@
     transform: none;
   }
   .term:hover .term-tip,
-  .term:focus-visible .term-tip,
+  .term:focus .term-tip,
   .term[data-open="true"] .term-tip {
     opacity: 1;
     transform: translate(-50%, 0) scale(1);
   }
   .term[data-align="start"]:hover .term-tip,
-  .term[data-align="start"]:focus-visible .term-tip,
+  .term[data-align="start"]:focus .term-tip,
   .term[data-align="start"][data-open="true"] .term-tip,
   .term[data-align="end"]:hover .term-tip,
-  .term[data-align="end"]:focus-visible .term-tip,
+  .term[data-align="end"]:focus .term-tip,
   .term[data-align="end"][data-open="true"] .term-tip {
     transform: translate(0, 0) scale(1);
   }
