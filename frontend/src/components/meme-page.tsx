@@ -86,7 +86,7 @@ export function MemePage({ account }: { account: string }) {
   const [fresh, setFresh] = useState(0);
   const snap = useAsync(() => loadMemeCached(account, fresh > 0), [account, fresh]);
   const events = useAsync(() => fetchMemeEvents(account), [account]);
-  const { accountId, send, connect } = useWallet();
+  const { accountId, send, connect, signHint } = useWallet();
   const user = useUserBalances(account, accountId);
   const toast = useToast();
   const [rebalanceMsg, setRebalanceMsg] = useState<{ error: boolean; text: string } | null>(null);
@@ -163,17 +163,17 @@ export function MemePage({ account }: { account: string }) {
   async function rebalance() {
     setRebalancing(true);
     setRebalanceMsg(null);
-    const id = toast.show({ tone: "pending", title: "Running the rules", body: "Confirm it in your wallet." });
+    const id = toast.show({ tone: "pending", title: "Running the rules", body: signHint });
     try {
-      await send([{ receiverId: account, methodName: "rebalance", args: {}, gas: 150, deposit: "0" }]);
+      const [hash] = await send([{ receiverId: account, methodName: "rebalance", args: {}, gas: 150, deposit: "0" }]);
       const text = "Rebalance sent. The outcome appears in the activity log.";
       setRebalanceMsg({ error: false, text });
       toast.update(id, {
         tone: "success",
         title: "Rebalance sent",
         body: "The outcome appears in the activity log.",
-        href: `${NEARBLOCKS}/address/${account}`,
-        hrefLabel: `${metadata.symbol} on NearBlocks`,
+        href: hash ? `${NEARBLOCKS}/txns/${hash}` : `${NEARBLOCKS}/address/${account}`,
+        hrefLabel: hash ? "The transaction on NearBlocks" : `${metadata.symbol} on NearBlocks`,
         confetti: true,
       });
     } catch (e) {

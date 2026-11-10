@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { cn } from "cn";
 import { Logo } from "@/components/logo";
+import { ConnectModal } from "@/components/connect-modal";
+import { GasBanner } from "@/components/gas-banner";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { WalletControls } from "@/components/wallet-controls";
 import { AppLink, useAppPath } from "@/lib/app-link";
@@ -116,6 +118,8 @@ export function AppHeader() {
           </div>
         </div>
       </header>
+      <GasBanner />
+      <ConnectModal />
       <Suspense fallback={<MobileTabs path={null} />}>
         <LiveMobileTabs />
       </Suspense>

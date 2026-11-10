@@ -11,7 +11,7 @@ import { ZoneBadge } from "@/components/mnav-gauge";
 import { Notice } from "@/components/notice";
 import { Stat, StatRow } from "@/components/stat";
 import { useToast } from "@/components/toast";
-import { GetTestUsdcButton } from "@/components/wallet-controls";
+import { FaucetLine, GetTestFundsButton } from "@/components/wallet-controls";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppLink } from "@/lib/app-link";
@@ -34,7 +34,7 @@ const pct = (n: number | null) =>
  * `?account=<id>` shows any account read-only (no claims), which also works without a wallet.
  */
 export function Dashboard() {
-  const { accountId: wallet, ready, connect, send } = useWallet();
+  const { accountId: wallet, ready, connect, send, signHint } = useWallet();
   const viewAs = useSearchParams().get("account")?.trim().toLowerCase() || null;
   const accountId = viewAs ?? wallet;
   const readOnly = !!viewAs && viewAs !== wallet;
@@ -70,14 +70,14 @@ export function Dashboard() {
 
   async function claim(p: Position) {
     setBusy(p.row.account);
-    const id = toast.show({ tone: "pending", title: `Claiming USDC from ${p.row.symbol}`, body: "Confirm it in your wallet." });
+    const id = toast.show({ tone: "pending", title: `Claiming USDC from ${p.row.symbol}`, body: signHint });
     try {
-      await send([{ receiverId: p.row.account, methodName: "claim_usdc", args: {}, gas: 50, deposit: "0" }]);
+      const [hash] = await send([{ receiverId: p.row.account, methodName: "claim_usdc", args: {}, gas: 50, deposit: "0" }]);
       toast.update(id, {
         tone: "success",
         title: `Claimed ${fmtRaw(p.claimable, USDC_DECIMALS, 4)} USDC`,
-        href: accountId ? `${NEARBLOCKS}/address/${accountId}` : undefined,
-        hrefLabel: "Your transactions on NearBlocks",
+        href: hash ? `${NEARBLOCKS}/txns/${hash}` : accountId ? `${NEARBLOCKS}/address/${accountId}` : undefined,
+        hrefLabel: hash ? "The transaction on NearBlocks" : "Your transactions on NearBlocks",
         confetti: true,
       });
     } catch (e) {
@@ -172,7 +172,10 @@ export function Dashboard() {
                     On NEAR
                   </span>
                 ) : (
-                  <GetTestUsdcButton onDone={() => setTick((t) => t + 1)} label="Get test USDC" className="-ml-0.5" />
+                  <span className="grid justify-items-start gap-1.5">
+                    <GetTestFundsButton onDone={() => setTick((t) => t + 1)} className="-ml-0.5" />
+                    <FaucetLine className="text-[0.75rem]" />
+                  </span>
                 )
               }
             />

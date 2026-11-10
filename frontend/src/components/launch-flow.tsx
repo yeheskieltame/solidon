@@ -9,7 +9,7 @@ import { MemeIcon } from "./meme-icon";
 import { MnavGauge } from "./mnav-gauge";
 import { Notice } from "./notice";
 import { useToast } from "./toast";
-import { GetTestUsdcButton, useUsdcBalance } from "./wallet-controls";
+import { FaucetLine, GetTestFundsButton, useUsdcBalance } from "./wallet-controls";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -169,7 +169,7 @@ function StepCard({ n, title, intro, children, next }: { n: number; title: strin
 }
 
 export function LaunchFlow() {
-  const { accountId, connect, send } = useWallet();
+  const { accountId, connect, send, signHint } = useWallet();
   const toast = useToast();
   const router = useRouter();
   const pathname = usePathname();
@@ -221,7 +221,7 @@ export function LaunchFlow() {
   async function run(label: string, pending: string, done: string, fn: () => Promise<void>) {
     setBusy(label);
     setTxErr(null);
-    const id = toast.show({ tone: "pending", title: pending, body: "Confirm it in your wallet." });
+    const id = toast.show({ tone: "pending", title: pending, body: signHint });
     try {
       await fn();
       toast.update(id, {
@@ -570,8 +570,9 @@ export function LaunchFlow() {
                 ) : (
                   connectBtn("Connect a wallet to seed")
                 )}
-                <GetTestUsdcButton onDone={usdc.reload} />
+                <GetTestFundsButton onDone={usdc.reload} />
               </div>
+              {accountId && seedShort && <FaucetLine />}
               <p className="text-[0.8125rem] text-soft">
                 {p?.usdcRegistered
                   ? "One transaction: the USDC transfer that seeds the pool."
