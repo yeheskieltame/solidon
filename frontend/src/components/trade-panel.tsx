@@ -1,18 +1,18 @@
 "use client";
 
-import { Lock, LockOpen, Wallet } from "lucide-react";
+import { ChevronDown, LockOpen, Wallet } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 import { cn } from "cn";
 import { LogoTile } from "./brand-logo";
 import { MemeIcon } from "./meme-icon";
 import { Notice } from "./notice";
-import { Hint } from "./term";
 import { useToast } from "./toast";
 import { FaucetLine, GetTestFundsButton } from "./wallet-controls";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CHAIN_LOGOS, PLATFORM_LOGOS } from "@/lib/brands";
 import { MEME_DECIMALS, NEARBLOCKS, NETWORK, USDC, USDC_DECIMALS } from "@/lib/config";
+import { fmtCompact } from "@/lib/figure";
 import { fmtRaw, fmtUsd, parseUnits, toBig, toDecimalString, toNumber } from "@/lib/format";
 import { PRICE_SCALE, quoteBuy, quoteSell, scaledToUsd, withSlippage } from "@/lib/math";
 import { fmtPrice } from "@/lib/price";
@@ -69,6 +69,7 @@ function Row({ k, v, icon }: { k: ReactNode; v: ReactNode; icon?: ReactNode }) {
 function AmountCard({
   id,
   label,
+  unit,
   icon,
   value,
   onChange,
@@ -76,11 +77,10 @@ function AmountCard({
   balance,
   quick,
   error,
-  disabled,
-  readOnly,
 }: {
   id: string;
   label: string;
+  unit: string;
   icon: ReactNode;
   value: string;
   onChange?: (v: string) => void;
@@ -88,17 +88,18 @@ function AmountCard({
   balance?: string | null;
   quick?: { label: string; value: string | null }[];
   error?: string | null;
-  disabled?: boolean;
-  readOnly?: boolean;
 }) {
   return (
     <div>
       <div className="input-card" data-invalid={!!error || undefined}>
         <div className="flex items-center justify-between gap-3">
           <label htmlFor={id} className="text-[0.9375rem] text-ink-2">
-            {label}
+            {label} <span className="sr-only">{unit}</span>
           </label>
-          {icon}
+          <span className="inline-flex items-center gap-2 text-[0.9375rem] text-ink" aria-hidden>
+            {icon}
+            {unit}
+          </span>
         </div>
         <input
           id={id}
@@ -107,13 +108,9 @@ function AmountCard({
           autoComplete="off"
           placeholder="0.00"
           value={value}
-          disabled={disabled}
-          readOnly={readOnly}
-          tabIndex={readOnly ? -1 : undefined}
           onChange={(e) => onChange?.(e.target.value)}
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-err` : undefined}
-          aria-live={readOnly ? "polite" : undefined}
         />
         <div className="mt-3 flex min-h-7 items-center justify-between gap-3 text-sm">
           <span className="text-soft tabular-nums">{usd}</span>
@@ -125,7 +122,7 @@ function AmountCard({
                   key={q.label}
                   type="button"
                   className="max-chip"
-                  disabled={disabled || q.value === null}
+                  disabled={q.value === null}
                   aria-pressed={q.value !== null && q.value === value}
                   onClick={() => q.value !== null && onChange?.(q.value)}
                 >
@@ -173,10 +170,13 @@ export function TradePanel({
   const [slip, setSlip] = useState(100);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ tone: "quiet" | "error"; text: string } | null>(null);
-  const ids = { buy: useId(), buyOut: useId(), sell: useId(), sellOut: useId(), redeem: useId(), redeemOut: useId() };
+  const [showDetails, setShowDetails] = useState(false);
+  const ids = { buy: useId(), sell: useId(), redeem: useId(), details: useId(), slip: useId() };
 
   const seeded = pool ? toBig(pool.usdc_reserve) > 0n : false;
   const redemptionOpen = !!treasury?.redemption_open;
+  // The Redeem tab exists only while the window is open; fall back to Buy when it closes.
+  const active = tab === "redeem" && !redemptionOpen ? "buy" : tab;
   const explorer = accountId ? `${NEARBLOCKS}/address/${accountId}` : undefined;
 
   async function run(label: string, pending: string, done: string, calls: FnCall[], detail?: string) {
@@ -248,11 +248,7 @@ export function TradePanel({
     user && redeemRaw && redeemRaw > user.meme ? `More than your ${sym} balance.` : null;
 
   const fee = `${params.pool_fee_bps / 100}%`;
-  const feeTip = `${params.treasury_fee_bps / 100}% goes to the treasury, ${params.creator_fee_bps / 100}% to the creator. Taken from the USDC side.`;
-  const memeQuick = [
-    { label: "50%", value: share(user?.meme, 50, MEME_DECIMALS) },
-    { label: "MAX", value: share(user?.meme, 100, MEME_DECIMALS) },
-  ];
+  const memeQuick = [{ label: "MAX", value: share(user?.meme, 100, MEME_DECIMALS) }];
   const memeBalance = user ? `${fmtRaw(user.meme, MEME_DECIMALS)} ${sym}` : null;
   const memeUsd = (raw: bigint | null) => fmtUsd(raw ? toNumber(raw, MEME_DECIMALS) * spotUsd : 0);
   const usdcUsd = (raw: bigint | null, frac = 2) => (raw ? `$${fmtRaw(raw, USDC_DECIMALS, frac)}` : "$0");
@@ -262,11 +258,10 @@ export function TradePanel({
 
   const slippage = (
     <div className="flex items-center justify-between gap-3 py-2 text-sm">
-      <span className="flex items-center gap-1.5 text-ink-2">
-        Slippage
-        <Hint tip="How far the price may move against you before the trade is cancelled instead of filled." align="start" />
+      <span className="text-ink-2" id={ids.slip}>
+        Max slippage
       </span>
-      <span className="seg !p-0.5" role="group" aria-label="Slippage tolerance">
+      <span className="seg !p-0.5" role="group" aria-labelledby={ids.slip}>
         {SLIPPAGES.map((s) => (
           <button key={s} type="button" aria-pressed={slip === s} onClick={() => setSlip(s)} className="!px-2 !py-0.5 !text-[0.8125rem]">
             {s / 100}%
@@ -287,6 +282,36 @@ export function TradePanel({
       }
     />
   );
+
+  /** The one-line answer to "what do I get", then the fine print behind a disclosure. */
+  function quote(line: ReactNode, rows: ReactNode) {
+    return (
+      <div className="px-1">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <p className="text-[0.9375rem] text-ink-2" aria-live="polite">
+            {line}
+          </p>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-md text-sm text-soft hover:text-ink"
+            aria-expanded={showDetails}
+            aria-controls={ids.details}
+            onClick={() => setShowDetails((v) => !v)}
+          >
+            Details
+            <ChevronDown className={cn("size-4 transition-transform", showDetails && "rotate-180")} aria-hidden />
+          </button>
+        </div>
+        <dl id={ids.details} hidden={!showDetails} className="mt-2 border-t border-line pt-1">
+          {rows}
+          {slippage}
+          {network}
+        </dl>
+      </div>
+    );
+  }
+
+  const feeRow = <Row k="Fee" v={`${fee} (${params.treasury_fee_bps / 100}% treasury, ${params.creator_fee_bps / 100}% creator)`} />;
 
   /** One full-width button whose label always says exactly what will happen, or why it cannot. */
   function action(label: string, blocked: string | null, busyKey: string, onClick: () => void, variant: "default" | "golden" | "destructive" = "default") {
@@ -321,7 +346,7 @@ export function TradePanel({
   return (
     <div>
       <Tabs
-        value={tab}
+        value={active}
         onValueChange={(v) => {
           setTab(String(v));
           setMsg(null);
@@ -330,16 +355,19 @@ export function TradePanel({
         <TabsList aria-label="Trade">
           <TabsTrigger value="buy">Buy</TabsTrigger>
           <TabsTrigger value="sell">Sell</TabsTrigger>
-          <TabsTrigger value="redeem">
-            {redemptionOpen ? <LockOpen aria-hidden /> : <Lock aria-hidden />}
-            Redeem
-          </TabsTrigger>
+          {redemptionOpen && (
+            <TabsTrigger value="redeem">
+              <LockOpen aria-hidden />
+              Redeem
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="buy" className="grid gap-3">
           <AmountCard
             id={ids.buy}
-            label="You pay USDC"
+            label="You pay"
+            unit="USDC"
             icon={usdcIcon}
             value={buyIn}
             onChange={setBuyIn}
@@ -348,22 +376,18 @@ export function TradePanel({
             quick={[{ label: "MAX", value: share(user?.usdc, 100, USDC_DECIMALS) }]}
             error={buyErr}
           />
-          <AmountCard id={ids.buyOut} label={`You receive ${sym}`} icon={memeIcon} value={buyOut > 0n ? fmtRaw(buyOut, MEME_DECIMALS) : ""} usd={memeUsd(buyOut)} readOnly />
-          <dl className="panel px-5 py-3">
-            {network}
-            <Row k="Minimum received" v={`${fmtRaw(buyMin, MEME_DECIMALS)} ${sym}`} />
-            <Row k="Average price" v={buyAvg ? fmtPrice(buyAvg) : "–"} />
-            <Row
-              k={
-                <>
-                  Price impact <Hint tip="Average price against the spot price, with the fee included." align="start" />
-                </>
-              }
-              v={buyAvg && spotUsd ? pctText(buyAvg / spotUsd - 1) : "–"}
-            />
-            <Row k={<>Fee <Hint tip={feeTip} align="start" /></>} v={fee} />
-            {slippage}
-          </dl>
+          {quote(
+            <>
+              You get <span className="text-ink tabular-nums" title={`${fmtRaw(buyOut, MEME_DECIMALS)} ${sym}`}>≈ {fmtCompact(toNumber(buyOut, MEME_DECIMALS))} {sym}</span>
+              <span className="text-soft"> · fee {fee}</span>
+            </>,
+            <>
+              <Row k="Minimum received" v={`${fmtRaw(buyMin, MEME_DECIMALS)} ${sym}`} />
+              <Row k="Average price" v={buyAvg ? fmtPrice(buyAvg) : "–"} />
+              <Row k="Price impact, fee included" v={buyAvg && spotUsd ? pctText(buyAvg / spotUsd - 1) : "–"} />
+              {feeRow}
+            </>,
+          )}
           {action(
             `Buy ~${fmtRaw(buyOut, MEME_DECIMALS)} ${sym} for ${buyRaw ? fmtRaw(buyRaw, USDC_DECIMALS) : "0"} USDC`,
             !buyIn.trim() || buyRaw === 0n ? "Enter an amount" : !buyRaw ? "Enter a valid amount" : buyShort ? "Not enough USDC" : buyOut <= 0n ? "Amount too small" : null,
@@ -399,7 +423,8 @@ export function TradePanel({
         <TabsContent value="sell" className="grid gap-3">
           <AmountCard
             id={ids.sell}
-            label={`You sell ${sym}`}
+            label="You sell"
+            unit={sym}
             icon={memeIcon}
             value={sellIn}
             onChange={setSellIn}
@@ -408,22 +433,18 @@ export function TradePanel({
             quick={memeQuick}
             error={sellErr}
           />
-          <AmountCard id={ids.sellOut} label="You receive USDC" icon={usdcIcon} value={sellOut > 0n ? fmtRaw(sellOut, USDC_DECIMALS, 4) : ""} usd={usdcUsd(sellOut, 4)} readOnly />
-          <dl className="panel px-5 py-3">
-            {network}
-            <Row k="Minimum received" v={`${fmtRaw(sellMin, USDC_DECIMALS, 4)} USDC`} />
-            <Row k="Average price" v={sellAvg ? fmtPrice(sellAvg) : "–"} />
-            <Row
-              k={
-                <>
-                  Price impact <Hint tip="Average price against the spot price, with the fee included." align="start" />
-                </>
-              }
-              v={sellAvg && spotUsd ? pctText(sellAvg / spotUsd - 1) : "–"}
-            />
-            <Row k={<>Fee <Hint tip={feeTip} align="start" /></>} v={fee} />
-            {slippage}
-          </dl>
+          {quote(
+            <>
+              You get <span className="text-ink tabular-nums">≈ {fmtRaw(sellOut, USDC_DECIMALS, 4)} USDC</span>
+              <span className="text-soft"> · fee {fee}</span>
+            </>,
+            <>
+              <Row k="Minimum received" v={`${fmtRaw(sellMin, USDC_DECIMALS, 4)} USDC`} />
+              <Row k="Average price" v={sellAvg ? fmtPrice(sellAvg) : "–"} />
+              <Row k="Price impact, fee included" v={sellAvg && spotUsd ? pctText(sellAvg / spotUsd - 1) : "–"} />
+              {feeRow}
+            </>,
+          )}
           {action(
             `Sell ${sellRaw ? fmtRaw(sellRaw, MEME_DECIMALS) : "0"} ${sym} for ~${fmtRaw(sellOut, USDC_DECIMALS, 4)} USDC`,
             !sellIn.trim() || sellRaw === 0n ? "Enter an amount" : !sellRaw ? "Enter a valid amount" : sellErr ? `Not enough ${sym}` : sellOut <= 0n ? "Amount too small" : null,
@@ -439,39 +460,35 @@ export function TradePanel({
           )}
         </TabsContent>
 
+        {redemptionOpen && (
         <TabsContent value="redeem" className="grid gap-3">
-          <p className={cn("flex items-start gap-2.5 px-1 text-sm", redemptionOpen ? "text-green-ink" : "text-soft")}>
-            {redemptionOpen ? <LockOpen className="mt-0.5 size-4 shrink-0" aria-hidden /> : <Lock className="mt-0.5 size-4 shrink-0" aria-hidden />}
-            {redemptionOpen
-              ? "The window is open: mNAV fell below 0.9× at the last rebalance. Burn tokens for NAV per token in USDC from the cash buffer."
-              : "The window is closed. It opens when a rebalance finds mNAV below 0.9×."}
+          <p className="flex items-start gap-2.5 px-1 text-sm text-green-ink">
+            <LockOpen className="mt-0.5 size-4 shrink-0" aria-hidden />
+            The redemption window is open: burn tokens for NAV per token in USDC from the cash buffer.
           </p>
           <AmountCard
             id={ids.redeem}
-            label={`You burn ${sym}`}
+            label="You burn"
+            unit={sym}
             icon={memeIcon}
             value={redeemIn}
             onChange={setRedeemIn}
             usd={memeUsd(redeemRaw)}
             balance={memeBalance}
             quick={memeQuick}
-            disabled={!redemptionOpen}
             error={redeemErr}
           />
-          <AmountCard id={ids.redeemOut} label="You receive USDC, at the last NAV" icon={usdcIcon} value={redeemEst > 0n ? fmtRaw(redeemEst, USDC_DECIMALS, 4) : ""} usd={usdcUsd(redeemEst, 4)} readOnly />
-          <dl className="panel px-5 py-3">
-            {network}
-            <Row k="Minimum received" v={`${fmtRaw(redeemMin, USDC_DECIMALS, 4)} USDC`} />
-            <Row
-              k={
-                <>
-                  Paid at <Hint tip="NAV with a fresh oracle price. If the price is stale or cash runs short, your tokens come back." align="start" />
-                </>
-              }
-              v="NAV per token"
-            />
-            {slippage}
-          </dl>
+          {quote(
+            <>
+              You get <span className="text-ink tabular-nums">≈ {fmtRaw(redeemEst, USDC_DECIMALS, 4)} USDC</span>
+              <span className="text-soft"> at the last NAV</span>
+            </>,
+            <>
+              <Row k="Minimum received" v={`${fmtRaw(redeemMin, USDC_DECIMALS, 4)} USDC`} />
+              <Row k="Paid at" v="NAV with a fresh oracle price" />
+              <p className="py-2 text-[0.8125rem] text-soft">If the oracle price is stale or cash runs short, your tokens come back.</p>
+            </>,
+          )}
           {action(
             `Burn ${redeemRaw ? fmtRaw(redeemRaw, MEME_DECIMALS) : "0"} ${sym} for ~${fmtRaw(redeemEst, USDC_DECIMALS, 4)} USDC`,
             !redemptionOpen ? "Redemption is closed" : !redeemIn.trim() || redeemRaw === 0n ? "Enter an amount" : !redeemRaw ? "Enter a valid amount" : redeemErr ? `Not enough ${sym}` : null,
@@ -487,6 +504,7 @@ export function TradePanel({
             "destructive",
           )}
         </TabsContent>
+        )}
       </Tabs>
 
       {user && user.claimable > 0n && (
