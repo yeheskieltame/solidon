@@ -39,15 +39,16 @@ type ToastApi = {
 
 const ToastContext = createContext<ToastApi | null>(null);
 
-const COLORS = ["#58CC02", "#1CB0F6", "#FFC800", "#FF9600", "#FF4B4B", "#B9A7F5"];
+/** The success moment: a small burst of gold coins (and a few brand-blue ones). */
+const COLORS = ["#F5B700", "#FFD23F", "#F2A900", "#3355FF", "#12A46B"];
 
 function burst(): Piece[] {
-  return Array.from({ length: 26 }, (_, i) => {
-    const angle = (i / 26) * Math.PI * 2 + Math.random() * 0.5;
-    const reach = 70 + Math.random() * 110;
+  return Array.from({ length: 18 }, (_, i) => {
+    const angle = (i / 18) * Math.PI * 2 + Math.random() * 0.5;
+    const reach = 50 + Math.random() * 70;
     return {
       x: Math.cos(angle) * reach,
-      y: Math.sin(angle) * reach - 50,
+      y: Math.sin(angle) * reach - 30,
       r: (Math.random() - 0.5) * 720,
       d: Math.random() * 0.12,
       c: COLORS[i % COLORS.length],
@@ -108,7 +109,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={api}>
       {children}
       <div
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex flex-col items-center gap-3 p-4 sm:inset-x-auto sm:right-0 sm:items-end sm:p-6"
+        className="pointer-events-none fixed inset-x-0 bottom-16 z-50 flex flex-col items-center gap-3 p-4 sm:inset-x-auto sm:right-0 sm:items-end sm:p-6 md:bottom-0"
         aria-live="polite"
       >
         {toasts.map((t) => (
@@ -116,28 +117,28 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             key={`${t.id}-${t.tone}`}
             role={t.tone === "error" ? "alert" : "status"}
             className={cn(
-              "toast pointer-events-auto relative flex w-full max-w-sm items-start gap-3 rounded-2xl border-2 border-ink bg-white p-4 shadow-[0_5px_0_var(--ink)]",
+              "toast pointer-events-auto relative flex w-full max-w-sm items-start gap-3 rounded-2xl border border-line bg-card p-3.5 shadow-[var(--shadow-lg)]",
             )}
           >
             <span
               className={cn(
-                "flex size-9 shrink-0 items-center justify-center rounded-xl border-2 border-ink",
-                t.tone === "success" && "bg-green",
-                t.tone === "error" && "bg-red",
-                t.tone === "pending" && "bg-golden",
+                "flex size-8 shrink-0 items-center justify-center rounded-full",
+                t.tone === "success" && "bg-green-wash text-green-ink",
+                t.tone === "error" && "bg-red-wash text-red-ink",
+                t.tone === "pending" && "bg-page-deep text-ink",
               )}
               aria-hidden
             >
               {t.tone === "success" ? (
-                <Check className="size-5" strokeWidth={3.5} />
+                <Check className="size-4" strokeWidth={2.5} />
               ) : t.tone === "error" ? (
-                <TriangleAlert className="size-5" strokeWidth={3} />
+                <TriangleAlert className="size-4" strokeWidth={2.25} />
               ) : (
-                <LoaderCircle className="size-5 animate-spin" strokeWidth={3} />
+                <LoaderCircle className="size-4 animate-spin" strokeWidth={2.25} />
               )}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="leading-tight font-extrabold">{t.title}</p>
+              <p className="pt-1 leading-tight font-medium">{t.title}</p>
               {t.body && <div className="mt-1 text-sm break-words text-soft">{t.body}</div>}
               {t.href && (
                 <a className="link mt-1.5 inline-block text-sm" href={t.href} target="_blank" rel="noreferrer">
@@ -149,23 +150,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={() => dismiss(t.id)}
-              className="-m-1 flex size-8 shrink-0 items-center justify-center rounded-lg text-soft hover:bg-lilac-wash hover:text-ink"
+              className="-m-1 flex size-8 shrink-0 items-center justify-center rounded-lg text-soft hover:bg-page-deep hover:text-ink"
               aria-label="Dismiss"
             >
-              <X className="size-4" strokeWidth={3} />
+              <X className="size-4" strokeWidth={2} />
             </button>
             {t.pieces.length > 0 && (
-              <span className="pointer-events-none absolute top-6 left-8" aria-hidden>
+              <span className="pointer-events-none absolute top-7 left-7" aria-hidden>
                 {t.pieces.map((p, i) => (
                   <span
                     key={i}
-                    className="confetti"
+                    className="coin"
                     style={
                       {
                         "--x": `${p.x}px`,
                         "--y": `${p.y}px`,
-                        "--r": `${p.r}deg`,
-                        "--d": `${p.d}s`,
+                                                "--d": `${p.d}s`,
                         "--c": p.c,
                       } as CSSProperties
                     }

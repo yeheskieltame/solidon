@@ -51,8 +51,8 @@ export function useUserBalances(account: string, accountId: string | null) {
 function Line({ k, v }: { k: ReactNode; v: string }) {
   return (
     <div className="flex justify-between gap-3 py-1 text-sm">
-      <dt className="font-semibold text-soft">{k}</dt>
-      <dd className="text-right font-extrabold">{v}</dd>
+      <dt className="text-soft">{k}</dt>
+      <dd className="text-right font-medium tabular-nums">{v}</dd>
     </div>
   );
 }
@@ -60,13 +60,13 @@ function Line({ k, v }: { k: ReactNode; v: string }) {
 /** The big "you get" figure and its fine print. */
 function Quote({ label, value, unit, children }: { label: string; value: string; unit: string; children: ReactNode }) {
   return (
-    <div className="rounded-2xl bg-page p-4" aria-live="polite">
-      <p className="text-sm font-bold text-soft">{label}</p>
+    <div className="panel p-4" aria-live="polite">
+      <p className="text-xs text-soft">{label}</p>
       <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
-        <span className="type-num text-[2rem] break-all">{value}</span>
-        <span className="font-extrabold text-soft">{unit}</span>
+        <span className="type-num text-[1.75rem] break-all">{value}</span>
+        <span className="text-sm font-medium text-soft">{unit}</span>
       </p>
-      <dl className="mt-2 border-t-2 border-line pt-2">{children}</dl>
+      <dl className="mt-2 border-t border-line pt-2">{children}</dl>
     </div>
   );
 }
@@ -107,9 +107,9 @@ function AmountField({
           onChange={(e) => onChange(e.target.value)}
           aria-invalid={!!error}
           aria-describedby={`${id}-hint`}
-          className="h-14 pr-24 font-heading text-2xl font-extrabold tracking-tight"
+          className="h-14 pr-24 text-2xl font-semibold tracking-tight tabular-nums"
         />
-        <span className="pointer-events-none absolute top-1/2 right-4 max-w-20 -translate-y-1/2 truncate text-sm font-extrabold text-soft">
+        <span className="pointer-events-none absolute top-1/2 right-4 max-w-20 -translate-y-1/2 truncate text-sm font-medium text-soft">
           {unit}
         </span>
       </div>
@@ -127,7 +127,7 @@ function AmountField({
           </button>
         ))}
       </div>
-      <p id={`${id}-hint`} className={cn("text-sm font-semibold", error ? "text-red-ink" : "text-soft")}>
+      <p id={`${id}-hint`} className={cn("text-[0.8125rem]", error ? "text-red-ink" : "text-soft")}>
         {error ?? hint}
       </p>
     </div>
@@ -239,7 +239,7 @@ export function TradePanel({
   const slippage = (
     <fieldset className="flex flex-wrap items-center gap-2 text-sm">
       <legend className="sr-only">Slippage tolerance</legend>
-      <span className="mr-auto font-bold text-soft">
+      <span className="mr-auto text-soft">
         <Term tip="How far the price may move against you before the trade is cancelled instead of filled." align="start">
           Slippage
         </Term>
@@ -252,12 +252,11 @@ export function TradePanel({
     </fieldset>
   );
 
-  /** One chunky button whose label always says exactly what will happen, or why it cannot. */
+  /** One full-width button whose label always says exactly what will happen, or why it cannot. */
   function action(label: string, blocked: string | null, busyKey: string, onClick: () => void, variant: "default" | "golden" | "destructive" = "default") {
     if (!accountId) {
       return (
         <Button
-          variant="blue"
           size="lg"
           className="w-full"
           onClick={() => connect().catch((e) => toast.show({ tone: "error", title: "Could not open the wallet picker", body: errorText(e) }))}
@@ -277,14 +276,14 @@ export function TradePanel({
 
   if (!seeded) {
     return (
-      <Notice sticker="lander" title="Trading has not opened yet">
+      <Notice title="Trading has not opened yet">
         The creator still has to seed the pool with USDC from the launch page.
       </Notice>
     );
   }
 
   return (
-    <div className="card p-4 sm:p-5">
+    <div className="card p-4 shadow-[var(--shadow-md)] sm:p-5">
       <Tabs
         value={tab}
         onValueChange={(v) => {
@@ -340,13 +339,13 @@ export function TradePanel({
               ]),
           )}
           {accountId && (buyShort || (user && user.usdc === 0n)) && (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-golden-wash p-3">
-              <p className="text-sm font-bold text-golden-ink">Out of USDC? It is free on testnet.</p>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-golden-wash p-3">
+              <p className="text-sm text-golden-ink">Out of USDC? It is free on testnet.</p>
               <GetTestUsdcButton onDone={onDone} />
             </div>
           )}
           {accountId && user && !user.registered && (
-            <p className="text-sm font-semibold text-soft">
+            <p className="text-[0.8125rem] text-soft">
               Your first buy also registers your account on {sym} (0.00125 NEAR storage), so the wallet asks twice.
             </p>
           )}
@@ -380,18 +379,17 @@ export function TradePanel({
                 [{ receiverId: account, methodName: "sell", args: { amount: sellRaw!.toString(), min_out: sellMin.toString() }, gas: 100, deposit: "1" }],
                 "USDC is on its way; if the transfer fails it becomes claimable.",
               ),
-            "golden",
           )}
         </TabsContent>
 
         <TabsContent value="redeem" className="grid gap-4">
           <div
             className={cn(
-              "flex items-start gap-3 rounded-2xl border-2 p-3.5 text-sm font-semibold",
-              redemptionOpen ? "border-green bg-green-wash" : "border-line bg-page text-soft",
+              "flex items-start gap-3 rounded-xl p-3.5 text-sm",
+              redemptionOpen ? "bg-green-wash text-green-ink" : "panel text-soft",
             )}
           >
-            {redemptionOpen ? <LockOpen className="mt-0.5 size-5 shrink-0" aria-hidden /> : <Lock className="mt-0.5 size-5 shrink-0" aria-hidden />}
+            {redemptionOpen ? <LockOpen className="mt-0.5 size-4 shrink-0" aria-hidden /> : <Lock className="mt-0.5 size-4 shrink-0" aria-hidden />}
             <p>
               {redemptionOpen
                 ? "The window is open: mNAV fell below 0.9× at the last rebalance. Burn tokens for NAV per token in USDC from the cash buffer."
@@ -431,10 +429,10 @@ export function TradePanel({
       </Tabs>
 
       {user && user.claimable > 0n && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-golden-wash p-3.5">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-golden-wash p-3.5">
           <p className="text-sm">
-            <span className="font-extrabold">{fmtRaw(user.claimable, USDC_DECIMALS, 4)} USDC</span>{" "}
-            <span className="font-semibold text-golden-ink">waiting for you (creator fees, tips or failed payouts)</span>
+            <span className="font-medium">{fmtRaw(user.claimable, USDC_DECIMALS, 4)} USDC</span>{" "}
+            <span className="text-golden-ink">waiting for you (creator fees, tips or failed payouts)</span>
           </p>
           <Button
             variant="golden"
@@ -453,8 +451,8 @@ export function TradePanel({
         <p
           role={msg.tone === "error" ? "alert" : "status"}
           className={cn(
-            "pop mt-4 rounded-2xl border-2 p-3 text-sm font-bold break-words",
-            msg.tone === "error" ? "border-red bg-red-wash text-red-ink" : "border-green bg-green-wash text-green-ink",
+            "toast mt-4 rounded-xl p-3 text-sm break-words",
+            msg.tone === "error" ? "bg-red-wash text-red-ink" : "bg-green-wash text-green-ink",
           )}
         >
           {msg.text}{" "}

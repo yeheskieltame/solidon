@@ -2,8 +2,8 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
-/** Chunky 3D buttons. The look lives in `.btn*` (globals.css); this maps the variants. */
-const buttonVariants = cva("btn [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5", {
+/** Pill buttons. The look lives in `.btn*` (globals.css); this maps the shadcn variants. */
+const buttonVariants = cva("btn [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4", {
   variants: {
     variant: {
       default: "",

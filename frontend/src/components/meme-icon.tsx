@@ -1,12 +1,20 @@
 import { cn } from "cn";
 
-const TINTS = ["#FFC800", "#58CC02", "#1CB0F6", "#FF9600", "#B9A7F5", "#FF8FB1"];
+/** Soft two-stop gradients for memes without an icon, picked from the symbol. */
+const TINTS = [
+  ["#FFE08A", "#F5B700"],
+  ["#C9D4FF", "#5C7CFF"],
+  ["#BDF0D8", "#12A46B"],
+  ["#FFD2B3", "#F08A24"],
+  ["#DCD2FF", "#7457E8"],
+  ["#FFC9D6", "#E5487A"],
+];
 
-/** The meme's on-chain icon (a data URL from `ft_metadata`), or its symbol as a sticker monogram. */
+/** The meme's on-chain icon (a data URL from `ft_metadata`), or a gradient monogram of its symbol. */
 export function MemeIcon({
   icon,
   symbol,
-  size = 48,
+  size = 40,
   className,
 }: {
   icon: string | null | undefined;
@@ -17,24 +25,22 @@ export function MemeIcon({
   const safe = icon && /^data:image\/(png|jpeg|webp|gif|svg\+xml);/.test(icon) ? icon : null;
   let hash = 0;
   for (const ch of symbol) hash = (hash * 31 + ch.charCodeAt(0)) % 997;
+  const [a, b] = TINTS[hash % TINTS.length];
   return (
     <span
-      className={cn(
-        "inline-flex shrink-0 -rotate-3 items-center justify-center overflow-hidden border-2 border-ink shadow-[0_3px_0_var(--ink)]",
-        className,
-      )}
+      className={cn("inline-flex shrink-0 items-center justify-center overflow-hidden ring-1 ring-black/5 ring-inset", className)}
       style={{
         width: size,
         height: size,
-        borderRadius: size * 0.3,
-        background: safe ? "#fff" : TINTS[hash % TINTS.length],
+        borderRadius: Math.round(size * 0.3),
+        background: safe ? "#fff" : `linear-gradient(140deg, ${a}, ${b})`,
       }}
     >
       {safe ? (
         // eslint-disable-next-line @next/next/no-img-element -- on-chain data URL
         <img src={safe} alt="" width={size} height={size} className="size-full object-cover" />
       ) : (
-        <span className="font-heading font-black tracking-tight" style={{ fontSize: size * 0.36 }} aria-hidden>
+        <span className="font-heading font-[650] tracking-tight text-ink" style={{ fontSize: size * 0.36 }} aria-hidden>
           {symbol.slice(0, 2)}
         </span>
       )}

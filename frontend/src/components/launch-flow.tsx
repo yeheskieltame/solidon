@@ -1,14 +1,13 @@
 "use client";
 
 import { ArrowRight, Check, Wallet } from "lucide-react";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useId, useState, type ReactNode } from "react";
 import { cn } from "cn";
+import { ChainStack, StockLogo } from "./brand-logo";
 import { MemeIcon } from "./meme-icon";
 import { MnavGauge } from "./mnav-gauge";
 import { Notice } from "./notice";
-import { Sticker } from "./sticker";
 import { useToast } from "./toast";
 import { GetTestUsdcButton, useUsdcBalance } from "./wallet-controls";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -19,6 +18,8 @@ import { KNOWN_CHAINS, chainMeta } from "@/lib/chains";
 import { FACTORY, NEARBLOCKS, USDC, USDC_DECIMALS } from "@/lib/config";
 import { fmtAmount, fmtRaw, parseUnits, toBig, toDecimalString, toNumber } from "@/lib/format";
 import { factory, tryView, type FtMetadata, type MemeInfo, type PoolView, type Stock, type StorageBalance, type TreasuryChainsRaw } from "@/lib/near";
+import { AppLink } from "@/lib/app-link";
+import { STOCK_LOGOS } from "@/lib/brands";
 import { useAsync } from "@/lib/use-async";
 import { TESTNET_VENUES } from "@/lib/venues";
 import { errorText, useWallet } from "@/lib/wallet";
@@ -115,31 +116,31 @@ function Stepper({ current }: { current: number }) {
             key={s.title}
             aria-current={state === "active" ? "step" : undefined}
             className={cn(
-              "relative flex flex-col items-start gap-1.5 rounded-2xl border-2 p-2.5 transition-colors sm:flex-row sm:items-center sm:gap-2.5 sm:p-3",
-              state === "active" && "border-ink bg-white shadow-[0_4px_0_var(--ink)]",
-              state === "done" && "border-green bg-green-wash",
+              "relative flex flex-col items-start gap-1.5 rounded-2xl border p-2.5 transition-[background-color,border-color,box-shadow] duration-300 sm:flex-row sm:items-center sm:gap-3 sm:p-3",
+              state === "active" && "border-line-strong bg-card shadow-[var(--shadow-md)]",
+              state === "done" && "border-line bg-card",
               state === "todo" && "border-dashed border-line-strong",
             )}
           >
             <span
               className={cn(
-                "flex size-9 shrink-0 items-center justify-center rounded-xl border-2 font-heading text-lg font-black",
-                state === "active" && "border-ink bg-golden",
-                state === "done" && "border-ink bg-green",
-                state === "todo" && "border-line-strong text-soft",
+                "flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold tabular-nums transition-colors duration-300",
+                state === "active" && "bg-ink text-white",
+                state === "done" && "bg-green-wash text-green-ink",
+                state === "todo" && "bg-page-deep text-soft",
               )}
               aria-hidden
             >
-              {state === "done" ? <Check className="size-5" strokeWidth={3.5} /> : i + 1}
+              {state === "done" ? <Check className="size-4" strokeWidth={2.5} /> : i + 1}
             </span>
             <span className="min-w-0 leading-tight">
-              <span className={cn("block text-[0.8125rem] font-extrabold sm:text-base", state === "todo" && "text-soft")}>
+              <span className={cn("block text-[0.8125rem] font-medium sm:text-sm", state === "todo" && "text-soft")}>
                 {s.title}
                 <span className="sr-only">
                   {state === "done" ? " (done)" : state === "active" ? " (current step)" : " (not yet)"}
                 </span>
               </span>
-              <span className="hidden truncate text-[0.8125rem] font-semibold text-soft sm:block">{s.hint}</span>
+              <span className="hidden truncate text-xs text-soft sm:block">{s.hint}</span>
             </span>
           </li>
         );
@@ -150,13 +151,13 @@ function Stepper({ current }: { current: number }) {
 
 function StepCard({ n, title, intro, children, next }: { n: number; title: string; intro: ReactNode; children: ReactNode; next: string }) {
   return (
-    <section className="card pop p-5 sm:p-7" aria-labelledby={`step-${n}`}>
-      <h2 id={`step-${n}`} className="type-h2 !text-[clamp(1.6rem,3vw,2.1rem)]">
+    <section className="card toast p-5 sm:p-7" aria-labelledby={`step-${n}`}>
+      <h2 id={`step-${n}`} className="font-heading text-2xl font-[650] tracking-[-0.03em]">
         {title}
       </h2>
-      <p className="mt-2 max-w-[56ch] font-semibold text-soft">{intro}</p>
+      <p className="mt-1.5 max-w-[60ch] text-soft">{intro}</p>
       <div className="mt-6">{children}</div>
-      <p className="mt-6 flex items-start gap-2 rounded-2xl bg-page p-3 text-sm font-bold">
+      <p className="panel mt-6 flex items-start gap-2 p-3 text-sm">
         <ArrowRight className="mt-0.5 size-4 shrink-0" aria-hidden />
         <span>
           <span className="text-soft">What happens next: </span>
@@ -305,7 +306,6 @@ export function LaunchFlow() {
   const connectBtn = (label: string) => (
     <Button
       type="button"
-      variant="blue"
       size="lg"
       onClick={() => connect().catch((e) => toast.show({ tone: "error", title: "Could not open the wallet picker", body: errorText(e) }))}
     >
@@ -368,7 +368,7 @@ export function LaunchFlow() {
                     aria-describedby={`${ids.symbol}-hint`}
                     aria-invalid={symbol.length > 0 && (!symbolOk || taken.data === true)}
                     required
-                    className="font-heading font-extrabold tracking-tight uppercase"
+                    className="font-medium tracking-wide uppercase"
                   />
                   <p
                     id={`${ids.symbol}-hint`}
@@ -388,7 +388,7 @@ export function LaunchFlow() {
               </div>
 
               <fieldset>
-                <legend className="mb-2 text-sm font-extrabold">Which stock does it believe in?</legend>
+                <legend className="mb-2 text-sm font-medium">Which stock does it believe in?</legend>
                 {stocks.error ? (
                   <Notice tone="error" title="Could not load the stock list">
                     {stocks.error}
@@ -405,10 +405,10 @@ export function LaunchFlow() {
                       <label
                         key={s.ticker}
                         className={cn(
-                          "cursor-pointer rounded-2xl border-2 p-3 transition-[transform,box-shadow,border-color,background-color] duration-150 ease-[var(--ease-spring)] has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink",
+                          "flex cursor-pointer items-center gap-3 rounded-2xl border p-3 transition-[transform,box-shadow,border-color,background-color] duration-300 ease-[var(--ease-spring)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-blue",
                           ticker === s.ticker
-                            ? "-translate-y-0.5 border-ink bg-golden shadow-[0_4px_0_var(--ink)]"
-                            : "border-line bg-white shadow-[0_3px_0_var(--line)] hover:-translate-y-0.5 hover:border-line-strong",
+                            ? "-translate-y-0.5 border-ink bg-card shadow-[var(--shadow-md)] ring-1 ring-ink"
+                            : "border-line bg-card hover:-translate-y-0.5 hover:border-line-strong hover:shadow-[var(--shadow-sm)]",
                         )}
                       >
                         <input
@@ -419,16 +419,19 @@ export function LaunchFlow() {
                           onChange={() => setTicker(s.ticker)}
                           className="sr-only"
                         />
-                        <span className="block font-heading text-lg font-black tracking-tight">{s.ticker}</span>
-                        <span className={cn("block truncate text-[0.8125rem] font-bold", ticker === s.ticker ? "text-ink" : "text-soft")}>
-                          {TESTNET_VENUES[s.ticker]?.name ?? "Listed stock"}
+                        <StockLogo ticker={s.ticker} size={32} decorative />
+                        <span className="min-w-0 leading-tight">
+                          <span className="block text-sm font-medium">{s.ticker}</span>
+                          <span className="block truncate text-xs text-soft">
+                            {STOCK_LOGOS[s.ticker]?.name ?? TESTNET_VENUES[s.ticker]?.name ?? "Listed stock"}
+                          </span>
                         </span>
                       </label>
                     ))}
                   </div>
                 )}
                 {selected && (
-                  <p className="mt-2 text-sm font-semibold text-soft">
+                  <p className="mt-2 text-[0.8125rem] text-soft">
                     The treasury buys {selected.ticker} on: {stockChains(selected).join(", ") || "none listed"}.
                     {!selected.venues && " This factory runs earlier code that lists no treasury venues."}
                   </p>
@@ -454,12 +457,12 @@ export function LaunchFlow() {
                     }
                   }}
                 />
-                <p id={`${ids.icon}-hint`} className={cn("text-sm font-semibold", iconErr ? "text-red-ink" : "text-soft")}>
+                <p id={`${ids.icon}-hint`} className={cn("text-[0.8125rem]", iconErr ? "text-red-ink" : "text-soft")}>
                   {iconErr ?? "Resized to 64×64 and stored on-chain in the token metadata (8 KB max)."}
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-t-2 border-line pt-5">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-line pt-5">
                 {accountId ? (
                   <Button type="submit" size="lg" className="whitespace-normal" disabled={!formValid || !!busy}>
                     {busy === "launch" ? <span className="dots">Waiting for your wallet</span> : (formBlocked ?? `Create ${symbol} for ${costLabel}`)}
@@ -467,7 +470,7 @@ export function LaunchFlow() {
                 ) : (
                   connectBtn("Connect a wallet to launch")
                 )}
-                <span className="text-sm font-semibold text-soft">
+                <span className="text-[0.8125rem] text-soft">
                   Costs {costLabel}, which pays for the contract&apos;s storage.
                 </span>
               </div>
@@ -479,9 +482,9 @@ export function LaunchFlow() {
             title="Seed the pool"
             intro={
               <>
-                <Link className="link" href={`/meme/${target}`}>
+                <AppLink className="link" href={`/meme/${target}`}>
                   {target}
-                </Link>{" "}
+                </AppLink>{" "}
                 is live with every rule locked. Your USDC becomes its first liquidity. Only the creator can seed, once.
               </>
             }
@@ -504,9 +507,9 @@ export function LaunchFlow() {
                     onChange={(e) => setSeed(e.target.value)}
                     aria-describedby={`${ids.seed}-hint`}
                     aria-invalid={seed !== "" && !seedRaw}
-                    className="h-14 pr-20 font-heading text-2xl font-extrabold tracking-tight"
+                    className="h-14 pr-20 text-2xl font-semibold tracking-tight tabular-nums"
                   />
-                  <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-sm font-extrabold text-soft">USDC</span>
+                  <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-sm font-medium text-soft">USDC</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quick seed amounts">
                   {["100", "500", "1000"].map((v) => (
@@ -523,9 +526,9 @@ export function LaunchFlow() {
                     Max
                   </button>
                 </div>
-                <p id={`${ids.seed}-hint`} className="text-sm font-semibold text-soft">
+                <p id={`${ids.seed}-hint`} className="text-[0.8125rem] text-soft">
                   All 1,000,000,000 tokens start in the pool, so the opening price is{" "}
-                  <span className="font-extrabold text-ink">
+                  <span className="font-medium text-ink">
                     {seedRaw ? `$${fmtAmount(toNumber(seedRaw, USDC_DECIMALS) / 1e9)}` : "seed ÷ 1,000,000,000"}
                   </span>{" "}
                   per token. Your balance: {usdc.data != null ? `${fmtRaw(usdc.data, USDC_DECIMALS)} USDC` : "–"}.
@@ -554,9 +557,9 @@ export function LaunchFlow() {
                 ) : (
                   connectBtn("Connect a wallet to seed")
                 )}
-                <GetTestUsdcButton onDone={usdc.reload} size="default" />
+                <GetTestUsdcButton onDone={usdc.reload} />
               </div>
-              <p className="text-sm font-semibold text-soft">
+              <p className="text-[0.8125rem] text-soft">
                 {p?.usdcRegistered
                   ? "One transaction: the USDC transfer that seeds the pool."
                   : "Two transactions: registering the meme on USDC (0.00125 NEAR storage), then the transfer that seeds the pool."}
@@ -578,29 +581,29 @@ export function LaunchFlow() {
               ) : (
                 connectBtn("Connect a wallet to open it")
               )}
-              <span className="text-sm font-semibold text-soft">Free apart from gas. Calls init_treasury().</span>
+              <span className="text-[0.8125rem] text-soft">Free apart from gas. Calls init_treasury().</span>
             </div>
           </StepCard>
         ) : (
-          <section className="card pop relative overflow-hidden p-6 sm:p-8" aria-labelledby="launched">
-            <Sticker name="astronaut" className="absolute -right-4 -bottom-16 w-40 rotate-6 sm:w-52" />
+          <section className="card toast relative isolate overflow-hidden p-6 sm:p-8" aria-labelledby="launched">
+            <div className="glow -z-10 -right-10 -bottom-16 h-48 w-64 bg-[#ffd76a]" aria-hidden />
             <div className="relative max-w-[32rem]">
               <span className="pill pill-green">All three steps done</span>
-              <h2 id="launched" className="type-h2 mt-3">
-                {p?.meta?.symbol ?? "Your meme"} has lifted off.
+              <h2 id="launched" className="type-h1 mt-3">
+                {p?.meta?.symbol ?? "Your meme"} is live.
               </h2>
-              <p className="mt-3 font-semibold text-soft">
+              <p className="mt-3 text-soft">
                 {p?.treasury === "unsupported"
                   ? "It is seeded and tradable. This meme runs earlier contract code without a multichain treasury."
                   : "It is seeded, its treasury addresses exist, and every trade now feeds the balance sheet."}
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
-                <Link href={`/meme/${target}`} className={buttonVariants({ size: "lg" })}>
+                <AppLink href={`/meme/${target}`} className={buttonVariants({ size: "lg" })}>
                   Open {p?.meta?.symbol ?? "the meme"}
-                </Link>
-                <Link href="/launch" className={buttonVariants({ variant: "outline", size: "lg" })}>
+                </AppLink>
+                <AppLink href="/launch" className={buttonVariants({ variant: "outline", size: "lg" })}>
                   Launch another
-                </Link>
+                </AppLink>
               </div>
             </div>
           </section>
@@ -609,57 +612,60 @@ export function LaunchFlow() {
 
       <aside className="grid content-start gap-5" aria-label="Preview and details">
         <div>
-          <p className="mb-2 text-sm font-extrabold">{p?.exists ? "Your meme" : "Live preview"}</p>
-          <div className="card flex flex-col gap-4 p-5">
+          <p className="mb-2 text-sm font-medium">{p?.exists ? "Your meme" : "Live preview"}</p>
+          <div className="card flex flex-col gap-4 p-5 shadow-[var(--shadow-md)]">
             <div className="flex items-start gap-3">
-              <MemeIcon icon={pvIcon} symbol={pvSymbol} size={56} />
+              <MemeIcon icon={pvIcon} symbol={pvSymbol} size={48} />
               <div className="min-w-0 flex-1">
-                <p className={cn("truncate font-heading text-2xl leading-tight font-black tracking-tight", !p?.meta && !symbol && "text-soft")}>{pvSymbol}</p>
-                <p className="truncate text-sm font-semibold text-soft">{pvName}</p>
+                <p className={cn("truncate text-xl leading-tight font-semibold tracking-tight", !p?.meta && !symbol && "text-faint")}>{pvSymbol}</p>
+                <p className="truncate text-sm text-soft">{pvName}</p>
               </div>
             </div>
-            <p className="text-[0.9375rem] font-semibold">
+            <p className="flex flex-wrap items-center gap-1.5 text-sm">
               {pvTicker ? (
                 <>
-                  Holds <span className="font-extrabold">{pvTicker}</span>
-                  {TESTNET_VENUES[pvTicker] && <span className="text-soft"> ({TESTNET_VENUES[pvTicker].name})</span>}
+                  Holds
+                  <StockLogo ticker={pvTicker} size={20} decorative />
+                  <span className="font-medium">{pvTicker}</span>
+                  {TESTNET_VENUES[pvTicker] && <span className="text-soft">({TESTNET_VENUES[pvTicker].name})</span>}
+                  <ChainStack chains={["base", "robinhood", "solana"]} size={18} className="ml-auto" />
                 </>
               ) : (
                 <span className="text-soft">Pick a stock to hold</span>
               )}
             </p>
             <dl className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl bg-page px-2.5 py-2">
-                <dt className="text-xs font-bold text-soft">{p?.seeded ? "USDC in the pool" : "Opening price"}</dt>
+              <div className="panel px-3 py-2">
+                <dt className="text-xs text-soft">{p?.seeded ? "USDC in the pool" : "Opening price"}</dt>
                 <dd className="type-num mt-1 text-[1.0625rem]">
                   {!pvSeed ? "–" : p?.seeded ? fmtAmount(pvSeed) : `$${fmtAmount(pvSeed / 1e9)}`}
                 </dd>
               </div>
-              <div className="rounded-xl bg-page px-2.5 py-2">
-                <dt className="text-xs font-bold text-soft">Supply</dt>
+              <div className="panel px-3 py-2">
+                <dt className="text-xs text-soft">Supply</dt>
                 <dd className="type-num mt-1 text-[1.0625rem]">1B</dd>
               </div>
             </dl>
             <MnavGauge value={null} size="sm" />
-            <p className="text-xs font-semibold break-all text-soft">
+            <p className="text-xs break-all text-soft">
               {target && p?.exists ? target : (candidate ?? `ticker.${FACTORY}`)}
             </p>
             {p?.exists && target && (
-              <Link href={`/meme/${target}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+              <AppLink href={`/meme/${target}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
                 Open its page
-              </Link>
+              </AppLink>
             )}
           </div>
         </div>
 
         <div className="card p-5">
           <p className="type-h3">What it costs</p>
-          <ul className="mt-2 grid gap-1.5 text-sm font-semibold text-soft">
+          <ul className="mt-2 grid gap-1.5 text-sm text-soft">
             <li>
-              <span className="font-extrabold text-ink">{costLabel}</span> to create the contract (storage)
+              <span className="font-medium text-ink">{costLabel}</span> to create the contract (storage)
             </li>
             <li>
-              <span className="font-extrabold text-ink">Your seed USDC</span>, which becomes the pool&apos;s liquidity
+              <span className="font-medium text-ink">Your seed USDC</span>, which becomes the pool&apos;s liquidity
             </li>
             <li>Gas for three transactions</li>
           </ul>
@@ -667,7 +673,7 @@ export function LaunchFlow() {
 
         <div className="card p-5">
           <p className="type-h3">What gets locked</p>
-          <p className="mt-2 text-sm font-semibold text-soft">
+          <p className="mt-2 text-sm text-soft">
             1% pool fee (0.8% treasury, 0.2% creator), issuance above 2.0× mNAV capped at 1% of
             supply a day, buyback below 1.0×, redemption below 0.9×, 20% cash buffer. The meme has
             no owner and no setter.
@@ -680,13 +686,13 @@ export function LaunchFlow() {
             <ul className="mt-2 grid gap-1 text-sm">
               {mine.data!.map((m) => (
                 <li key={m}>
-                  <Link href={`/launch?meme=${m}`} className={cn("link break-all", m === target && "text-ink")} aria-current={m === target ? "page" : undefined}>
+                  <AppLink href={`/launch?meme=${m}`} className={cn("link break-all", m === target && "text-ink")} aria-current={m === target ? "page" : undefined}>
                     {m}
-                  </Link>
+                  </AppLink>
                 </li>
               ))}
             </ul>
-            <p className="mt-2 text-xs font-semibold text-soft">Pick one to continue its setup.</p>
+            <p className="mt-2 text-xs text-soft">Pick one to continue its setup.</p>
           </div>
         )}
       </aside>
