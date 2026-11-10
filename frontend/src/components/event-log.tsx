@@ -4,6 +4,7 @@ import {
   ArrowDownLeft,
   ArrowLeftRight,
   ArrowUpRight,
+  BadgeCheck,
   CircleSlash,
   Flame,
   HandCoins,
@@ -11,6 +12,7 @@ import {
   PenLine,
   RefreshCw,
   Scale,
+  Send,
   Sparkles,
   Sprout,
   Undo2,
@@ -20,6 +22,7 @@ import { cn } from "cn";
 import { Notice } from "./notice";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { chainMeta } from "@/lib/chains";
 import { MEME_DECIMALS, NEARBLOCKS, USDC_DECIMALS } from "@/lib/config";
 import { fmtRaw, shortAddr, timeAgo, toBig } from "@/lib/format";
 import { fetchMemeEvents, type MemeEvent } from "@/lib/events";
@@ -42,7 +45,20 @@ const KINDS: Record<string, { label: string; icon: LucideIcon; tint: string }> =
   evm_tx_rejected: { label: "Signature rejected", icon: CircleSlash, tint: "bg-red" },
   buy_stock_skipped: { label: "Stock buy skipped", icon: CircleSlash, tint: "bg-lilac-wash" },
   signature_cleared: { label: "Signature slot cleared", icon: PenLine, tint: "bg-lilac-wash" },
+  solana_tx_signed: { label: "Solana tx signed", icon: PenLine, tint: "bg-blue" },
+  solana_tx_rejected: { label: "Solana signature rejected", icon: CircleSlash, tint: "bg-red" },
+  solana_accounts: { label: "Solana token accounts set", icon: Landmark, tint: "bg-blue" },
+  cash_sent: { label: "Cash sent to a chain", icon: Send, tint: "bg-blue" },
+  cash_credited: { label: "Cash arrived", icon: BadgeCheck, tint: "bg-green" },
+  cash_returned: { label: "Cash returned", icon: Undo2, tint: "bg-lilac-wash" },
+  cash_rejected: { label: "Cash proof rejected", icon: CircleSlash, tint: "bg-red" },
+  fund_chain_skipped: { label: "Funding skipped", icon: CircleSlash, tint: "bg-lilac-wash" },
 };
+
+function chainName(v: unknown) {
+  const name = String(v ?? "");
+  return chainMeta(name)?.label ?? name;
+}
 
 function usdc(v: unknown) {
   return `${fmtRaw(toBig(v as string), USDC_DECIMALS, 4)} USDC`;
@@ -81,9 +97,22 @@ function describe(e: MemeEvent, sym: string): string {
     case "ft_transfer":
       return `${meme(d.amount, sym)} from ${d.old_owner_id} to ${d.new_owner_id}`;
     case "treasury":
-      return String(d.evm_address ?? "");
+      return String(d.evm_address ?? d.solana_address ?? "");
     case "evm_tx_signed":
-      return `${d.chain}, nonce ${d.nonce}`;
+      return `${chainName(d.chain)}, nonce ${d.nonce}`;
+    case "solana_tx_signed":
+      return `${chainName(d.chain)}, ${d.kind ? `${String(d.kind).replace(/_/g, " ")}, ` : ""}sequence ${d.seq}`;
+    case "cash_sent":
+      return `${usdc(d.amount)} on its way to ${chainName(d.chain)}`;
+    case "cash_credited":
+      return `${usdc(d.amount)} credited on ${chainName(d.chain)}, ${d.proof === "mpc" ? "proven by the MPC" : "reported by the relayer"}`;
+    case "cash_returned":
+      return `${usdc(d.amount)} came back from ${chainName(d.chain)}`;
+    case "cash_rejected":
+      return `${chainName(d.chain)}: the transfer proof did not verify`;
+    case "fund_chain_skipped":
+    case "buy_stock_skipped":
+      return `${chainName(d.chain)}: ${d.reason ?? "skipped"}`;
     default:
       return JSON.stringify(d).slice(0, 140);
   }
@@ -149,7 +178,7 @@ export function EventLog({ account, symbol }: { account: string; symbol: string 
                       title={e.txHash}
                     >
                       {e.time ? timeAgo(e.time) : shortAddr(e.txHash)}
-                      <span className="sr-only"> , transaction on NearBlocks (opens in a new tab)</span>
+                      <span className="sr-only">: transaction on NearBlocks (opens in a new tab)</span>
                     </a>
                   </p>
                   <p className="text-sm font-semibold break-words text-soft">{describe(e, symbol)}</p>

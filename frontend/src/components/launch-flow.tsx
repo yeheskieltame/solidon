@@ -583,7 +583,7 @@ export function LaunchFlow() {
           </StepCard>
         ) : (
           <section className="card pop relative overflow-hidden p-6 sm:p-8" aria-labelledby="launched">
-            <Sticker name="rocket" className="absolute -right-6 -bottom-8 w-44 rotate-12 opacity-90 sm:w-56" />
+            <Sticker name="astronaut" className="absolute -right-4 -bottom-16 w-40 rotate-6 sm:w-52" />
             <div className="relative max-w-[32rem]">
               <span className="pill pill-green">All three steps done</span>
               <h2 id="launched" className="type-h2 mt-3">
@@ -630,8 +630,10 @@ export function LaunchFlow() {
             </p>
             <dl className="grid grid-cols-2 gap-2">
               <div className="rounded-xl bg-page px-2.5 py-2">
-                <dt className="text-xs font-bold text-soft">Opening price</dt>
-                <dd className="type-num mt-1 text-[1.0625rem]">{pvSeed ? `$${fmtAmount(pvSeed / 1e9)}` : "–"}</dd>
+                <dt className="text-xs font-bold text-soft">{p?.seeded ? "USDC in the pool" : "Opening price"}</dt>
+                <dd className="type-num mt-1 text-[1.0625rem]">
+                  {!pvSeed ? "–" : p?.seeded ? fmtAmount(pvSeed) : `$${fmtAmount(pvSeed / 1e9)}`}
+                </dd>
               </div>
               <div className="rounded-xl bg-page px-2.5 py-2">
                 <dt className="text-xs font-bold text-soft">Supply</dt>
