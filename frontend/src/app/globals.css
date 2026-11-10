@@ -135,6 +135,7 @@
     @apply font-sans;
     font-feature-settings: "tnum" 1, "cv11" 1;
     -webkit-text-size-adjust: 100%;
+    overflow-x: clip;
     scroll-behavior: smooth;
     scroll-padding-top: calc(var(--header-h) + 5rem);
   }
@@ -270,7 +271,7 @@
     white-space: nowrap;
   }
   .stat-value[data-size="md"] {
-    font-size: clamp(1.75rem, 2.6vw, 2.25rem);
+    font-size: clamp(1.75rem, 2.7vw, 2.5rem);
   }
   .fig-dim {
     color: var(--faint);
