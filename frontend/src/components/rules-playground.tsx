@@ -49,19 +49,20 @@ export function RulesPlayground() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-      <div className="card flex flex-col p-5 sm:p-7">
+      <div className="panel flex flex-col p-5 sm:p-8">
         <p className="text-sm text-soft">
           <Term k="mnav" align="start">
             mNAV
           </Term>{" "}
           = token price ÷ <Term k="nav">NAV</Term> per token
         </p>
-        <p className="type-num mt-4 text-6xl sm:text-7xl" aria-live="polite">
-          {fmtTimes(value)}
+        <p className="stat-value mt-4 !text-6xl sm:!text-7xl" aria-live="polite">
+          {fmtTimes(value).replace("×", "")}
+          <span className="fig-dim">×</span>
         </p>
         <p className="mt-2 min-h-[3em] max-w-[44ch] text-[0.9375rem] text-soft">{mnavSentence(value, undefined, "NVDA")}</p>
         <MnavGauge value={value} label="Example mNAV" className="mt-4" />
-        <label htmlFor={id} className="mt-4 block text-sm font-medium">
+        <label htmlFor={id} className="mt-4 block text-sm text-ink-2">
           Drag the market price
         </label>
         <input
@@ -91,15 +92,15 @@ export function RulesPlayground() {
         <p className="mt-auto pt-5 text-xs text-soft">An example, not a live meme.</p>
       </div>
 
-      <ul className="grid gap-3" aria-label="The locked rules">
+      <ul className="grid content-start border-t border-line" aria-label="The locked rules">
         {RULES.map((r) => {
           const on = r.zone === zone;
           return (
             <li
               key={r.zone}
               className={cn(
-                "flex gap-4 rounded-2xl border p-4 transition-[background-color,border-color,box-shadow,transform] duration-300 ease-[var(--ease-spring)]",
-                on ? "-translate-y-0.5 border-line-strong bg-card shadow-[var(--shadow-md)]" : "border-line bg-card/50",
+                "flex gap-4 border-b border-line py-5 transition-opacity duration-300",
+                on ? "opacity-100" : "opacity-55",
               )}
               aria-current={on || undefined}
             >
@@ -114,16 +115,16 @@ export function RulesPlayground() {
             </li>
           );
         })}
-        <li className="flex items-center gap-4 rounded-2xl border border-dashed border-line-strong p-4">
+        <li className="flex items-center gap-4 py-5">
           <span className="relative flex size-11 shrink-0 items-center justify-center" aria-hidden>
             <svg viewBox="0 0 36 36" className="size-11 -rotate-90">
               <circle cx="18" cy="18" r="15" fill="none" stroke="var(--page-deep)" strokeWidth="4" />
-              <circle cx="18" cy="18" r="15" fill="none" stroke="var(--ink)" strokeWidth="4" strokeDasharray={`${0.2 * 94.25} 94.25`} strokeLinecap="round" />
+              <circle cx="18" cy="18" r="15" fill="none" stroke="var(--blue)" strokeWidth="4" strokeDasharray={`${0.2 * 94.25} 94.25`} strokeLinecap="round" />
             </svg>
-            <span className="absolute text-[0.6875rem] font-semibold">20%</span>
+            <span className="absolute text-[0.6875rem]">20%</span>
           </span>
           <p className="text-sm text-soft">
-            <span className="font-medium text-ink">A 20% cash buffer.</span> USDC kept on NEAR to pay
+            <span className="text-ink">A 20% cash buffer.</span> USDC kept on NEAR to pay
             redemptions. Below 10% a stock sale refills it; buybacks only spend what is above it.
           </p>
         </li>

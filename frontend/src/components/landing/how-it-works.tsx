@@ -5,19 +5,19 @@ import { CHAIN_LOGOS, PLATFORM_LOGOS } from "@/lib/brands";
 const STEPS = [
   {
     title: "Launch a meme",
-    body: "Pick a name, a ticker and the stock it believes in. The factory deploys it as its own contract with every rule locked: no owner, no setter.",
+    body: "Pick a name, a ticker and the stock it believes in. The factory deploys it with every rule locked.",
   },
   {
     title: "People trade it",
-    body: "Each buy and sell pays a 1% fee: 0.8% to the meme's treasury, 0.2% to its creator. Hype fills the balance sheet.",
+    body: "Each trade pays a 1% fee: 0.8% to the treasury, 0.2% to the creator.",
   },
   {
     title: "The treasury buys real stock",
-    body: "The contract sends USDC to its own addresses on Base, Robinhood Chain and Solana and swaps it into the stock. NEAR Chain Signatures signs every swap; nobody holds a key.",
+    body: "USDC goes to the meme's own addresses on three chains and is swapped into the stock. Chain Signatures signs; nobody holds a key.",
   },
   {
     title: "mNAV runs the rules",
-    body: "Once an hour anyone can call rebalance. It compares price with NAV per token and issues, buys back or opens redemption, by fixed thresholds.",
+    body: "Once an hour anyone can call rebalance: it issues, buys back or opens redemption by fixed thresholds.",
   },
 ];
 
@@ -36,12 +36,12 @@ export function HowItWorks() {
           <h2 id="how-title" className="type-h2 max-w-[16ch]">
             From a joke to a treasury company in four steps.
           </h2>
-          <Reveal className="mt-10 grid gap-1" stagger={0.08}>
+          <Reveal className="mt-10 grid border-t border-line" stagger={0.08}>
             {STEPS.map((s, i) => (
               <RevealItem key={s.title}>
-                <div className="group grid grid-cols-[2.25rem_1fr] gap-4 rounded-2xl p-3 transition-colors hover:bg-card">
+                <div className="group grid grid-cols-[2.25rem_1fr] gap-4 border-b border-line py-5">
                   <span
-                    className="flex size-9 items-center justify-center rounded-full border border-line bg-card text-sm font-semibold tabular-nums shadow-[var(--shadow-xs)] transition-[background-color,color,transform] duration-300 group-hover:scale-110 group-hover:bg-ink group-hover:text-white"
+                    className="flex size-8 items-center justify-center rounded-full bg-page-deep text-sm tabular-nums transition-[background-color,color,transform] duration-300 group-hover:scale-110 group-hover:bg-blue group-hover:text-white"
                     aria-hidden
                   >
                     {i + 1}
@@ -60,25 +60,24 @@ export function HowItWorks() {
         </div>
 
         <Reveal className="lg:pt-4" stagger={0.12}>
-          <figure className="card relative overflow-hidden p-5 sm:p-7" aria-labelledby="flow-caption">
-            <div className="halftone absolute inset-0 opacity-60" aria-hidden />
+          <figure className="panel relative overflow-hidden p-5 sm:p-8" aria-labelledby="flow-caption">
             <div className="relative">
               <RevealItem>
-                <div className="mx-auto flex max-w-sm items-center gap-3 rounded-2xl border border-line bg-card p-3 shadow-[var(--shadow-sm)]">
+                <div className="mx-auto flex max-w-sm items-center gap-3 rounded-2xl bg-page-deep p-3">
                   <LogoTile logo={CHAIN_LOGOS.near} size={40} decorative />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium">Meme contract on NEAR</p>
+                    <p className="text-sm">Meme contract on NEAR</p>
                     <p className="text-xs text-soft">Pool, ledger, mNAV rules. 1% fee in USDC</p>
                   </div>
                 </div>
               </RevealItem>
               <Flow />
               <RevealItem>
-                <div className="mx-auto flex max-w-sm items-center gap-3 rounded-2xl border border-ink bg-ink p-3 text-white shadow-[var(--shadow-md)]">
+                <div className="mx-auto flex max-w-sm items-center gap-3 rounded-2xl bg-blue-wash p-3 ring-1 ring-blue/50">
                   <LogoTile logo={PLATFORM_LOGOS.chainSignatures} size={40} decorative className="!ring-0" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium">NEAR Chain Signatures</p>
-                    <p className="text-xs text-white/70">The MPC network signs for the meme&apos;s own addresses</p>
+                    <p className="text-sm">NEAR Chain Signatures</p>
+                    <p className="text-xs text-soft">The MPC network signs for the meme&apos;s own addresses</p>
                   </div>
                 </div>
               </RevealItem>
@@ -86,14 +85,14 @@ export function HowItWorks() {
               <RevealItem>
                 <ul className="grid grid-cols-3 gap-2 sm:gap-3">
                   {VENUES.map((v) => (
-                    <li key={v.chain} className="rounded-2xl border border-line bg-card p-2.5 text-center shadow-[var(--shadow-sm)] sm:p-3.5">
+                    <li key={v.chain} className="rounded-2xl bg-page-deep p-2.5 text-center sm:p-3.5">
                       <ChainLogo chain={v.chain} size={36} decorative className="mx-auto" />
-                      <p className="mt-2 text-[0.8125rem] leading-tight font-medium">{v.net}</p>
+                      <p className="mt-2 text-[0.8125rem] leading-tight">{v.net}</p>
                       <p className="mt-2 flex items-center justify-center gap-1 text-[0.6875rem] text-soft sm:text-xs">
                         <LogoTile logo={v.venue} size={16} decorative />
                         <span className="max-sm:sr-only">{v.venueName}</span>
                       </p>
-                      <p className="mt-2 flex items-center justify-center gap-1 border-t border-line pt-2 text-xs font-medium">
+                      <p className="mt-2 flex items-center justify-center gap-1 border-t border-line-strong pt-2 text-xs">
                         <StockLogo ticker="NVDA" size={16} decorative />
                         NVDA
                       </p>
@@ -103,8 +102,8 @@ export function HowItWorks() {
               </RevealItem>
             </div>
             <figcaption id="flow-caption" className="relative mt-5 text-center text-[0.8125rem] text-soft">
-              Fees become USDC cash, cash becomes stock on three chains. The ledger books the minimum
-              output of every swap, so it never claims more than the chain holds.
+              Fees become cash, cash becomes stock on three chains. The ledger books the minimum output
+              of every swap.
             </figcaption>
           </figure>
         </Reveal>

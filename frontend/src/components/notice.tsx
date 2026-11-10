@@ -27,15 +27,15 @@ export function Notice({
     <div
       role={tone === "error" ? "alert" : "status"}
       className={cn(
-        "flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5",
-        tone === "error" ? "border-red/25 bg-red-wash" : "border-line bg-card",
+        "flex flex-col gap-3 rounded-[18px] p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5",
+        tone === "error" ? "bg-red-wash" : "bg-panel",
         className,
       )}
     >
       <span
         className={cn(
           "flex size-10 shrink-0 items-center justify-center rounded-xl",
-          tone === "error" ? "bg-card text-red-ink" : "bg-page-deep text-ink-2",
+          tone === "error" ? "bg-page text-red-ink" : "bg-page-deep text-ink-2",
         )}
         aria-hidden
       >

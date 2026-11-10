@@ -56,5 +56,5 @@ export function Stat({
 
 /** A row of open stats sized to their figures: generous gaps, no dividers. */
 export function StatRow({ children, className }: { children: ReactNode; className?: string }) {
-  return <dl className={cn("grid grid-cols-2 gap-x-8 gap-y-9 sm:flex sm:flex-wrap sm:gap-x-14", className)}>{children}</dl>;
+  return <dl className={cn("grid grid-cols-2 gap-x-8 gap-y-9 sm:flex sm:flex-wrap sm:gap-x-11", className)}>{children}</dl>;
 }

@@ -117,7 +117,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             key={`${t.id}-${t.tone}`}
             role={t.tone === "error" ? "alert" : "status"}
             className={cn(
-              "toast pointer-events-auto relative flex w-full max-w-sm items-start gap-3 rounded-2xl border border-line bg-card p-3.5 shadow-[var(--shadow-lg)]",
+              "toast pointer-events-auto relative flex w-full max-w-sm items-start gap-3 rounded-2xl border border-line-strong bg-panel p-3.5 shadow-[var(--shadow-lg)]",
             )}
           >
             <span

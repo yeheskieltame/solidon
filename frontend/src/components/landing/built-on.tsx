@@ -23,15 +23,15 @@ export function BuiltOn() {
         <h2 id="built-title" className="type-h2 max-w-[18ch]">
           Built on rails you already trust.
         </h2>
-        <p className="lede">No bridge of our own, no custody. Each meme only talks to the networks below.</p>
+        <p className="lede">No bridge of our own, no custody.</p>
       </div>
-      <Reveal className="mt-10 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3 lg:grid-cols-5" stagger={0.04}>
+      <Reveal className="mt-12 grid grid-cols-1 gap-x-12 sm:grid-cols-2 lg:grid-cols-3" stagger={0.03}>
         {STACK.map((s) => (
-          <RevealItem key={s.name} className="group flex flex-col gap-3 bg-card p-4 transition-colors hover:bg-page sm:p-5">
-            <LogoTile logo={s.logo} size={40} decorative className="transition-transform duration-300 ease-[var(--ease-spring)] group-hover:-translate-y-0.5 group-hover:scale-105" />
-            <div>
-              <p className="text-sm font-medium">{s.name}</p>
-              <p className="mt-0.5 text-[0.8125rem] leading-snug text-soft">{s.role}</p>
+          <RevealItem key={s.name} className="group flex items-center gap-4 border-b border-line py-4">
+            <LogoTile logo={s.logo} size={36} decorative className="transition-transform duration-300 ease-[var(--ease-spring)] group-hover:scale-110" />
+            <div className="min-w-0">
+              <p className="text-[0.9375rem]">{s.name}</p>
+              <p className="text-[0.8125rem] text-soft">{s.role}</p>
             </div>
           </RevealItem>
         ))}
