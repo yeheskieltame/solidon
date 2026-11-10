@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { cn } from "cn";
 import { Logo } from "@/components/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { WalletControls } from "@/components/wallet-controls";
 import { AppLink, useAppPath } from "@/lib/app-link";
 import { FACTORY, NETWORK } from "@/lib/config";
@@ -86,7 +87,7 @@ function LiveMobileTabs() {
   return <MobileTabs path={useAppPath()} />;
 }
 
-/** App chrome: logo, the three tabs (a sliding pill marks the active one), wallet. */
+/** App chrome: logo, the three tabs (a sliding pill marks the active one), theme toggle, wallet. */
 export function AppHeader() {
   return (
     <>
@@ -106,10 +107,11 @@ export function AppHeader() {
               <LiveDesktopTabs />
             </Suspense>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link href={SITE_URL || "/"} className="hidden text-sm text-soft hover:text-ink lg:inline">
               About Solidon
             </Link>
+            <ThemeToggle />
             <WalletControls />
           </div>
         </div>

@@ -40,7 +40,7 @@ export function MnavChart({ points, thresholds }: { points: { t: number; v: numb
 
   return (
     <figure>
-      <div className="relative h-60 overflow-hidden rounded-xl bg-[#202025]">
+      <div className="relative h-60 overflow-hidden rounded-xl bg-[var(--chart-bg)]">
         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 size-full" aria-hidden>
           <defs>
             <linearGradient id={`fill-${gid}`} x1="0" y1="0" x2="0" y2="1">
@@ -69,7 +69,7 @@ export function MnavChart({ points, thresholds }: { points: { t: number; v: numb
         {points.map((p) => (
           <span
             key={p.t}
-            className="absolute size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#86a6ff]"
+            className="absolute size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-ink"
             style={{ left: pct(x(p.t), W), top: pct(y(p.v), H) }}
             title={`${fmtTimes(p.v)} on ${new Date(p.t * 1000).toLocaleString("en-GB")}`}
           />

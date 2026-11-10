@@ -14,7 +14,7 @@ const delay = (s: number) => ({ animationDelay: `${s}s` }) as CSSProperties;
 export function Hero() {
   return (
     <section id="product" aria-labelledby="hero-title" className="relative isolate overflow-hidden pt-14 pb-16 sm:pt-24 sm:pb-24">
-      <div className="glow -z-10 top-[48%] left-1/2 h-96 w-[60%] -translate-x-1/2 bg-[#3a6ff7] opacity-20" aria-hidden />
+      <div className="glow -z-10 top-[48%] left-1/2 h-96 w-[60%] -translate-x-1/2 bg-blue opacity-[var(--glow-opacity)]" aria-hidden />
 
       <div className="wrap flex flex-col items-center text-center">
         <p className="enter-fade flex items-center gap-2.5 text-[0.9375rem] text-soft" style={delay(0)}>

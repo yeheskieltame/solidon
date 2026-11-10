@@ -23,7 +23,7 @@ export function LogoTile({
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center overflow-hidden ring-1 ring-white/10 ring-inset",
+        "inline-flex shrink-0 items-center justify-center overflow-hidden ring-1 ring-[var(--logo-ring)] ring-inset",
         rounded === "full" ? "rounded-full" : "",
         className,
       )}

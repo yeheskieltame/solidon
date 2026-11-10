@@ -297,7 +297,7 @@ function Shell({ children, action }: { children: React.ReactNode; action?: React
 function PositionRow({ p, busy, onClaim }: { p: Position; busy: boolean; onClaim: (() => void) | null }) {
   const r = p.row;
   return (
-    <li className="grid gap-4 px-5 py-4 transition-colors hover:bg-[#212126] lg:grid-cols-[minmax(0,1.3fr)_repeat(4,minmax(0,1fr))_13rem] lg:items-center">
+    <li className="grid gap-4 px-5 py-4 transition-colors hover:bg-[var(--hover)] lg:grid-cols-[minmax(0,1.3fr)_repeat(4,minmax(0,1fr))_13rem] lg:items-center">
       <div className="flex items-center gap-3">
         <MemeIcon icon={r.icon} symbol={r.symbol} size={40} />
         <div className="min-w-0">

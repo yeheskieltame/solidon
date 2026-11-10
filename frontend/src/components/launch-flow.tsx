@@ -412,7 +412,7 @@ export function LaunchFlow() {
                           "flex cursor-pointer items-center gap-3 rounded-[16px] border bg-panel p-3.5 transition-[transform,border-color,background-color] duration-300 ease-[var(--ease-spring)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-blue",
                           ticker === s.ticker
                             ? "border-blue"
-                            : "border-transparent hover:-translate-y-0.5 hover:bg-[#212126]",
+                            : "border-transparent hover:-translate-y-0.5 hover:bg-[var(--hover)]",
                         )}
                       >
                         <input
