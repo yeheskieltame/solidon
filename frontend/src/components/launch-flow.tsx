@@ -372,7 +372,7 @@ export function LaunchFlow() {
                   />
                   <p
                     id={`${ids.symbol}-hint`}
-                    className={cn("text-sm font-semibold [overflow-wrap:anywhere]", symbol && (!symbolOk || taken.data) ? "text-red-ink" : symbolOk && taken.data === false ? "text-green-ink" : "text-soft")}
+                    className={cn("text-[0.8125rem] [overflow-wrap:anywhere]", symbol && (!symbolOk || taken.data) ? "text-red-ink" : symbolOk && taken.data === false ? "text-green-ink" : "text-soft")}
                   >
                     {!symbol
                       ? "2 to 10 letters or digits. It becomes the contract address."

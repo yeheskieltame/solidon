@@ -287,7 +287,7 @@ export function MemePage({ account }: { account: string }) {
         ))}
       </nav>
 
-      <div className="mt-6 grid gap-x-8 gap-y-10 lg:grid-cols-[minmax(0,1fr)_23rem]">
+      <div className="mt-6 grid gap-x-8 gap-y-10 lg:grid-cols-[minmax(0,1fr)_24.5rem]">
         {/* A: the mNAV story */}
         <div className="min-w-0 lg:col-start-1">
           <div className="card p-5 sm:p-6">

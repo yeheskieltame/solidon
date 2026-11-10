@@ -120,8 +120,9 @@ export function Markets() {
       </dl>
 
       {/* Toolbar */}
-      <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full lg:max-w-xs">
+      <div className="mt-6 grid gap-3">
+        <div className="flex items-center gap-2">
+        <div className="relative w-full max-w-sm">
           <label htmlFor={searchId} className="sr-only">
             Search memes
           </label>
@@ -135,8 +136,26 @@ export function Markets() {
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <div className="-mx-1 flex min-w-0 gap-1.5 overflow-x-auto px-1 pb-1 lg:pb-0" role="group" aria-label="Filter by thesis stock">
+          <label htmlFor={sortId} className="sr-only">
+            Sort by
+          </label>
+          <div className="relative ml-auto shrink-0">
+            <select
+              id={sortId}
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+              className="field !min-h-10 cursor-pointer appearance-none !rounded-full !py-1 pr-8 !text-[0.8125rem]"
+            >
+              {SORTS.map((s) => (
+                <option key={s.key} value={s.key}>
+                  Sort: {s.label}
+                </option>
+              ))}
+            </select>
+            <ArrowDown className="pointer-events-none absolute top-1/2 right-3 size-3.5 -translate-y-1/2 text-soft" aria-hidden />
+          </div>
+        </div>
+          <div className="-mx-1 flex min-w-0 gap-1.5 overflow-x-auto px-1 pb-1" role="group" aria-label="Filter by thesis stock">
             <button type="button" className="chip" aria-pressed={stock === null} onClick={() => setStock(null)}>
               All stocks
             </button>
@@ -155,25 +174,6 @@ export function Markets() {
               </button>
             ))}
           </div>
-          <label htmlFor={sortId} className="sr-only">
-            Sort by
-          </label>
-          <div className="relative">
-            <select
-              id={sortId}
-              value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
-              className="field !min-h-[2.125rem] cursor-pointer appearance-none !rounded-full !py-1 pr-8 !text-[0.8125rem]"
-            >
-              {SORTS.map((s) => (
-                <option key={s.key} value={s.key}>
-                  Sort: {s.label}
-                </option>
-              ))}
-            </select>
-            <ArrowDown className="pointer-events-none absolute top-1/2 right-3 size-3.5 -translate-y-1/2 text-soft" aria-hidden />
-          </div>
-        </div>
       </div>
 
       <div className="mt-4">
