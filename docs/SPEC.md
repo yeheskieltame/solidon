@@ -117,7 +117,7 @@ The meme contract on NEAR is the only owner of the treasury: it requests a signa
 
 **Testnet vs mainnet.** Testnets have no real stock tokens, so every testnet venue (Base Sepolia, Robinhood Chain testnet, Solana devnet) is a Solidon synthetic token in its own pool, priced by a mock oracle at the reference price ([SPIKE.md S24](SPIKE.md)). The mainnet price source is still open: Pyth equity feeds need a paid grant (S20); Chainlink logs verified through MPC are the candidate (S22).
 
-Stack: Rust contracts (near-sdk + Omni Transaction), Node.js keeper (broadcaster, testnet bridge, mock-oracle feeder), Next.js + shadcn frontend with one light, playful "sticker-book" theme: lavender paper, ink text, and green, blue, golden, orange and red reserved for actions and the mNAV rule zones (see `frontend/README.md`).
+Stack: Rust contracts (near-sdk + Omni Transaction), Node.js keeper (broadcaster, testnet bridge, mock-oracle feeder), Next.js + shadcn frontend in one build that serves a landing site at `<domain>` and the app (Markets, Launch, Dashboard, meme pages) at `app.<domain>` through a host-routing proxy, in one light, modern fintech theme with a friendly coin mark and real logos of the stocks, chains and venues; colour is reserved for meaning and the mNAV rule zones (see `frontend/README.md`).
 
 ## Mechanics & locked parameters
 

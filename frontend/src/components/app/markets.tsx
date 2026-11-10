@@ -131,7 +131,7 @@ export function Markets() {
             id={searchId}
             type="search"
             className="field !min-h-10 !rounded-full pl-10"
-            placeholder="Search by ticker, name or stock"
+            placeholder="Search memes or stocks"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
