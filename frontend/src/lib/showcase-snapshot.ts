@@ -1,4 +1,4 @@
-// A frozen read of the live showcase meme (spydia.solidon.testnet, 11 Nov 2026), so the landing's
+// A frozen read of the live showcase meme (honey.solidon.testnet, 11 Nov 2026), so the landing's
 // product visual renders at once and still works when the RPC is unreachable. The page swaps
 // in a live read as soon as it arrives. Values are the raw view JSON, unedited.
 
@@ -8,15 +8,15 @@ import { SHOWCASE_MEME } from "./site";
 const RAW = {
   "metadata": {
     "spec": "ft-1.0.0",
-    "name": "Spydia",
-    "symbol": "SPYDIA",
-    "icon": "data:image/webp;base64,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",
+    "name": "Honeypot",
+    "symbol": "HONEY",
+    "icon": "data:image/webp;base64,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",
     "reference": null,
     "reference_hash": null,
     "decimals": 18
   },
   "info": {
-    "creator": "solidon-launch.testnet",
+    "creator": "solidon-launch2.testnet",
     "usdc": "usdc.solidon.testnet",
     "oracle": "pyth.solidon.testnet",
     "stock": {
@@ -88,7 +88,7 @@ const RAW = {
   },
   "paramsFromContract": true,
   "chains": {
-    "address": "0xc8c8407717e388ed21e5b2fd5a047c6743318c50",
+    "address": null,
     "mpc": "v1.signer-prod.testnet",
     "signing": false,
     "chains": [
@@ -116,8 +116,8 @@ const RAW = {
           "decimals": 8,
           "solana": null
         },
-        "nonce": 1,
-        "approved": true,
+        "nonce": 0,
+        "approved": false,
         "usdc": "0",
         "stock": "0",
         "in_transit": "0"
@@ -170,9 +170,9 @@ const RAW = {
           "bitmap_extension": "5nUE56LNNXaxeYwZWSfpWfD2qBLXmzy2F41nSrxBKhPu"
         }
       },
-      "address": "5DdM4FKEsvLwjr2t2GZGxpwg8D3RN9HQoCo4Lpd51Xmr",
-      "usdc_account": "57TkKEcfxg5wLYnK4oEsxkmbq4FHhXGMpEtrLuBq8BU5",
-      "stock_account": "BwLBidsksUtbmdunobCBbqLxcrAYYfNZodRWddAAHDuh",
+      "address": null,
+      "usdc_account": null,
+      "stock_account": null,
       "seq": 0,
       "usdc": "0",
       "stock": "0",
@@ -185,9 +185,9 @@ const RAW = {
     "price": "17282606149",
     "conf": "0",
     "expo": -8,
-    "publish_time": 1794379543
+    "publish_time": 1794380274
   },
-  "fetchedAt": 1794379555
+  "fetchedAt": 1794380747
 };
 
 export const SHOWCASE_SNAPSHOT: MemeSnapshot = { account: SHOWCASE_MEME, ...RAW } as unknown as MemeSnapshot; // raw view JSON carries extra fields

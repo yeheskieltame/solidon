@@ -116,7 +116,19 @@ Holdings after the run (ledger = minOut booked at signing; on-chain = the token'
 
 The ledger is below the on-chain balance on every chain, as designed (it never overstates NAV).
 
-### Featured meme: Spydia ($SPYDIA)
+### Featured meme: Honeypot ($HONEY)
+
+[`honey.solidon.testnet`](https://testnet.nearblocks.io/address/honey.solidon.testnet), thesis NVDA, is the meme now shown on the landing. Its art is a GPU chip in a leather jacket and a sly fox agent, in `frontend/public/memes/honeypot.webp`; the full image, shrunk to 64 px, is the on-chain icon. It was launched on 11 Nov 2026 by `solidon-launch2.testnet` (funded by the NEAR faucet).
+
+| Step | Transaction |
+| --- | --- |
+| `create_meme` (4.46 NEAR) | [`39tFsQd…`](https://testnet.nearblocks.io/txns/39tFsQdK9mAyDfHoDGhPLiJfyjStZkmyc5STN4Yk2v63) |
+| Seed 1,000 USDC | [`ESpLZ6i…`](https://testnet.nearblocks.io/txns/ESpLZ6i4hzUQqJctzNhpqwn4cC2NiCbtSXbhmehw1gCR) |
+| Buys of 400, 150 and 250 USDC | [`BifYJTF…`](https://testnet.nearblocks.io/txns/BifYJTF14ueCuNx9dtYdYP1PJwXL1tsvyXK8xoaSPKcW), [`H3XmCrx…`](https://testnet.nearblocks.io/txns/H3XmCrxbfxmXLLeohrUKKFTMKJx2dWwcSwqL8Ds7GFeE), [`EE4QubF…`](https://testnet.nearblocks.io/txns/EE4QubFpfHo1pRqCB3114jfWhRWjESCfxKz5xNehbd8G) |
+
+`honeypot.solidon.testnet` is an abandoned first try: it was launched with a cropped icon, and meme icons are immutable, so it was replaced by `$HONEY`. It holds only its 1,000 USDC seed. Spydia (below) stays live, but it is no longer featured.
+
+### Spydia ($SPYDIA)
 
 [`spydia.solidon.testnet`](https://testnet.nearblocks.io/address/spydia.solidon.testnet), thesis NVDA, is the meme shown on the landing. It was launched on 11 Nov 2026 by `solidon-launch.testnet`, a testnet account funded by the NEAR faucet. Its 64 px icon is stored on-chain, and the full art is in `frontend/public/memes/spydia.webp`. The keeper picked it up without any change: `init_treasury`, `init_solana_treasury`, then `approve_router`.
 
