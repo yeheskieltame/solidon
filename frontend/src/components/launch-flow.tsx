@@ -219,17 +219,17 @@ export function LaunchFlow() {
   const selected = stocks.data?.find((s) => s.ticker === ticker) ?? null;
   const seedShort = !!seedRaw && (usdc.data ?? 0n) < seedRaw;
 
-  async function run(label: string, pending: string, done: string, fn: () => Promise<void>) {
+  async function run(label: string, pending: string, done: string, fn: () => Promise<string[] | void>) {
     setBusy(label);
     setTxErr(null);
     const id = toast.show({ tone: "pending", title: pending, body: signHint });
     try {
-      await fn();
+      const hash = ((await fn()) ?? []).filter(Boolean).at(-1);
       toast.update(id, {
         tone: "success",
         title: done,
-        href: accountId ? `${NEARBLOCKS}/address/${accountId}` : undefined,
-        hrefLabel: "Your transactions on NearBlocks",
+        href: hash ? `${NEARBLOCKS}/txns/${hash}` : accountId ? `${NEARBLOCKS}/address/${accountId}` : undefined,
+        hrefLabel: hash ? "The transaction on NearBlocks" : "Your transactions on NearBlocks",
         confetti: true,
       });
     } catch (e) {
@@ -247,7 +247,7 @@ export function LaunchFlow() {
       if (!candidate || !cost.data) return;
       // Put the account in the URL first, so a redirecting wallet returns to step 2.
       router.replace(`${pathname}?meme=${candidate}`);
-      await send([
+      return send([
         {
           receiverId: FACTORY,
           methodName: "create_meme",
@@ -279,13 +279,13 @@ export function LaunchFlow() {
         gas: 150,
         deposit: "1",
       });
-      await send(calls);
+      return send(calls);
     });
 
   const initTreasury = () =>
     run("treasury", "Opening the treasury", "Treasury opened", async () => {
       if (!target) return;
-      await send([{ receiverId: target, methodName: "init_treasury", args: {}, gas: 100, deposit: "0" }]);
+      return send([{ receiverId: target, methodName: "init_treasury", args: {}, gas: 100, deposit: "0" }]);
     });
 
   const formValid =
