@@ -9,12 +9,16 @@ export const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "/app").replace(/\/+$
 /** The landing site, used for links back from the app. "/" on a single host. */
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/+$/, "");
 
-/** The meme featured on the landing: Spydia ($SPYDIA), whose treasury holds NVDA. */
-export const SHOWCASE_MEME = "spydia.solidon.testnet";
+/** The meme featured on the landing: Honeypot ($HONEY), whose treasury holds NVDA. */
+export const SHOWCASE_MEME = "honey.solidon.testnet";
 
 /** Full-size meme art served from public/memes (the on-chain icon is only 64 px). */
 export const MEME_ART: Record<string, { src: string; alt: string }> = {
   [SHOWCASE_MEME]: {
+    src: "/memes/honeypot.webp",
+    alt: "A grinning green GPU chip in a leather jacket and a sly fox in a white coat take a selfie in pixel sunglasses, thumbs up, with a honey pot floating behind them.",
+  },
+  "spydia.solidon.testnet": {
     src: "/memes/spydia.webp",
     alt: "A smitten capybara in a leather jacket on a GPU throne reaches for a honey pot while a spy watches and NVDA crashes. Caption: The more you buy, the more they spy.",
   },
