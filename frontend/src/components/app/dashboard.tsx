@@ -18,7 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AppLink } from "@/lib/app-link";
 import { PLATFORM_LOGOS } from "@/lib/brands";
 import { NEARBLOCKS, USDC_DECIMALS } from "@/lib/config";
-import { fetchMemeEvents, type MemeEvent } from "@/lib/events";
+import { fetchMemeEvents, type EventSource, type MemeEvent } from "@/lib/events";
+import { fetchIndexedAccountActivity } from "@/lib/indexer";
 import { fmtUsdCompact } from "@/lib/figure";
 import { fmtAmount, fmtRaw, fmtUsd, timeAgo } from "@/lib/format";
 import { loadMarket } from "@/lib/market";
@@ -46,13 +47,28 @@ export function Dashboard() {
   const data = useAsync(async () => {
     if (!accountId) return null;
     const market = await loadMarket(tick > 0);
-    return loadPortfolio(accountId, market.rows);
+    const pf = await loadPortfolio(accountId, market.rows);
+    return { ...pf, symbols: Object.fromEntries(market.rows.map((r) => [r.account, r.symbol])) as Record<string, string> };
   }, [accountId, tick]);
 
   const held = (data.data?.positions ?? []).filter((p) => p.balance > 0n).slice(0, 3);
-  const activity = useAsync(async (): Promise<(MemeEvent & { symbol: string; account: string })[]> => {
-    if (!accountId || held.length === 0) return [];
-    const out: (MemeEvent & { symbol: string; account: string })[] = [];
+  const symbols = data.data?.symbols;
+  type Item = MemeEvent & { symbol: string; account: string };
+  const activity = useAsync(async (): Promise<{ items: Item[]; source: EventSource }> => {
+    if (!accountId || !symbols) return { items: [], source: "indexer" };
+    // The keeper's indexer has every event of the account; NearBlocks only the latest few.
+    try {
+      const events = await fetchIndexedAccountActivity(accountId, 50);
+      const items = events
+        .filter((e) => e.contract && symbols[e.contract])
+        .map((e) => ({ ...e, symbol: symbols[e.contract!], account: e.contract! }))
+        .sort((a, b) => b.time - a.time);
+      if (items.length > 0) return { items: items.slice(0, 12), source: "indexer" };
+    } catch {
+      /* indexer down: fall back */
+    }
+    if (held.length === 0) return { items: [], source: "nearblocks" };
+    const out: Item[] = [];
     // Sequential: the NearBlocks public API is rate limited.
     let failed: unknown = null;
     for (const p of held) {
@@ -66,8 +82,9 @@ export function Dashboard() {
       }
     }
     if (out.length === 0 && failed) throw failed;
-    return out.sort((a, b) => b.time - a.time).slice(0, 12);
-  }, [accountId, held.map((p) => p.row.account).join(",")]);
+    return { items: out.sort((a, b) => b.time - a.time).slice(0, 12), source: "nearblocks" };
+  }, [accountId, !!symbols, tick, held.map((p) => p.row.account).join(",")]);
+  const items = activity.data?.items ?? [];
 
   async function claim(p: Position) {
     setBusy(p.row.account);
@@ -230,12 +247,22 @@ export function Dashboard() {
           </section>
 
           <section aria-labelledby="activity-title" className="mt-16">
-            <h2 id="activity-title" className="type-section">
-              Recent activity
-            </h2>
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <h2 id="activity-title" className="type-section">
+                Recent activity
+              </h2>
+              {items.length > 0 && (
+                <p className="text-sm text-soft">{activity.data?.source === "indexer" ? "From the keeper's indexer" : "Latest transactions, from NearBlocks"}</p>
+              )}
+            </div>
             <div className="mt-5">
-              {held.length === 0 ? (
-                <p className="text-sm text-soft">Trades on memes you hold appear here.</p>
+              {(activity.loading || data.loading) && !activity.data?.items.length ? (
+                <div className="panel grid gap-3 p-5" aria-busy aria-label="Loading activity">
+                  <Skeleton className="h-10" />
+                  <Skeleton className="h-10" />
+                </div>
+              ) : items.length === 0 && held.length === 0 && !activity.error ? (
+                <p className="text-sm text-soft">Your buys, sells, redemptions and claims appear here after your first trade.</p>
               ) : activity.loading && !activity.data ? (
                 <Skeleton className="h-24 rounded-[18px]" />
               ) : activity.error ? (
@@ -245,7 +272,7 @@ export function Dashboard() {
                     The account on NearBlocks
                   </a>
                 </Notice>
-              ) : (activity.data?.length ?? 0) === 0 ? (
+              ) : items.length === 0 ? (
                 <Notice title="Nothing recent">
                   No trades by {accountId} in the latest transactions of your memes.{" "}
                   <a className="link" href={`${NEARBLOCKS}/address/${accountId}`} target="_blank" rel="noreferrer">
@@ -254,7 +281,7 @@ export function Dashboard() {
                 </Notice>
               ) : (
                 <ol className="panel divide-y divide-line">
-                  {activity.data!.map((e, i) => {
+                  {items.map((e, i) => {
                     const kind = eventKind(e.event);
                     const Icon = kind.icon;
                     return (

@@ -7,6 +7,7 @@ import { ChainLogo, StockLogo } from "./brand-logo";
 import { CompositionBar, compositionOf } from "./composition";
 import { CopyButton, ExplorerLink } from "./copy-button";
 import { EventLog, mnavHistory } from "./event-log";
+import { HISTORY_EMPTY, HistoryCharts, useMemeHistory } from "./history-charts";
 import { MemeIcon } from "./meme-icon";
 import { MnavChart } from "./mnav-chart";
 import { MnavGauge, ZoneBadge } from "./mnav-gauge";
@@ -22,7 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AppLink } from "@/lib/app-link";
 import { STOCK_LOGOS } from "@/lib/brands";
 import { NEARBLOCKS, NETWORK } from "@/lib/config";
-import { fetchMemeEvents } from "@/lib/events";
+import { loadMemeEvents } from "@/lib/events";
 import { fmtUsdCompact } from "@/lib/figure";
 import { fmtAmount, fmtRaw, fmtUsd, timeAgo, toBig, toNumber } from "@/lib/format";
 import { lastMnav, oracleUsd } from "@/lib/math";
@@ -32,7 +33,7 @@ import { fmtTimes, mnavSentence } from "@/lib/mnav";
 import { useAsync } from "@/lib/use-async";
 import { errorText, useWallet } from "@/lib/wallet";
 
-type DetailKey = "treasury" | "rules" | "balance" | "activity" | "contract";
+type DetailKey = "history" | "treasury" | "rules" | "balance" | "activity" | "contract";
 
 /** A key/value attribute row with a hairline under it. */
 function Attr({ k, v }: { k: ReactNode; v: ReactNode }) {
@@ -131,7 +132,8 @@ function PageSkeleton() {
 export function MemePage({ account }: { account: string }) {
   const [fresh, setFresh] = useState(0);
   const snap = useAsync(() => loadMemeCached(account, fresh > 0), [account, fresh]);
-  const events = useAsync(() => fetchMemeEvents(account), [account]);
+  const events = useAsync(() => loadMemeEvents(account), [account]);
+  const priceHistory = useMemeHistory(account);
   const { accountId, send, connect, signHint } = useWallet();
   const user = useUserBalances(account, accountId);
   const toast = useToast();
@@ -185,7 +187,8 @@ export function MemePage({ account }: { account: string }) {
   const epochCap = toBig(treasury?.epoch_cap);
   const epochIssued = toBig(treasury?.epoch_issued);
   const cashPct = (nav.cashShare ?? 0) * 100;
-  const history = mnavHistory(events.data);
+  const history = mnavHistory(events.data?.events);
+  const hasHistory = (priceHistory.data?.length ?? 0) >= 2 ? priceHistory.data!.length : 0;
   const slices = compositionOf(row);
   const cashSlice = slices.find((s) => s.key === "cash");
   const redemptionOpen = !!treasury?.redemption_open;
@@ -401,6 +404,16 @@ export function MemePage({ account }: { account: string }) {
         </h2>
         <div className="mt-2">
           <DetailItem
+            id="history"
+            title={`${metadata.symbol} against ${ticker}`}
+            summary={hasHistory ? `Price against the stock and mNAV over time, ${hasHistory} recorded points` : HISTORY_EMPTY}
+            open={open.has("history")}
+            onToggle={() => toggle("history")}
+          >
+            <HistoryCharts history={priceHistory} symbol={metadata.symbol} icon={metadata.icon} ticker={ticker} thresholds={thresholds} />
+          </DetailItem>
+
+          <DetailItem
             id="treasury"
             title="Treasury per chain"
             summary="Addresses, what the contract booked against what each chain holds, and how cash is proven"
@@ -558,7 +571,7 @@ export function MemePage({ account }: { account: string }) {
             open={open.has("activity")}
             onToggle={() => toggle("activity")}
           >
-            {history.length >= 3 && (
+            {!hasHistory && history.length >= 3 && (
               <div className="panel mb-8 p-5 sm:p-8">
                 <p className="mb-6 text-[0.9375rem] text-soft">mNAV at each of the last {history.length} rebalances, from the contract&apos;s own events</p>
                 <MnavChart points={history} thresholds={thresholds} />

@@ -35,7 +35,12 @@ export function MnavChart({ points, thresholds }: { points: { t: number; v: numb
   ].filter((g) => g.v > lo && g.v < hi);
   const nTicks = Math.min(5, points.length);
   const ticks = Array.from({ length: nTicks }, (_, i) => t0 + ((t1 - t0) * i) / Math.max(1, nTicks - 1));
-  const date = (t: number) => new Date(t * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const date = (t: number) =>
+    t1 - t0 < 2 * 86_400
+      ? new Date(t * 1000).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+      : new Date(t * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  // Dots mark each recorded value while they stay legible; dense series are a plain line.
+  const dots = points.length <= 40;
   const pct = (px: number, total: number) => `${(px / total) * 100}%`;
 
   return (
@@ -66,7 +71,7 @@ export function MnavChart({ points, thresholds }: { points: { t: number; v: numb
             {g.label}
           </span>
         ))}
-        {points.map((p) => (
+        {dots && points.map((p) => (
           <span
             key={p.t}
             className="absolute size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-ink"
@@ -87,7 +92,7 @@ export function MnavChart({ points, thresholds }: { points: { t: number; v: numb
         ))}
       </div>
       <figcaption className="sr-only">
-        mNAV recorded by {points.length} rebalances, from {fmtTimes(points[0].v)} to {fmtTimes(points[points.length - 1].v)}, average {fmtTimes(avg)}.
+        mNAV at {points.length} recorded points, from {fmtTimes(points[0].v)} to {fmtTimes(points[points.length - 1].v)}, average {fmtTimes(avg)}.
       </figcaption>
     </figure>
   );
