@@ -14,6 +14,19 @@ const delay = (s: number) => ({ animationDelay: `${s}s` }) as CSSProperties;
 export function Hero() {
   return (
     <section id="product" aria-labelledby="hero-title" className="relative isolate overflow-hidden pt-14 pb-16 sm:pt-24 sm:pb-24">
+      <video
+        className="hero-video pointer-events-none absolute inset-x-0 top-0 -z-20 h-[46rem] w-full object-cover"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        poster="/hero/hero-flow.jpg"
+        aria-hidden
+      >
+        <source src="/hero/hero-flow.webm" type="video/webm" />
+        <source src="/hero/hero-flow.mp4" type="video/mp4" />
+      </video>
       <div className="glow -z-10 top-[48%] left-1/2 h-96 w-[60%] -translate-x-1/2 bg-blue opacity-[var(--glow-opacity)]" aria-hidden />
 
       <div className="wrap flex flex-col items-center text-center">
