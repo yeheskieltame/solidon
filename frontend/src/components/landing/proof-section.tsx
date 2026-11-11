@@ -68,7 +68,7 @@ export function ProofSection() {
           <h2 id="proof-title" className="type-h2 max-w-[14ch]">
             Proof, not promises.
           </h2>
-          <p className="lede">The test meme {SHOWCASE_MEME} holds NVDA on all three chains. Every swap links to an explorer.</p>
+          <p className="lede">Our end-to-end test meme bought NVDA on all three chains. Every swap links to an explorer.</p>
         </div>
 
         <Reveal className="panel mt-12 overflow-x-auto">
