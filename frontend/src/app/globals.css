@@ -1294,3 +1294,20 @@
     content: "...";
   }
 }
+
+/* Hero background loop (MotionSites gradient, black ground). Dark: screen drops the black.
+   Light: invert + hue-rotate keeps the blues on white, multiply drops the white. Faded out
+   toward the product frame so the headline stays the focus. */
+.hero-video {
+  opacity: 0.55;
+  mix-blend-mode: screen;
+  mask-image: radial-gradient(ellipse 70% 75% at 50% 35%, #000 30%, transparent 75%);
+}
+:root[data-theme="light"] .hero-video {
+  opacity: 0.35;
+  filter: invert(1) hue-rotate(180deg) saturate(1.4);
+  mix-blend-mode: multiply;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-video { display: none; }
+}
