@@ -136,7 +136,7 @@ function CompareChart({ points, symbol, icon, ticker }: { points: HistoryPoint[]
       </div>
       <div className="relative mt-2 h-5 text-xs text-soft" aria-hidden>
         {ticks.map((t, i) => (
-          <span key={t} className="absolute" style={{ left: pct(x(t), W), transform: `translateX(${i === 0 ? "0" : i === ticks.length - 1 ? "-100%" : "-50%"})` }}>
+          <span key={t} className="absolute whitespace-nowrap" style={{ left: pct(x(t), W), transform: `translateX(${i === 0 ? "0" : i === ticks.length - 1 ? "-100%" : "-50%"})` }}>
             {timeLabel(t, t1 - t0)}
           </span>
         ))}

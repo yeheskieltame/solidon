@@ -405,8 +405,8 @@ export function MemePage({ account }: { account: string }) {
         <div className="mt-2">
           <DetailItem
             id="history"
-            title={`${metadata.symbol} against ${ticker}`}
-            summary={hasHistory ? `Price against the stock and mNAV over time, ${hasHistory} recorded points` : HISTORY_EMPTY}
+            title="History"
+            summary={hasHistory ? `${metadata.symbol} against ${ticker} and mNAV over time, from ${hasHistory} recorded points` : HISTORY_EMPTY}
             open={open.has("history")}
             onToggle={() => toggle("history")}
           >

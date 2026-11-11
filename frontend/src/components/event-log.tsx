@@ -55,6 +55,12 @@ const KINDS: Record<string, { label: string; icon: LucideIcon; tint: string }> =
   fund_chain_skipped: { label: "Funding skipped", icon: CircleSlash, tint: "bg-page-deep text-ink-2" },
 };
 
+/** Account ids as people read them: 64-hex implicit accounts shortened. */
+function who(v: unknown) {
+  const id = String(v ?? "");
+  return /^[0-9a-f]{64}$/.test(id) ? shortAddr(id, 6, 4) : id;
+}
+
 function chainName(v: unknown) {
   const name = String(v ?? "");
   return chainMeta(name)?.label ?? name;
@@ -71,15 +77,15 @@ export function describeEvent(e: MemeEvent, sym: string): string {
   const d = e.data;
   switch (e.event) {
     case "seed":
-      return `${d.account} seeded ${usdc(d.usdc_in)}`;
+      return `${who(d.account)} seeded ${usdc(d.usdc_in)}`;
     case "buy":
-      return `${d.account} paid ${usdc(d.usdc_in)} for ${meme(d.meme_out, sym)}`;
+      return `${who(d.account)} paid ${usdc(d.usdc_in)} for ${meme(d.meme_out, sym)}`;
     case "sell":
-      return `${d.account} sold ${meme(d.meme_in, sym)} for ${usdc(d.usdc_out)}`;
+      return `${who(d.account)} sold ${meme(d.meme_in, sym)} for ${usdc(d.usdc_out)}`;
     case "redeem":
-      return `${d.account} burned ${meme(d.meme_in, sym)} for ${usdc(d.usdc_out)}`;
+      return `${who(d.account)} burned ${meme(d.meme_in, sym)} for ${usdc(d.usdc_out)}`;
     case "redeem_refunded":
-      return `${meme(d.meme, sym)} returned to ${d.account}`;
+      return `${meme(d.meme, sym)} returned to ${who(d.account)}`;
     case "rebalance": {
       // Outcome is "no_action" / "cooldown" or {"issued": {...}} / {"bought_back": {...}}.
       const key =
@@ -95,7 +101,7 @@ export function describeEvent(e: MemeEvent, sym: string): string {
     case "ft_burn":
       return `${meme(d.amount, sym)}${d.memo ? ` (${d.memo})` : ""}`;
     case "ft_transfer":
-      return `${meme(d.amount, sym)} from ${d.old_owner_id} to ${d.new_owner_id}`;
+      return `${meme(d.amount, sym)} from ${who(d.old_owner_id)} to ${who(d.new_owner_id)}`;
     case "treasury":
       return String(d.evm_address ?? d.solana_address ?? "");
     case "evm_tx_signed":
