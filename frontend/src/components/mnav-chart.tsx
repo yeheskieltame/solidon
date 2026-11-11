@@ -84,7 +84,7 @@ export function MnavChart({ points, thresholds }: { points: { t: number; v: numb
         {ticks.map((t, i) => (
           <span
             key={t}
-            className="absolute"
+            className="absolute whitespace-nowrap"
             style={{ left: pct(x(t), W), transform: `translateX(${i === 0 ? "0" : i === ticks.length - 1 ? "-100%" : "-50%"})` }}
           >
             {date(t)}

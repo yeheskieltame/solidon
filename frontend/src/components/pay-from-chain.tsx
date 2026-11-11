@@ -12,7 +12,7 @@ import { LogoTile } from "./brand-logo";
 import { CopyButton } from "./copy-button";
 import { Button } from "@/components/ui/button";
 import { CHAIN_LOGOS, PLATFORM_LOGOS, type BrandLogo } from "@/lib/brands";
-import { fmtAmount, fmtUsd, parseUnits, toDecimalString } from "@/lib/format";
+import { fmtAmount, fmtUsd, parseUnits, shortAddr, toDecimalString } from "@/lib/format";
 import {
   CURATED,
   ONECLICK_LIVE,
@@ -74,7 +74,7 @@ const STATUS_TEXT: Record<OneClickStatus, string> = {
 export function PayFromChain({ className, onFunded }: { className?: string; onFunded?: () => void }) {
   const { accountId, connect } = useWallet();
   const [open, setOpen] = useState(false);
-  const ids = { panel: useId(), amount: useId(), search: useId(), list: useId(), refund: useId() };
+  const ids = { panel: useId(), amount: useId(), search: useId(), list: useId(), refund: useId(), details: useId() };
 
   return (
     <div className={className}>
@@ -108,7 +108,7 @@ function Body({
   connect,
   onFunded,
 }: {
-  ids: { amount: string; search: string; list: string; refund: string };
+  ids: { amount: string; search: string; list: string; refund: string; details: string };
   accountId: string | null;
   connect: () => Promise<unknown>;
   onFunded?: () => void;
@@ -123,6 +123,7 @@ function Body({
   const [deposit, setDeposit] = useState<{ res: OneClickQuoteResponse; token: OneClickToken } | null>(null);
   const [depositErr, setDepositErr] = useState<string | null>(null);
   const [requesting, setRequesting] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   const list = useMemo(() => tokens.data ?? [], [tokens.data]);
   const curated = useMemo(
@@ -314,20 +315,34 @@ function Body({
             <p className="text-sm text-red-ink">{current.error}</p>
           ) : (
             <>
-              <p className={cn("text-[0.9375rem] text-ink-2", loading && "opacity-60")}>
-                You get{" "}
-                <span className="text-ink tabular-nums">{q ? `≈ ${fmtAmount(Number(q.amountOutFormatted), 2)} USDC` : loading ? <span className="dots">Quoting</span> : "–"}</span>
-                <span className="text-soft"> on NEAR{q ? ` · ${secs(q.timeEstimate)}` : ""}</span>
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <p className={cn("text-[0.9375rem] text-ink-2", loading && "opacity-60")}>
+                  You get{" "}
+                  <span className="text-ink tabular-nums">{q ? `≈ ${fmtAmount(Number(q.amountOutFormatted), 2)} USDC` : loading ? <span className="dots">Quoting</span> : "–"}</span>
+                  <span className="text-soft"> on NEAR{q ? ` · ${secs(q.timeEstimate)}` : ""}</span>
+                </p>
+                {q && (
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 rounded-md text-sm text-soft hover:text-ink"
+                    aria-expanded={showDetails}
+                    aria-controls={ids.details}
+                    onClick={() => setShowDetails((v) => !v)}
+                  >
+                    Details
+                    <ChevronDown className={cn("size-4 transition-transform", showDetails && "rotate-180")} aria-hidden />
+                  </button>
+                )}
+              </div>
               {q && (
-                <dl className="mt-2 border-t border-line pt-1 text-sm">
+                <dl id={ids.details} hidden={!showDetails} className="mt-2 border-t border-line pt-1 text-sm">
                   <Line k="Minimum received" v={`${fmtAmount(Number(q.minAmountOut) / 1e6, 4)} USDC`} />
                   <Line
                     k="Route cost"
                     v={costUsd !== null ? `${fmtUsd(Math.max(0, costUsd))}${feeBps ? ` (incl. ${feeBps / 100}% 1Click fee)` : ""}` : "–"}
                   />
                   <Line k="Arrives in" v={secs(q.timeEstimate)} />
-                  <Line k="To" v={<span className="break-all">{recipient}</span>} />
+                  <Line k="To" v={<span title={recipient}>{shortAddr(recipient, 8, 6)} on NEAR</span>} />
                 </dl>
               )}
               {standIn && (
