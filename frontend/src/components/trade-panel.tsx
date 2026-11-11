@@ -6,6 +6,7 @@ import { cn } from "cn";
 import { LogoTile } from "./brand-logo";
 import { MemeIcon } from "./meme-icon";
 import { Notice } from "./notice";
+import { PayFromChain } from "./pay-from-chain";
 import { useToast } from "./toast";
 import { FaucetLine, GetTestFundsButton } from "./wallet-controls";
 import { Button } from "@/components/ui/button";
@@ -418,6 +419,7 @@ export function TradePanel({
               Your first buy also registers your account on {sym} (0.00125 NEAR storage), so the wallet asks twice.
             </p>
           )}
+          <PayFromChain className="mt-1 border-t border-line px-1 pt-3" onFunded={onDone} />
         </TabsContent>
 
         <TabsContent value="sell" className="grid gap-3">
