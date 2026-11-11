@@ -21,7 +21,7 @@ node keeper.js                        # loop every LOOP_SECS (60 s), plus the in
 node indexer.js                       # indexer + read API only: no key, never signs
 ```
 
-Node 20+. Flags: `--once` (one cycle, no API), `--dry-run` (every write is logged as `DRY ... would ...` instead of sent), `--no-api` (no indexer, no HTTP API), `--meme=a.testnet,b.testnet`, `--only=oracle,broadcast,bridge,treasury,solana`. Logs are one line per event with explorer links; RPC URLs and keys are redacted.
+Node 20+. Flags: `--once` (one cycle, no API), `--dry-run` (every write is logged as `DRY ... would ...` instead of sent), `--no-api` (no indexer, no HTTP API; use it when `indexer.js` runs on its own, so only one process writes `data/`), `--meme=a.testnet,b.testnet`, `--only=oracle,broadcast,bridge,treasury,solana`. Logs are one line per event with explorer links; RPC URLs and keys are redacted.
 
 One cycle:
 

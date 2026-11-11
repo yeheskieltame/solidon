@@ -136,6 +136,9 @@ export function loadConfig(flags) {
     factory,
     keeperAccount,
     nearRpc: process.env.NEAR_RPC || "https://test.rpc.fastnear.com", // rpc.testnet.near.org is deprecated and rate-limits (-429)
+    // Transactions go through their own endpoint: few calls, but they need an RPC that waits for
+    // the outcome (dRPC answers "Internal server error" to broadcast_tx_commit). Views use nearRpc.
+    nearRpcSend: process.env.NEAR_RPC_SEND || process.env.NEAR_RPC || "https://test.rpc.fastnear.com",
     nearExplorer: "https://testnet.nearblocks.io",
     nearKey: near.key,
     nearKeySource: near.source,

@@ -80,7 +80,7 @@ export class Near {
         `no key for ${this.cfg.keeperAccount}: set KEEPER_NEAR_PRIVATE_KEY or create ~/.near-credentials/testnet/${this.cfg.keeperAccount}.json`,
       );
     }
-    const provider = new JsonRpcProvider({ url: this.cfg.nearRpc }, { retries: 6, wait: 500, backoff: 2 });
+    const provider = new JsonRpcProvider({ url: this.cfg.nearRpcSend }, { retries: 6, wait: 500, backoff: 2 });
     this.account = new Account(this.cfg.keeperAccount, provider, this.cfg.nearKey);
     return this.account;
   }
