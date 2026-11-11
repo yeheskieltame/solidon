@@ -9,8 +9,16 @@ export const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "/app").replace(/\/+$
 /** The landing site, used for links back from the app. "/" on a single host. */
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/+$/, "");
 
-/** The live end-to-end meme from docs/DEPLOYMENTS.md: NVDA on Base, Robinhood Chain and Solana. */
-export const SHOWCASE_MEME = "e2etest.solidon.testnet";
+/** The meme featured on the landing: Spydia ($SPYDIA), whose treasury holds NVDA. */
+export const SHOWCASE_MEME = "spydia.solidon.testnet";
+
+/** Full-size meme art served from public/memes (the on-chain icon is only 64 px). */
+export const MEME_ART: Record<string, { src: string; alt: string }> = {
+  [SHOWCASE_MEME]: {
+    src: "/memes/spydia.webp",
+    alt: "A smitten capybara in a leather jacket on a GPU throne reaches for a honey pot while a spy watches and NVDA crashes. Caption: The more you buy, the more they spy.",
+  },
+};
 
 /** Absolute app URL for a path inside the app ("/launch" -> "https://app.x.y/launch" or "/app/launch"). */
 export function appUrl(path = "/"): string {

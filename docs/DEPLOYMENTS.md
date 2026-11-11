@@ -116,6 +116,16 @@ Holdings after the run (ledger = minOut booked at signing; on-chain = the token'
 
 The ledger is below the on-chain balance on every chain, as designed (it never overstates NAV).
 
+### Featured meme: Spydia ($SPYDIA)
+
+[`spydia.solidon.testnet`](https://testnet.nearblocks.io/address/spydia.solidon.testnet), thesis NVDA, is the meme shown on the landing. It was launched on 11 Nov 2026 by `solidon-launch.testnet`, a testnet account funded by the NEAR faucet. Its 64 px icon is stored on-chain, and the full art is in `frontend/public/memes/spydia.webp`. The keeper picked it up without any change: `init_treasury`, `init_solana_treasury`, then `approve_router`.
+
+| Step | Transaction |
+| --- | --- |
+| `create_meme` (4.46 NEAR) | [`HBUBuW5…`](https://testnet.nearblocks.io/txns/HBUBuW54haTS8VxAnWxLxrgDMfdS6N9haSF2ndbQURXu) |
+| Seed 1,000 USDC | [`HCBnzsT…`](https://testnet.nearblocks.io/txns/HCBnzsTtGsu9hnCnpBctpZA52R2rwFU3CMTpcRsnBoi8) |
+| Buys of 400, 150 and 250 USDC | [`4RNCs63…`](https://testnet.nearblocks.io/txns/4RNCs63GFb5Q33nmwM9FA2y9a78zdc577KRDZYs6Bdb3), [`H67hFSt…`](https://testnet.nearblocks.io/txns/H67hFStpeQhYeyMMAY2J2Qrazf6WUGWPLyYs4zSnNgPd), [`9qGqv8S…`](https://testnet.nearblocks.io/txns/9qGqv8SZmVHADnR9Rryjh83gZiGtborChBMA872o3uHr) |
+
 ## NEAR testnet (history)
 
 ### Current factory (9 Nov 2026, second deploy)

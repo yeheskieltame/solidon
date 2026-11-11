@@ -1311,3 +1311,14 @@
 @media (prefers-reduced-motion: reduce) {
   .hero-video { display: none; }
 }
+
+/* The featured meme on the landing: a sticker, tilted until you hover it. */
+.meme-poster {
+  rotate: -2.5deg;
+  transition: rotate 0.5s var(--ease-spring), scale 0.5s var(--ease-spring);
+}
+.meme-poster img { box-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.45); }
+.meme-poster:hover { rotate: 0deg; scale: 1.03; }
+@media (prefers-reduced-motion: reduce) {
+  .meme-poster, .meme-poster:hover { rotate: 0deg; scale: 1; transition: none; }
+}
