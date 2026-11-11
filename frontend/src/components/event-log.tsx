@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { chainMeta } from "@/lib/chains";
 import { MEME_DECIMALS, NEARBLOCKS, USDC_DECIMALS } from "@/lib/config";
-import { fmtRaw, shortAddr, timeAgo, toBig } from "@/lib/format";
+import { fmtRaw, shortAccount, shortAddr, timeAgo, toBig } from "@/lib/format";
 import type { EventFeed, MemeEvent } from "@/lib/events";
 import { fmtTimes } from "@/lib/mnav";
 import type { AsyncState } from "@/lib/use-async";
@@ -55,11 +55,7 @@ const KINDS: Record<string, { label: string; icon: LucideIcon; tint: string }> =
   fund_chain_skipped: { label: "Funding skipped", icon: CircleSlash, tint: "bg-page-deep text-ink-2" },
 };
 
-/** Account ids as people read them: 64-hex implicit accounts shortened. */
-function who(v: unknown) {
-  const id = String(v ?? "");
-  return /^[0-9a-f]{64}$/.test(id) ? shortAddr(id, 6, 4) : id;
-}
+const who = shortAccount;
 
 function chainName(v: unknown) {
   const name = String(v ?? "");
