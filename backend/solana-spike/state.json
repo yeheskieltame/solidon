@@ -103,7 +103,59 @@
           -5680
         ]
       },
-      "done": true
+      "done": true,
+      "repegs": [
+        {
+          "oracleUsd": "172.82606149",
+          "poolUsdBefore": "176.4808",
+          "tickBefore": -5681,
+          "targetUsd": "171.9619",
+          "limitTick": -5421.3,
+          "innerEdge": -5680,
+          "depthStock": "28930821873",
+          "swapBudget": "289308218",
+          "priceInsideRange": true,
+          "startedAt": "2026-11-11T05:25:42.104Z",
+          "mintToTx": "5inw6DLzsHPTz15SX3ZV42nWk1sMXZfiTmUp6Vfk4dwwiJvHHRLFtxbkbXZe2t5c4kq3eJZjBFtwdwiowmcpnFKe",
+          "edgeSwapTx": "2kW7CidbS7tR3tTGJ3Geip1c78KBeKPDfLttrX3oZmFSs6GsvHRkDM86MwgKrifX3eewByWsbsfqHBW4jKDo8jhH",
+          "unusedSentinels": [
+            {
+              "ticks": [
+                -5420,
+                -5410
+              ],
+              "tx": "2JEc15qmundG6Zks3tU3mxJ4PxhL4rbmu2fptK1MeS9QjMR9D3u4XZMdvGm58nVa12bUhh2EYoUjhwWywth4GiP1",
+              "nft": "7Zntp8yHi9neH2EEuKbTxYorsYR3wWwREL7PYZs68zJZ",
+              "note": "USDC-only, above the limit: the swap ended before it and failed with 6026; left in place (above the price, buys move away from it)"
+            }
+          ],
+          "sentinel": [
+            -5430,
+            -5420
+          ],
+          "sentinelTx": "4DhoxEtgM7TjPVbD1oQUBtNdQkGkNRGX57dkLDLxm6uqFLSMzVLhiBu9pxMgitXNfAxi8BTfe99muRNv1i3odPJU",
+          "sentinelNft": "HqnVwsNdXnQuMRcWJ1TcEhA9hC6XiuEC7J47r9xjoVuh",
+          "repegSwapTx": "3TqAT2EmwBZ7vCJT39LF7eF4Z2W3g52gJRLsjnVq5Xu5sqZeRzvGQXEvjnzRtxtaUzyvKnGaHQciQM7U6iPqfABD",
+          "repegSwapArrays": [
+            -6000
+          ],
+          "stockSold": "5062",
+          "usdcReceived": "8699",
+          "tickAfterSwap": -5422,
+          "poolUsdAfterSwap": "171.9619",
+          "range": [
+            -5680,
+            -5430
+          ],
+          "positionTx": "APMdYYqMGeq3iTW8CkJPr53rPDxhWJA6o1NFhcpL8kA6YReTcd5bzq17SM7AbCEMNJq1Dr8ucoYiBjm9sAn2wQa",
+          "positionNft": "46izKLXzfBE19TNgWuAsrKVtkh8R2JJR4946J31dvaGK",
+          "positionStock": "28930821873",
+          "edgeUsd": "172.1116",
+          "poolUsdAfter": "171.9619",
+          "done": true,
+          "doneAt": "2026-11-11T05:26:36.689Z"
+        }
+      ]
     },
     "AAPL": {
       "ref_price_usd": "350.43926444",
@@ -171,7 +223,48 @@
           -16940
         ]
       },
-      "done": true
+      "done": true,
+      "repegs": [
+        {
+          "oracleUsd": "533.99592396",
+          "poolUsdBefore": "543.8022",
+          "tickBefore": -16936,
+          "targetUsd": "531.3259",
+          "limitTick": -16702.89,
+          "sentinel": [
+            -16710,
+            -16700
+          ],
+          "innerEdge": -16940,
+          "depthStock": "9363367351",
+          "swapBudget": "93633673",
+          "priceInsideRange": false,
+          "startedAt": "2026-11-11T05:26:59.908Z",
+          "mintToTx": "5yEdoDcxCs266R9fkUzhBJ3PCKmJVDCbE8t83GWaHqrdBS1t79fwBm2W5KL4a3BnEKzT6niQGK25CFVNuQrP9DFk",
+          "sentinelTx": "2ygLMrUUsXhMvCVBh4GKsqDqECnw4K4Ctk4LeqrdXXgXzg3h8sDVgabh66svQyfs53oo74K149svSoMz6oyBL8R9",
+          "sentinelNft": "ACEcYt7SUozQE7ZNcyTQwy9WqFpAhN59RyE9oqLvf8Za",
+          "repegSwapTx": "2DNMfTQVTB7KNYfhPRofVYVsXLFPANcNH2V5QgWKM463dCGWYzm4XrEmHKmSHVBgCZe6boLEAbHHV4MgrfW1TPK",
+          "repegSwapArrays": [
+            -17400,
+            -16800
+          ],
+          "stockSold": "1339",
+          "usdcReceived": "7110",
+          "tickAfterSwap": -16703,
+          "poolUsdAfterSwap": "531.3259",
+          "range": [
+            -16940,
+            -16710
+          ],
+          "positionTx": "eEHjQVGkesgw8K7u9Ucyt7fmbudioUCMwNa78AjX1kycbxvtBqRfQ6Q9wLrb6tQiugvLmT3tZUNKikRyoRKG62h",
+          "positionNft": "2XPhgQ36JnudCM2QcqNPE6aZzogXnZP5jm1ZEZCr7eZH",
+          "positionStock": "9363367351",
+          "edgeUsd": "531.7038",
+          "poolUsdAfter": "531.3259",
+          "done": true,
+          "doneAt": "2026-11-11T05:27:10.280Z"
+        }
+      ]
     },
     "GOOGL": {
       "ref_price_usd": "290.38272638",
