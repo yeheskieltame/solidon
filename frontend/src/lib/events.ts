@@ -2,6 +2,7 @@
 // read from the NearBlocks v3 API (receipts -> transaction receipt trees).
 
 import { NEARBLOCKS_API } from "./config";
+import { fetchIndexedMemeEvents } from "./indexer";
 
 export type MemeEvent = {
   standard: string;
@@ -76,4 +77,21 @@ export async function fetchMemeEvents(account: string, maxTxs = 10): Promise<Mem
     }
   }
   return out.sort((a, b) => b.time - a.time);
+}
+
+export type EventSource = "indexer" | "nearblocks";
+export type EventFeed = { events: MemeEvent[]; source: EventSource };
+
+/**
+ * A meme's events from the keeper's indexer when it answers with any, else from NearBlocks
+ * (the latest transactions only). Newest first.
+ */
+export async function loadMemeEvents(account: string): Promise<EventFeed> {
+  try {
+    const events = await fetchIndexedMemeEvents(account, 50);
+    if (events.length > 0) return { events: events.sort((a, b) => b.time - a.time), source: "indexer" };
+  } catch {
+    /* indexer down: fall back */
+  }
+  return { events: await fetchMemeEvents(account), source: "nearblocks" };
 }

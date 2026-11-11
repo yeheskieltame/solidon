@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, Plus, RefreshCw, Search } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { cn } from "cn";
 import { ChainStack, StockLogo } from "@/components/brand-logo";
+import { Sparkline } from "@/components/history-charts";
 import { MemeIcon } from "@/components/meme-icon";
 import { MnavGauge, ZoneBadge } from "@/components/mnav-gauge";
 import { Notice } from "@/components/notice";
@@ -15,6 +16,7 @@ import { STOCK_LOGOS } from "@/lib/brands";
 import { FACTORY } from "@/lib/config";
 import { fmtUsdCompact } from "@/lib/figure";
 import { fmtUsd } from "@/lib/format";
+import { fetchHistory, indexerHealth, type HistoryPoint } from "@/lib/indexer";
 import { loadMarket, type MarketRow } from "@/lib/market";
 import { fmtTimes } from "@/lib/mnav";
 import { fmtPrice, fmtPriceLong } from "@/lib/price";
@@ -62,6 +64,13 @@ export function Markets() {
   const sortId = useId();
 
   const rows = useMemo(() => market.data?.rows ?? [], [market.data]);
+  // Seven days of price per meme from the keeper's indexer; nothing when it is down.
+  const sparks = useAsync(async (): Promise<Record<string, HistoryPoint[] | null>> => {
+    if (rows.length === 0 || !(await indexerHealth())) return {};
+    const since = Date.now() / 1000 - 7 * 86_400;
+    const entries = await Promise.all(rows.map(async (r) => [r.account, await fetchHistory(r.account, { since, limit: 500 })] as const));
+    return Object.fromEntries(entries);
+  }, [rows.map((r) => r.account).join(","), fresh]);
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = rows.filter(
@@ -212,8 +221,8 @@ export function Markets() {
           </Notice>
         ) : (
           <>
-            <MarketTable rows={shown} sort={sort} asc={asc} onSort={sortBy} />
-            <MarketCards rows={shown} />
+            <MarketTable rows={shown} sort={sort} asc={asc} onSort={sortBy} sparks={sparks.data} />
+            <MarketCards rows={shown} sparks={sparks.data} />
             {shown.length === 0 && (
               <Notice className="mt-3" title="No meme matches">
                 Clear the search or pick another stock.
@@ -252,7 +261,9 @@ function SortHead({ k, label, sort, asc, onSort, num }: { k: SortKey; label: str
   );
 }
 
-function MarketTable({ rows, sort, asc, onSort }: { rows: MarketRow[]; sort: SortKey; asc: boolean; onSort: (k: SortKey) => void }) {
+type Sparks = Record<string, HistoryPoint[] | null> | undefined;
+
+function MarketTable({ rows, sort, asc, onSort, sparks }: { rows: MarketRow[]; sort: SortKey; asc: boolean; onSort: (k: SortKey) => void; sparks: Sparks }) {
   const head = { sort, asc, onSort };
   return (
     <div className="panel overflow-hidden max-md:hidden">
@@ -297,7 +308,10 @@ function MarketTable({ rows, sort, asc, onSort }: { rows: MarketRow[]; sort: Sor
                 )}
               </td>
               <td className="num" title={r.spotUsd !== null ? fmtPriceLong(r.spotUsd) : undefined}>
-                {r.spotUsd !== null ? fmtPrice(r.spotUsd) : <span className="text-soft">Not seeded</span>}
+                <span className="inline-flex items-center justify-end gap-3">
+                  <Sparkline points={sparks?.[r.account]} className="shrink-0 max-lg:hidden" />
+                  {r.spotUsd !== null ? fmtPrice(r.spotUsd) : <span className="text-soft">Not seeded</span>}
+                </span>
               </td>
               <td className="num" title={r.nav.navUsd !== null ? fmtPriceLong(r.nav.navUsd) : undefined}>
                 {fmtPrice(r.nav.navUsd)}
@@ -324,7 +338,7 @@ function MarketTable({ rows, sort, asc, onSort }: { rows: MarketRow[]; sort: Sor
   );
 }
 
-function MarketCards({ rows }: { rows: MarketRow[] }) {
+function MarketCards({ rows, sparks }: { rows: MarketRow[]; sparks: Sparks }) {
   return (
     <ul className="grid md:hidden">
       {rows.map((r) => (
@@ -339,6 +353,7 @@ function MarketCards({ rows }: { rows: MarketRow[] }) {
                   Holds {r.ticker ?? "?"}
                 </p>
               </div>
+              <Sparkline points={sparks?.[r.account]} className="shrink-0" />
               <ZoneBadge zone={r.zone} fallback={r.seeded ? "New" : "Not seeded"} />
             </div>
             <dl className="mt-4 grid grid-cols-3 gap-2 text-sm">

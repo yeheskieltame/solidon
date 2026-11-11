@@ -25,7 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { chainMeta } from "@/lib/chains";
 import { MEME_DECIMALS, NEARBLOCKS, USDC_DECIMALS } from "@/lib/config";
 import { fmtRaw, shortAddr, timeAgo, toBig } from "@/lib/format";
-import type { MemeEvent } from "@/lib/events";
+import type { EventFeed, MemeEvent } from "@/lib/events";
 import { fmtTimes } from "@/lib/mnav";
 import type { AsyncState } from "@/lib/use-async";
 
@@ -132,12 +132,15 @@ export function mnavHistory(events: MemeEvent[] | undefined): { t: number; v: nu
 }
 
 /** The meme's events as a table: event, what happened, when (linked to the transaction). */
-export function EventLog({ account, symbol, log }: { account: string; symbol: string; log: AsyncState<MemeEvent[]> }) {
+export function EventLog({ account, symbol, log }: { account: string; symbol: string; log: AsyncState<EventFeed> }) {
+  const events = log.data?.events;
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-[52ch] text-[0.9375rem] text-soft">
-          Every mint, burn, trade and rebalance the contract logged in its latest transactions, read from NearBlocks.
+          {log.data?.source === "indexer"
+            ? "Every mint, burn, trade and rebalance the contract logged, from the keeper's indexer."
+            : "Every mint, burn, trade and rebalance the contract logged in its latest transactions, read from NearBlocks."}
         </p>
         <Button variant="ghost" size="sm" onClick={log.reload} disabled={log.loading}>
           <RefreshCw className={cn(log.loading && "animate-spin")} aria-hidden />
@@ -162,7 +165,7 @@ export function EventLog({ account, symbol, log }: { account: string; symbol: st
         >
           {log.error}. Every transaction is also on NearBlocks.
         </Notice>
-      ) : log.data && log.data.length === 0 ? (
+      ) : events && events.length === 0 ? (
         <Notice className="mt-4" title="Nothing has happened yet">
           The first trade or rebalance shows up here.
         </Notice>
@@ -180,7 +183,7 @@ export function EventLog({ account, symbol, log }: { account: string; symbol: st
               </tr>
             </thead>
             <tbody>
-              {(log.data ?? []).map((e, i) => {
+              {(events ?? []).map((e, i) => {
                 const kind = eventKind(e.event);
                 const Icon = kind.icon;
                 return (
