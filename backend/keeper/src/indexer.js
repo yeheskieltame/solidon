@@ -11,6 +11,7 @@
 //              minute while testnet makes ~100 (measured, backend/README.md).
 import { serve } from "./api.js";
 import { eventsFromTx, txComplete } from "./events.js";
+import { Holders } from "./holders.js";
 import { snapshotOf } from "./history.js";
 import { log, errMsg } from "./log.js";
 import { sleep } from "./net.js";
@@ -71,6 +72,7 @@ export class Indexer {
     this.store = store ?? new Store(this.ix.dataDir);
     this.api = new TxApi(this.ix.txApi);
     this.memeFilter = memeFilter;
+    this.holderBook = new Holders(near);
     this.memeList = [];
     this.meta = new Map();
     this.usdc = null;
@@ -84,6 +86,16 @@ export class Indexer {
 
   memes() {
     return this.memeList;
+  }
+
+  /** Holders of `meme` from live `ft_balance_of` views over its event parties (src/holders.js). */
+  holders(meme, limit) {
+    const creator = this.meta.get(meme)?.creator ?? null;
+    return this.holderBook.get(meme, this.store.events.get(meme) ?? [], { creator, limit });
+  }
+
+  onHoldersError(meme, e) {
+    log.warn("api", `holders of ${meme} failed: ${errMsg(e)}`);
   }
 
   health() {

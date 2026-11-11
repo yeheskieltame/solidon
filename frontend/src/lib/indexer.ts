@@ -134,3 +134,31 @@ export const fetchIndexedMemeEvents = (meme: string, limit = 50) =>
 /** Events that involve an account, newest first. Throws when the indexer is down. */
 export const fetchIndexedAccountActivity = (account: string, limit = 50) =>
   events(`/v1/accounts/${encodeURIComponent(account)}/activity?limit=${limit}`);
+
+export type Holder = {
+  account: string;
+  /** Raw units. */
+  balance: string;
+  /** Of the total supply, 0 to 1; null when the supply is unknown. */
+  share: number | null;
+};
+export type MemeHolders = {
+  meme: string;
+  /** Biggest first, the pool excluded. */
+  holders: Holder[];
+  /** The meme contract's own reserve in its pool, raw units. */
+  pool_reserve: string | null;
+  total_supply: string | null;
+  updated_at: number;
+};
+
+/** Top holders of a meme (live balances, cached 60 s by the indexer); null when it is down. */
+export async function fetchHolders(meme: string, limit = 20): Promise<MemeHolders | null> {
+  if (!(await indexerHealth())) return null;
+  try {
+    const r = await get<MemeHolders>(`/v1/memes/${encodeURIComponent(meme)}/holders?limit=${limit}`, 20_000);
+    return Array.isArray(r?.holders) ? r : null;
+  } catch {
+    return null;
+  }
+}

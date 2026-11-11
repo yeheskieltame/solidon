@@ -8,6 +8,7 @@ import { CompositionBar, compositionOf } from "./composition";
 import { CopyButton, ExplorerLink } from "./copy-button";
 import { EventLog, mnavHistory } from "./event-log";
 import { HISTORY_EMPTY, HistoryCharts, useMemeHistory } from "./history-charts";
+import { HoldersList, holdersSummary } from "./holders-list";
 import { MemeIcon } from "./meme-icon";
 import { MnavChart } from "./mnav-chart";
 import { MnavGauge, ZoneBadge } from "./mnav-gauge";
@@ -24,6 +25,7 @@ import { AppLink } from "@/lib/app-link";
 import { STOCK_LOGOS } from "@/lib/brands";
 import { NEARBLOCKS, NETWORK } from "@/lib/config";
 import { loadMemeEvents } from "@/lib/events";
+import { fetchHolders } from "@/lib/indexer";
 import { fmtUsdCompact } from "@/lib/figure";
 import { fmtAmount, fmtRaw, fmtUsd, timeAgo, toBig, toNumber } from "@/lib/format";
 import { lastMnav, oracleUsd } from "@/lib/math";
@@ -33,7 +35,7 @@ import { fmtTimes, mnavSentence } from "@/lib/mnav";
 import { useAsync } from "@/lib/use-async";
 import { errorText, useWallet } from "@/lib/wallet";
 
-type DetailKey = "history" | "treasury" | "rules" | "balance" | "activity" | "contract";
+type DetailKey = "history" | "treasury" | "rules" | "balance" | "holders" | "activity" | "contract";
 
 /** A key/value attribute row with a hairline under it. */
 function Attr({ k, v }: { k: ReactNode; v: ReactNode }) {
@@ -133,6 +135,7 @@ export function MemePage({ account }: { account: string }) {
   const [fresh, setFresh] = useState(0);
   const snap = useAsync(() => loadMemeCached(account, fresh > 0), [account, fresh]);
   const events = useAsync(() => loadMemeEvents(account), [account]);
+  const holders = useAsync(() => fetchHolders(account), [account]);
   const priceHistory = useMemeHistory(account);
   const { accountId, send, connect, signHint } = useWallet();
   const user = useUserBalances(account, accountId);
@@ -212,6 +215,7 @@ export function MemePage({ account }: { account: string }) {
     setFresh((f) => f + 1);
     user.reload();
     readings.reload();
+    holders.reload();
   };
 
   const toggle = (k: DetailKey) =>
@@ -563,6 +567,18 @@ export function MemePage({ account }: { account: string }) {
                 : `No price for ${ticker} from the oracle. Stock is valued at zero here until one is published.`}
             </p>
           </DetailItem>
+
+          {holders.data && (
+            <DetailItem
+              id="holders"
+              title="Holders"
+              summary={holdersSummary(holders.data, metadata.symbol)}
+              open={open.has("holders")}
+              onToggle={() => toggle("holders")}
+            >
+              <HoldersList data={holders.data} symbol={metadata.symbol} you={accountId} />
+            </DetailItem>
+          )}
 
           <DetailItem
             id="activity"

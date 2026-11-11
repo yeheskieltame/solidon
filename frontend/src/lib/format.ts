@@ -65,6 +65,12 @@ export function shortAddr(a: string, head = 6, tail = 4): string {
   return a.length > head + tail + 1 ? `${a.slice(0, head)}…${a.slice(-tail)}` : a;
 }
 
+/** NEAR account ids as people read them: 64-hex implicit accounts shortened, named ones kept. */
+export function shortAccount(v: unknown): string {
+  const id = String(v ?? "");
+  return /^[0-9a-f]{64}$/.test(id) ? shortAddr(id, 6, 4) : id;
+}
+
 export function timeAgo(secs: number): string {
   const d = Math.max(0, Math.floor(Date.now() / 1000) - secs);
   if (d < 60) return `${d}s ago`;

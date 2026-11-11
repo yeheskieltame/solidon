@@ -1,9 +1,11 @@
 // Read-only HTTP API over the indexer's store (node:http, JSON, CORS *). `route` is pure:
 // (service, method, url) -> { status, body }, so every route is unit-tested without a socket.
+// The holders route needs NEAR views, so it alone returns a Promise of { status, body }.
 //   GET /health
 //   GET /v1/memes
 //   GET /v1/memes/:id/history?since=<unix s>&limit=<n>   ascending
 //   GET /v1/memes/:id/events?limit=<n>&before=<block>     newest first
+//   GET /v1/memes/:id/holders?limit=<n>                   biggest first (live views, cached 60 s)
 //   GET /v1/accounts/:id/activity?limit=<n>               newest first, across all memes
 import http from "node:http";
 import { involves } from "./events.js";
@@ -80,6 +82,16 @@ export function route(service, method, rawUrl) {
         const list = (store.events.get(id) ?? []).filter((e) => before === null || e.block_height < before);
         return { status: 200, body: { meme: id, events: list.slice(0, limit), more: list.length > limit } };
       }
+      if (id && parts[3] === "holders") {
+        const limit = limitOf(q, 50);
+        return service.holders(id, limit).then(
+          (body) => ({ status: 200, body }),
+          (e) => {
+            service.onHoldersError?.(id, e);
+            return { status: 502, body: { error: "NEAR RPC unavailable, try again" } };
+          },
+        );
+      }
     }
 
     if (parts[0] === "v1" && parts[1] === "accounts" && parts.length === 4 && parts[3] === "activity") {
@@ -102,8 +114,8 @@ export function route(service, method, rawUrl) {
 }
 
 export function serve(service, port, onError = () => {}) {
-  const server = http.createServer((req, res) => {
-    const { status, body } = route(service, req.method, req.url);
+  const server = http.createServer(async (req, res) => {
+    const { status, body } = await route(service, req.method, req.url);
     res.writeHead(status, {
       "content-type": "application/json; charset=utf-8",
       "access-control-allow-origin": "*",
