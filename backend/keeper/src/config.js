@@ -61,10 +61,11 @@ export function loadEnvFile(file) {
 }
 
 export function parseFlags(argv) {
-  const flags = { once: false, dryRun: false, memes: null, only: null };
+  const flags = { once: false, dryRun: false, memes: null, only: null, noApi: false };
   for (const a of argv) {
     if (a === "--once") flags.once = true;
     else if (a === "--dry-run") flags.dryRun = true;
+    else if (a === "--no-api") flags.noApi = true;
     else if (a.startsWith("--meme=")) flags.memes = a.slice(7).split(",").filter(Boolean);
     else if (a.startsWith("--only=")) flags.only = a.slice(7).split(",").filter(Boolean);
     else if (a === "--help" || a === "-h") flags.help = true;
@@ -146,6 +147,14 @@ export function loadConfig(flags) {
     hoodMainnetUrl: process.env.HOOD_MAINNET_RPC || alchemy("robinhood-mainnet"),
     feeds: readJson(path.join(STOCKS, "feeds.json")).feeds,
     proxies: CHAINLINK_PROXIES,
+    // Indexer + read API (src/indexer.js, src/api.js): history and events, no key needed.
+    indexer: {
+      port: num("INDEXER_PORT", 8788),
+      dataDir: process.env.INDEXER_DATA || path.join(REPO, "backend/keeper/data"),
+      txApi: process.env.FASTNEAR_TX_API || "https://tx.test.fastnear.com",
+      pollSecs: num("INDEXER_POLL_SECS", 20),
+      snapshotSecs: num("SNAPSHOT_SECS", num("LOOP_SECS", 60)),
+    },
     statePath: process.env.KEEPER_STATE || path.join(REPO, "backend/keeper/state.json"),
     loopSecs: num("LOOP_SECS", 60),
     oracleIntervalSecs: num("ORACLE_INTERVAL_SECS", 300),
@@ -178,11 +187,13 @@ export function loadConfig(flags) {
 
 export const HELP = `Solidon keeper (testnet)
 
-  node keeper.js [--once] [--dry-run] [--meme=a.testnet,b.testnet] [--only=oracle,bridge,treasury,broadcast,solana]
+  node keeper.js [--once] [--dry-run] [--no-api] [--meme=a.testnet,b.testnet] [--only=oracle,bridge,treasury,broadcast,solana]
+  node indexer.js [--meme=...]   indexer + read API only, never signs
 
   --once      run one cycle and exit
   --dry-run   real reads, no writes: logs every transaction it would send (no key needed)
   --meme=     only these memes (default: every meme of the factory)
   --only=     only these steps (default: all)
+  --no-api    do not start the indexer and its HTTP API (INDEXER_PORT, default 8788)
 
 Env: see backend/.env.example (keeper section).`;

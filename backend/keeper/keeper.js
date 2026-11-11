@@ -6,7 +6,8 @@
 //   treasury   init_treasury, approve_router, fund_chain, buy_stock, rebalance when due
 //   solana     init_solana_treasury, set_solana_accounts, treasury SOL, buy_stock_solana + broadcast,
 //              resign_solana for an expired buy, fund_chain("solana")
-// Usage: node keeper.js [--once] [--dry-run] [--meme=...] [--only=...]   (see --help)
+//   api        indexer + read API (src/indexer.js) on its own timers; --no-api disables it
+// Usage: node keeper.js [--once] [--dry-run] [--no-api] [--meme=...] [--only=...]   (see --help)
 import { HELP, loadConfig, parseFlags } from "./src/config.js";
 import { log, errMsg, setSecrets } from "./src/log.js";
 import { Near } from "./src/near.js";
@@ -20,6 +21,7 @@ import { housekeeping } from "./src/treasury.js";
 import { solanaHousekeeping, solanaWalletReport } from "./src/solana.js";
 import { SolanaRpc, keeperKeypair } from "./src/sol.js";
 import { sleep } from "./src/net.js";
+import { startReadService } from "./src/indexer.js";
 
 const flags = parseFlags(process.argv.slice(2));
 if (flags.help) {
@@ -151,6 +153,8 @@ async function cycle(first) {
 }
 
 await startup();
+// History and events run on their own timers: the treasury loop below never waits for them.
+const readService = flags.noApi || flags.once ? null : startReadService(cfg, near, { memeFilter: flags.memes });
 for (let first = true; !stopping; first = false) {
   const t0 = Date.now();
   try {
@@ -162,4 +166,5 @@ for (let first = true; !stopping; first = false) {
   const wait = cfg.loopSecs * 1000 - (Date.now() - t0);
   for (let t = 0; t < wait && !stopping; t += 1000) await sleep(Math.min(1000, wait - t));
 }
+readService?.stop();
 log.info("keeper", "stopped");
