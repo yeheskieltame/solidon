@@ -9,6 +9,7 @@ import { describeEvent, eventKind } from "@/components/event-log";
 import { MemeIcon } from "@/components/meme-icon";
 import { ZoneBadge } from "@/components/mnav-gauge";
 import { Notice } from "@/components/notice";
+import { PayFromChain } from "@/components/pay-from-chain";
 import { Stat, StatRow } from "@/components/stat";
 import { useToast } from "@/components/toast";
 import { FaucetLine, GetTestFundsButton } from "@/components/wallet-controls";
@@ -181,6 +182,8 @@ export function Dashboard() {
             />
             <Stat label="Claimable" hint="Creator fees, caller tips and failed payouts waiting for this account." value={pf ? pf.totals.claimableUsd : null} format={fmtUsdCompact} sub="Fees, tips, failed payouts" />
           </StatRow>
+
+          {!readOnly && <PayFromChain className="mt-10 max-w-[26rem]" onFunded={() => setTick((t) => t + 1)} />}
 
           <section aria-labelledby="positions-title" className="mt-16">
             <div className="flex items-baseline justify-between gap-3">

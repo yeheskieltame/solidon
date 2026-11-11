@@ -20,6 +20,9 @@ prologs and comments stripped; single-colour Simple Icons paths get the brand co
 | `chains/base.svg` | <https://raw.githubusercontent.com/base/brand-kit/main/logo/TheSquare/Digital/Base_square_blue.svg> | Official Base brand kit (github.com/base/brand-kit), "The Square" |
 | `chains/robinhood.svg` | <https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/robinhood.svg> | Simple Icons (CC0 data), the Robinhood feather, shown on Robinhood's lime for Robinhood Chain |
 | `chains/solana.svg` | <https://cryptologos.cc/logos/solana-sol-logo.svg> | cryptologos.cc, the Solana gradient mark |
+| `chains/bitcoin.svg` | <https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/bitcoin.svg> | Simple Icons (CC0 data), filled with Bitcoin orange #F7931A. Used for paying from another chain |
+| `chains/ethereum.svg` | <https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/ethereum.svg> | Simple Icons (CC0 data), filled with #627EEA. Used for ETH as a pay-in asset |
+| `chains/arbitrum.svg` | <https://cryptologos.cc/logos/arbitrum-arb-logo.svg> | cryptologos.cc, the Arbitrum mark. Used for paying from Arbitrum |
 | `platforms/uniswap.svg` | <https://commons.wikimedia.org/wiki/Special:FilePath/Uniswap_Logo.svg> | Wikimedia Commons, the Uniswap unicorn |
 | `platforms/raydium.svg` | <https://cryptologos.cc/logos/raydium-ray-logo.svg> | cryptologos.cc |
 | `platforms/chainlink.svg` | <https://cryptologos.cc/logos/chainlink-link-logo.svg> | cryptologos.cc |

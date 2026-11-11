@@ -28,6 +28,9 @@ export const CHAIN_LOGOS: Record<string, BrandLogo> = {
   base: { src: "/logos/chains/base.svg", name: "Base", scale: 1, tile: "#0000ff" },
   robinhood: { src: "/logos/chains/robinhood.svg", name: "Robinhood Chain", scale: 0.6, tile: "#ccff00" },
   solana: { src: "/logos/chains/solana.svg", name: "Solana", scale: 0.56, tile: "#0b1020" },
+  bitcoin: { src: "/logos/chains/bitcoin.svg", name: "Bitcoin", scale: 0.7 },
+  ethereum: { src: "/logos/chains/ethereum.svg", name: "Ethereum", scale: 0.56 },
+  arbitrum: { src: "/logos/chains/arbitrum.svg", name: "Arbitrum", scale: 0.78 },
 };
 
 export const PLATFORM_LOGOS = {
