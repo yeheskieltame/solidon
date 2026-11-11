@@ -1,0 +1,126 @@
+{
+ "meme": "e2etest.solidon.testnet",
+ "pool": {
+  "meme_reserve": "506271689539410721945461952",
+  "usdc_reserve": "1975224018",
+  "treasury_usdc": "6933339",
+  "spot_price": "3901509918117",
+  "twap_price": "3978500684640"
+ },
+ "treasury": {
+  "stock_units": "159831127948846476",
+  "treasury_usdc": "6933339",
+  "circulating": "502059946717057512037792224",
+  "redemption_open": false,
+  "last_rebalance": 1794372171,
+  "next_rebalance": 1794375771,
+  "last_nav": "29762330370",
+  "last_mnav_bps": "1337281",
+  "epoch_cap": "5020599467170575120377922",
+  "epoch_issued": "5020599467170575120377922"
+ },
+ "tc": {
+  "address": "0x582be22a62a466284817298848be90bf8a6f37e4",
+  "mpc": "v1.signer-prod.testnet",
+  "signing": false,
+  "chains": [
+   {
+    "config": {
+     "name": "base",
+     "chain_id": 84532,
+     "usdc": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+     "usdc_decimals": 6,
+     "swap_router": "0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4",
+     "pool_fee": 3000,
+     "max_fee_per_gas": "100000000",
+     "max_priority_fee_per_gas": "1000000",
+     "max_swap_usdc": "5000000",
+     "proof": {
+      "Mpc": {
+       "foreign_chain": "Base",
+       "finality": "Latest"
+      }
+     }
+    },
+    "venue": {
+     "chain": "base",
+     "token": "0x8f13563130684478E617C1797308A081Cb2c2654",
+     "decimals": 8,
+     "solana": null
+    },
+    "nonce": 4,
+    "approved": true,
+    "usdc": "0",
+    "stock": "5829568",
+    "in_transit": "0"
+   },
+   {
+    "config": {
+     "name": "robinhood",
+     "chain_id": 46630,
+     "usdc": "0xbf4479C07Dc6fdc6dAa764A0ccA06969e894275F",
+     "usdc_decimals": 18,
+     "swap_router": "0x3ce954107b1a675826b33bf23060dd655e3758fe",
+     "pool_fee": 3000,
+     "max_fee_per_gas": "100000000",
+     "max_priority_fee_per_gas": "10000000",
+     "max_swap_usdc": "5000000000000000000",
+     "proof": "Relayer"
+    },
+    "venue": {
+     "chain": "robinhood",
+     "token": "0x82289af84B9a0faf598a4D2052E16c8D1619f7f4",
+     "decimals": 18,
+     "solana": null
+    },
+    "nonce": 4,
+    "approved": true,
+    "usdc": "0",
+    "stock": "45190227948846476",
+    "in_transit": "0"
+   }
+  ],
+  "solana": {
+   "config": {
+    "name": "solana",
+    "usdc_mint": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+    "usdc_token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    "stock_token_program": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+    "clmm_program": "devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH",
+    "amm_config": "GVSwm4smQBYcgAJU7qjFHLQBHTc4AdB3F2HbZp6KqKof",
+    "max_swap_usdc": "5000000"
+   },
+   "venue": {
+    "chain": "solana",
+    "token": "88Bseqdd57C3sD5E8SaLPfwQ18e47RvzCXsRApiwSqbB",
+    "decimals": 8,
+    "solana": {
+     "pool": "FEstNywAgrVXixWbLkFaqqMjT7jbdjwmkoPdmudtRCqU",
+     "usdc_vault": "7QxxoL5DRDo2Q1Z6nvXkFa7Z55cN7r8YRyj4ig8i5sPB",
+     "stock_vault": "2x5h8nw3sH9zEo7g8G3e3ub7n9GMXJWLvivrXtJ18BN6",
+     "observation": "AggvhJqcKyXuGnW2xx52MeY3veqwsm4JSCVJDg1bfiVF",
+     "bitmap_extension": "5nUE56LNNXaxeYwZWSfpWfD2qBLXmzy2F41nSrxBKhPu"
+    }
+   },
+   "address": "BnhYneFsvh45UDJy7B7CVwvdAev1p1gNzGjWdf9KERNV",
+   "usdc_account": "9mJacqGtPZFSBkn1ydeDUVEMrR4ZfKK8e3MSXMadAyG4",
+   "stock_account": "7STZuQ6enhKb9NPb2QpRvSkgDSeBWAGNkyQAwSQ8Ynai",
+   "seq": 5,
+   "usdc": "0",
+   "stock": "5634522",
+   "in_transit": "0",
+   "last_buy": {
+    "seq": 4,
+    "usdc_in": "5000000",
+    "min_stock_out": "2864151",
+    "signed_at": 277168336
+   }
+  }
+ },
+ "price": {
+  "price": "17282606149",
+  "conf": "0",
+  "expo": -8,
+  "publish_time": 1794372829
+ }
+}
