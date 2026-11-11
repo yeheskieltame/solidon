@@ -191,7 +191,9 @@ test("parseFlags", () => {
     dryRun: true,
     memes: ["a.testnet", "b.testnet"],
     only: ["oracle"],
+    noApi: false,
   });
+  assert.equal(parseFlags(["--no-api"]).noApi, true);
   assert.throws(() => parseFlags(["--nope"]));
 });
 
