@@ -4,7 +4,7 @@ Node.js services and spike scripts that support the contracts. None of them hold
 
 | Path | Purpose |
 | --- | --- |
-| `keeper/` | Testnet keeper: mock oracle prices, treasury housekeeping (EVM and Solana), broadcaster for MPC-signed transactions, testnet bridge for `fund_chain` |
+| `keeper/` | Testnet keeper: mock oracle prices, treasury housekeeping (EVM and Solana), broadcaster for MPC-signed transactions, testnet bridge for `fund_chain`; indexer + read API (price history, event log) |
 | `spike/` | Integration spike scripts behind [docs/SPIKE.md](../docs/SPIKE.md) |
 | `solana-spike/` | Raydium CLMM venues and the MPC-signed swap on Solana devnet (S25) |
 
@@ -17,10 +17,11 @@ cd backend/keeper
 npm install
 npm test                              # pure logic + flow tests, no network
 node keeper.js --once --dry-run       # real reads, no transaction; no key needed
-node keeper.js                        # loop every LOOP_SECS (60 s)
+node keeper.js                        # loop every LOOP_SECS (60 s), plus the indexer + read API
+node indexer.js                       # indexer + read API only: no key, never signs
 ```
 
-Node 20+. Flags: `--once` (one cycle), `--dry-run` (every write is logged as `DRY ... would ...` instead of sent), `--meme=a.testnet,b.testnet`, `--only=oracle,broadcast,bridge,treasury,solana`. Logs are one line per event with explorer links; RPC URLs and keys are redacted.
+Node 20+. Flags: `--once` (one cycle, no API), `--dry-run` (every write is logged as `DRY ... would ...` instead of sent), `--no-api` (no indexer, no HTTP API), `--meme=a.testnet,b.testnet`, `--only=oracle,broadcast,bridge,treasury,solana`. Logs are one line per event with explorer links; RPC URLs and keys are redacted.
 
 One cycle:
 
@@ -35,6 +36,32 @@ One cycle:
 The fund estimate counts the Solana ledger too, as the contract's NAV does.
 
 Memes on pre-multichain code (no `get_treasury_chains`, like the current `elondoge.solidon.testnet`) only get `rebalance()`; a factory without `get_chains` is reported and the chain list is taken from `contracts/stocks/`.
+
+### Indexer and read API
+
+The web app's activity feed reads NearBlocks, which rate-limits, and the contracts keep no price history. The indexer (`src/indexer.js`) fills both gaps and serves them over HTTP (`src/api.js`, `node:http`, JSON, CORS `*`, read-only). It starts with the keeper (`--no-api` turns it off) and runs alone as `node indexer.js` for a hosted read-only deployment: that process loads no key and sends no transaction. It has its own timers, so a slow indexer source never delays the treasury loop.
+
+- **Snapshots**, every `SNAPSHOT_SECS` (default `LOOP_SECS`, 60 s): per meme `get_pool`, `get_treasury`, `get_treasury_chains` and the oracle price (`get_price_no_older_than`, else `get_price_unsafe` with `oracle_stale: true`), turned into one point with the contract's math (`Meme::assets` / `Meme::nav`, the same as `frontend/src/lib/math.ts`): treasury value = NEAR cash + USDC on and in transit to every chain + stock on every chain at one price; `nav` = value / circulating; `mnav` = (TWAP, else spot) / NAV. Every point is kept for 24 h, then one per 15 minutes (compacted hourly).
+- **Events**, every `INDEXER_POLL_SECS` (20 s): the [FastNear transactions API](https://tx.test.fastnear.com) lists the transactions of the factory and of every meme (`POST /v0/account`, newest first, paged by `resume_token`); new ones are fetched with every receipt and log (`POST /v0/transactions`, 20 per call). Each `EVENT_JSON:` log of a receipt executed by the factory or a meme is stored under that account, one record per `data` item; NEP-141 events of the USDC contract that name a meme (buys, payouts, `fund_chain` transfers with their memo) are stored under that meme. A transaction is stored once all its receipts have executed. **Backfill**: the first run walks every page back to the account's creation (e2etest: 48 transactions in ~6 s); `data/cursor.json` records each indexed transaction and each fully backfilled account, so a restart resumes and a new meme is backfilled on its first poll.
+- **Why not neardata block-following**: measured on 11 Nov 2026, the free tier of `testnet.neardata.xyz` answers "rate-limit exceeded of 30 blocks per minute" (HTTP 429), while testnet produces ~100 blocks a minute (0.6 s blocks), so it cannot even follow the head; a backfill from the factory deploy (~180k blocks) would take days. The FastNear tx API indexes per account, so the cost scales with Solidon's own transactions, not with the chain.
+
+Data dir `backend/keeper/data/` (gitignored; `INDEXER_DATA` moves it):
+
+| File | Content |
+| --- | --- |
+| `history/<meme>.jsonl` | `{t, price, twap, nav, mnav, stock_price, oracle_stale, treasury_value, circulating, chains: {base, robinhood, solana}}`, ascending. Prices and values in USD per whole token; `chains` is the stock held per chain in raw units of its venue token; `twap`/`nav`/`mnav` are `null` when not computable |
+| `events/<account>.jsonl` | `{block_height, timestamp, tx_hash, receipt_id, log_index, data_index, signer, predecessor, receiver, event, standard, version, data}`; `receiver` is the contract that emitted it (the meme, the factory, or the USDC contract) |
+| `cursor.json` | `{done: {<tx_hash>: <block>}, backfilled: {<account>: true}}` |
+
+Routes (`INDEXER_PORT`, default 8788). `limit` is 1..500; errors are `{"error": "..."}` with 400 (bad parameter or account id), 404 (unknown meme or route) or 405 (not GET):
+
+| Route | Answer |
+| --- | --- |
+| `GET /health` | `{ok, last_block, memes, lag_s, events, transactions, backfilled, tracked, last_snapshot}`; `last_block` is the final NEAR block at the last finished poll, `lag_s` the seconds since; `ok` is false before the first poll or when it is late |
+| `GET /v1/memes` | `{memes: [{id, symbol, name, creator, ticker, latest, events}]}`, `latest` = the newest snapshot or `null` |
+| `GET /v1/memes/:id/history?since=<unix s>&limit=` | `{meme, history: [snapshot...], more}`, ascending from `since` (default all, limit 500) |
+| `GET /v1/memes/:id/events?limit=50&before=<block>` | `{meme, events: [event...], more}`, newest first; page with `before` = the last `block_height` seen |
+| `GET /v1/accounts/:id/activity?limit=50&before=<block>` | `{account, events, more}`: events of every meme and the factory where the account is the signer, the predecessor, or named in `data` (`account`, `owner_id`, `old_owner_id`, `new_owner_id`, `caller`, `creator`) |
 
 ### Keeper setup (maintainer)
 
@@ -64,5 +91,8 @@ Memes on pre-multichain code (no `get_treasury_chains`, like the current `elondo
 - **Solana holdings are booked, not read**: the keeper checks only the last signed buy, because the contract can re-sign only its `last_buy`; so it never starts a new buy before the last one landed. A buy that keeps failing on-chain (e.g. the pool moved past `minOut`) is re-signed at most `SOLANA_MAX_RESIGNS` times, then left for a human.
 - **Stuck signatures**: the keeper does not call `clear_stuck_signature` (300 blocks), on EVM or Solana.
 - **MPC log index**: `credit_cash` uses one `log_index` both to select the log and as the log's `logIndex` in the payload hash. The keeper sends the receipt's `logIndex` (as backend/spike/s8 did). Both live checks (S18, S26) had `logIndex` equal to the log's position in the receipt, so whether the MPC selects by position or by block-wide `logIndex` is unconfirmed; when they differ, the keeper warns, and a failed credit is retried `CREDIT_MAX_ATTEMPTS` times, then left as `credit-failed` in `state.json`.
-- **Indexer**: incoming transfers are listed through NearBlocks v3 (v1 was retired on 5 Nov 2026; v3 has no memo, hence the receipt read-back). If NearBlocks is down the bridge waits; nothing is lost.
+- **Bridge source**: incoming transfers are listed through NearBlocks v3 (v1 was retired on 5 Nov 2026; v3 has no memo, hence the receipt read-back). If NearBlocks is down the bridge waits; nothing is lost.
 - **Restarts**: a transfer seen but not yet delivered when `state.json` is lost is still capped by `in_transit`, so it cannot be delivered twice.
+- **Indexer source**: one free third-party API (FastNear tx API, rate-limited; the client waits and backs off on 429). If it is down, history keeps accumulating and events catch up on the next good poll. Events of memes are read from receipts the meme executed; events of other contracts are not indexed except USDC transfers that name a meme. Failed receipts emit no logs, so failed buys/sells do not appear.
+- **History starts at the first indexer run**: the contracts keep no price history, so there are no points before that (events, in contrast, are backfilled). Gaps appear while no indexer runs.
+- **Indexer storage** is JSONL files held in memory (fine for hackathon volume: tens of memes, thousands of events); `activity` scans every event per request.
