@@ -1,11 +1,26 @@
 "use client";
 
-import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
-import { useRef } from "react";
+import { motion, useScroll, useTransform, type MotionValue } from "motion/react";
+import { useRef, useSyncExternalStore } from "react";
 import { StockLogo } from "@/components/brand-logo";
 import { TESTNET_VENUES } from "@/lib/venues";
 
 const STOCKS = Object.entries(TESTNET_VENUES).map(([ticker, v]) => ({ ticker, name: v.name }));
+
+const REDUCE = "(prefers-reduced-motion: reduce)";
+const subscribe = (cb: () => void) => {
+  const mq = matchMedia(REDUCE);
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+};
+
+/**
+ * Reduced motion without a hydration mismatch: the server (and the hydrating first render)
+ * always renders the marquee; the client switches to the static list right after hydration.
+ */
+function useReduced(): boolean {
+  return useSyncExternalStore(subscribe, () => matchMedia(REDUCE).matches, () => false);
+}
 
 function Item({ ticker, name }: { ticker: string; name: string }) {
   return (
@@ -38,7 +53,7 @@ function Row({ items, reverse, shift }: { items: typeof STOCKS; reverse?: boolea
  * Pauses on hover; static under reduced motion.
  */
 export function StockMarquee() {
-  const reduce = useReducedMotion();
+  const reduce = useReduced();
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
   const a = useTransform(scrollYProgress, [0, 1], [60, -60]);
