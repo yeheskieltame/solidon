@@ -20,9 +20,19 @@ function encodeArgs(args: object): string {
   return btoa(bin);
 }
 
+/** Endpoints that just failed (rate limit, outage) go to the back of the line for 30 s. */
+const benched = new Map<string, number>();
+const BENCH_MS = 30_000;
+
+function endpoints(): string[] {
+  const now = Date.now();
+  const ok = NEAR_RPCS.filter((u) => (benched.get(u) ?? 0) <= now);
+  return [...ok, ...NEAR_RPCS.filter((u) => !ok.includes(u))];
+}
+
 async function rpc(body: object): Promise<unknown> {
   let last: unknown;
-  for (const url of NEAR_RPCS) {
+  for (const url of endpoints()) {
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -31,9 +41,12 @@ async function rpc(body: object): Promise<unknown> {
         cache: "no-store",
       });
       if (!res.ok) throw new Error(`${url} answered HTTP ${res.status}`);
-      return await res.json();
+      const json = await res.json();
+      benched.delete(url);
+      return json;
     } catch (e) {
       last = e;
+      benched.set(url, Date.now() + BENCH_MS);
     }
   }
   throw new ViewError(

@@ -176,7 +176,12 @@ export function HistoryCharts({
   const mnav = cut.filter((p) => (p.mnav ?? 0) > 0).map((p) => ({ t: p.t, v: p.mnav! }));
 
   if (history.loading && all === undefined) return <p className="text-sm text-soft">Reading the history…</p>;
-  if (!all || all.length < 2) return <p className="text-[0.9375rem] text-soft">{HISTORY_EMPTY}</p>;
+  if (!all || all.length < 2)
+    return (
+      <p className="max-w-[62ch] text-[0.9375rem] text-soft">
+        The keeper records price, NAV and mNAV as it runs. Once it has two points, {symbol} is charted against {ticker} here, with mNAV over time.
+      </p>
+    );
 
   return (
     <div className="grid gap-8">
