@@ -85,7 +85,7 @@ export async function fetchHistory(meme: string, opts: { since?: number; limit?:
   if (opts.limit) q.set("limit", String(opts.limit));
   try {
     const rows = await get<unknown>(`/v1/memes/${encodeURIComponent(meme)}/history${q.size ? `?${q}` : ""}`);
-    const list = Array.isArray(rows) ? rows : ((rows as { data?: unknown[] })?.data ?? []);
+    const list = Array.isArray(rows) ? rows : ((rows as { history?: unknown[] })?.history ?? []);
     return list
       .map((r) => point(r as Record<string, unknown>))
       .filter((p): p is HistoryPoint => !!p)
@@ -123,7 +123,7 @@ export function toMemeEvents(rows: IndexerEvent[]): (MemeEvent & { contract?: st
 async function events(path: string): Promise<(MemeEvent & { contract?: string })[]> {
   if (!(await indexerHealth())) throw new Error("The indexer is unreachable");
   const rows = await get<unknown>(path);
-  const list = Array.isArray(rows) ? rows : ((rows as { data?: unknown[] })?.data ?? []);
+  const list = Array.isArray(rows) ? rows : ((rows as { events?: unknown[] })?.events ?? []);
   return toMemeEvents(list as IndexerEvent[]);
 }
 
