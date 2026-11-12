@@ -162,3 +162,34 @@ export async function fetchHolders(meme: string, limit = 20): Promise<MemeHolder
     return null;
   }
 }
+
+/**
+ * When the meme's current issuance epoch started, replayed from its rebalance events: the
+ * contract (`mnav.rs` evaluate) starts a new epoch at the first rebalance at least `epochSecs`
+ * after the previous start, and does not expose `epoch_start` itself. Trusted only when the
+ * replay agrees with the contract: the tokens issued since that start must equal
+ * `epochIssued`. Null when the indexer is down, the history is cut or the sums differ.
+ */
+export async function fetchEpochStart(meme: string, epochSecs: number, epochIssued: bigint): Promise<number | null> {
+  if (!(epochSecs > 0) || !(await indexerHealth())) return null;
+  try {
+    const r = await get<{ events?: IndexerEvent[]; more?: boolean }>(`/v1/memes/${encodeURIComponent(meme)}/events?limit=500`, 10_000);
+    if (!Array.isArray(r?.events) || r.more) return null;
+    const rebalances = toMemeEvents(r.events)
+      .filter((e) => e.event === "rebalance")
+      .sort((a, b) => a.time - b.time);
+    let start: number | null = null;
+    let issued = 0n;
+    for (const e of rebalances) {
+      if (start === null || e.time >= start + epochSecs) {
+        start = e.time;
+        issued = 0n;
+      }
+      const out = e.data.outcome as { issued?: { meme?: string } } | string | undefined;
+      if (typeof out === "object" && out?.issued?.meme) issued += BigInt(out.issued.meme);
+    }
+    return start !== null && issued === epochIssued ? start : null;
+  } catch {
+    return null;
+  }
+}
