@@ -1,6 +1,6 @@
 # Solidon backend on a VPS behind a shared Caddy (network deploy_default, see README.md here).
 # Host layout: /opt/solidon/repo (this repo), /opt/solidon/state (indexer data + keeper state.json),
-# /opt/solidon/secrets (solana-keeper.json), /opt/solidon/secrets.env (keys, chmod 600).
+# /opt/solidon/secrets (solana-keeper.json, solana-payer.json), /opt/solidon/secrets.env (keys, chmod 600).
 name: solidon
 services:
   api:
@@ -21,6 +21,11 @@ services:
     environment:
       KEEPER_STATE: /state/state.json
       KEEPER_SOLANA_KEYPAIR: /secrets/solana-keeper.json
+      # Pool re-peg every 30 min (src/repeg.js): EVM with KEEPER_EVM_PRIVATE_KEY (must be the MockERC20 deployer),
+      # Solana with the devnet payer (mint authority of the synthetic mints); its step log persists in /state.
+      REPEG_EVERY_MIN: "30"
+      SOLANA_PAYER_KEYPAIR: /secrets/solana-payer.json
+      SOLANA_SPIKE_STATE: /state/solana-spike-state.json
       NEAR_RPC: https://near-testnet.drpc.org
       NEAR_RPC_SEND: https://test.rpc.fastnear.com
     volumes: ["/opt/solidon/state:/state", "/opt/solidon/secrets:/secrets:ro"]

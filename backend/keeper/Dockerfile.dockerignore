@@ -1,8 +1,12 @@
 **
 !backend/keeper/
+!backend/solana-spike/
 !contracts/stocks/
 backend/keeper/node_modules
 backend/keeper/data
 backend/keeper/state.json
 backend/keeper/.secrets
+backend/keeper/.scratch
 backend/keeper/test
+backend/solana-spike/node_modules
+backend/solana-spike/.secrets

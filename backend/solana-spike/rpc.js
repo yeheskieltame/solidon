@@ -1,4 +1,6 @@
-// Shared devnet setup: RPC URL from backend/.env (never printed), throwaway payer in .secrets/.
+// Shared devnet setup: RPC URL from backend/.env or ALCHEMY_API_KEY (never printed), throwaway payer in .secrets/.
+// For an unattended run (keeper image): SOLANA_PAYER_KEYPAIR = payer keypair file, SOLANA_SPIKE_STATE = a
+// writable state.json (seeded from this directory's copy on first use).
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,7 +9,7 @@ import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const envFile = process.env.SOLIDON_ENV || path.join(HERE, "../.env");
 const env = fs.existsSync(envFile) ? fs.readFileSync(envFile, "utf8") : "";
-const key = env.match(/^ALCHEMY_API_KEY=(.*)$/m)?.[1]?.trim();
+const key = process.env.ALCHEMY_API_KEY || env.match(/^ALCHEMY_API_KEY=(.*)$/m)?.[1]?.trim();
 export const RPC = key ? `https://solana-devnet.g.alchemy.com/v2/${key}` : "https://api.devnet.solana.com";
 // Alchemy devnet has no signatureSubscribe, so confirmations subscribe through the public devnet websocket.
 export const conn = new Connection(RPC, { commitment: "confirmed", wsEndpoint: "wss://api.devnet.solana.com" });
@@ -27,8 +29,12 @@ export async function hoodCall(to, data) {
   if (r.error) throw new Error(`eth_call ${to}: ${r.error.message}`);
   return r.result;
 }
-export const STATE = path.join(HERE, "state.json");
-export const readState = () => (fs.existsSync(STATE) ? JSON.parse(fs.readFileSync(STATE, "utf8")) : {});
+const SEED = path.join(HERE, "state.json");
+export const STATE = process.env.SOLANA_SPIKE_STATE || SEED;
+export const readState = () => {
+  const file = fs.existsSync(STATE) ? STATE : SEED;
+  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {};
+};
 export const writeState = (s) => fs.writeFileSync(STATE, JSON.stringify(s, null, 2) + "\n");
 
 // Throwaway devnet keypairs, created on first use under .secrets/ (git-ignored).
@@ -40,7 +46,10 @@ export function keypair(name) {
   }
   return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(file, "utf8"))));
 }
-export const payer = () => keypair("payer");
+export const payer = () =>
+  process.env.SOLANA_PAYER_KEYPAIR
+    ? Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(process.env.SOLANA_PAYER_KEYPAIR, "utf8"))))
+    : keypair("payer");
 
 // The SDK ships a minified bundle; print errors without dumping it.
 process.on("uncaughtException", (e) => {

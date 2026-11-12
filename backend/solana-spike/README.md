@@ -11,7 +11,7 @@ SOLIDON_ENV=/path/to/backend/.env MPC_SIGNER=creator.solidon.testnet TICKER=NVDA
 SOLIDON_ENV=/path/to/backend/.env ONLY=NVDA node 3_repeg.js   # pool >0.5% above Chainlink: sell stock to 0.995x oracle (USDC sentinel position at the target so the swap fills), add $50k stock liquidity contiguous with the old range (DRY_RUN=1: plan only; state.json stocks.<T>.repegs)
 ```
 
-Throwaway devnet keys (payer, mint keypairs) live in `.secrets/` (git-ignored). `ALCHEMY_API_KEY` is read from `backend/.env` and never printed.
+Throwaway devnet keys (payer, mint keypairs) live in `.secrets/` (git-ignored); `SOLANA_PAYER_KEYPAIR` points at another payer file and `SOLANA_SPIKE_STATE` at a writable state file (seeded from `state.json`), as the keeper image does for its scheduled re-peg (`backend/keeper/src/repeg.js`). `ALCHEMY_API_KEY` is read from `backend/.env` and never printed.
 
 ## Stock venues (Circle devnet USDC, current)
 

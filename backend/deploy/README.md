@@ -3,17 +3,22 @@
 The keeper and the indexer run as two containers of one image (`backend/keeper/Dockerfile`) next to a shared Caddy that terminates HTTPS. The web app runs on Vercel and reads the indexer's API. Live: web https://solidon.xyz and https://app.solidon.xyz (Vercel team `tame22`, project `solidon`), API https://api.solidon.xyz on the VPS.
 
 ```
-/opt/solidon/repo         this repo (backend/keeper, backend/deploy, contracts/stocks), shipped with git archive
-/opt/solidon/state        indexer data/ and keeper state.json (bridge transfers: move it, never copy it to a second keeper)
-/opt/solidon/secrets      solana-keeper.json (chmod 600)
-/opt/solidon/secrets.env  ALCHEMY_API_KEY, PYTH_API_KEY, KEEPER_EVM_PRIVATE_KEY, KEEPER_NEAR_PRIVATE_KEY (chmod 600)
+/opt/solidon/repo         this repo (backend/keeper, backend/solana-spike, backend/deploy, contracts/stocks), shipped with git archive
+/opt/solidon/state        indexer data/, keeper state.json (bridge transfers: move it, never copy it to a second keeper),
+                          solana-spike-state.json (Solana re-peg steps, seeded from the image on first use)
+/opt/solidon/secrets      solana-keeper.json, solana-payer.json (= backend/solana-spike/.secrets/payer.json, mint
+                          authority of the devnet stocks) (chmod 600)
+/opt/solidon/secrets.env  ALCHEMY_API_KEY, PYTH_API_KEY, KEEPER_EVM_PRIVATE_KEY (the EVM deployer, owner of the MockERC20
+                          stocks the re-peg mints), KEEPER_NEAR_PRIVATE_KEY (chmod 600)
 ```
 
 ```bash
 # from a checkout, ship the code and (re)build
-git archive --format=tar HEAD backend/keeper backend/deploy contracts/stocks | ssh root@<vps> 'rm -rf /opt/solidon/repo && mkdir -p /opt/solidon/repo && tar -x -C /opt/solidon/repo'
+git archive --format=tar HEAD backend/keeper backend/solana-spike backend/deploy contracts/stocks | ssh root@<vps> 'rm -rf /opt/solidon/repo && mkdir -p /opt/solidon/repo && tar -x -C /opt/solidon/repo'
 ssh root@<vps> 'cd /opt/solidon/repo/backend/deploy && docker compose up -d --build'
 ```
+
+The keeper re-pegs the synthetic stock pools every 30 minutes (`REPEG_EVERY_MIN` in compose.yml; backend/README.md, keeper section). One pass by hand: `docker compose exec keeper node repeg.js --dry-run`.
 
 Only one keeper may run at a time: stop any other keeper before `up`, and move its `state.json` into `/opt/solidon/state`, so a bridge transfer is never paid twice.
 
