@@ -168,6 +168,14 @@ export function loadConfig(flags) {
     treasuryGasMin: toUnits(process.env.TREASURY_GAS_MIN_ETH || "0.0002", 18),
     treasuryGasTopup: toUnits(process.env.TREASURY_GAS_TOPUP_ETH || "0.0005", 18),
     receiptTimeoutSecs: num("RECEIPT_TIMEOUT_SECS", 120),
+    // Pool re-peg (src/repeg.js): every REPEG_EVERY_MIN minutes (0 = off), a pool whose next buy fills more than
+    // THRESHOLD_PCT above Chainlink is moved to TARGET x Chainlink with DEPTH_USD of new stock liquidity.
+    repeg: {
+      everyMin: num("REPEG_EVERY_MIN", 0),
+      threshold: num("THRESHOLD_PCT", 0.5) / 100,
+      target: num("TARGET", 0.995),
+      depthUsd: num("DEPTH_USD", 50_000),
+    },
     creditMaxAttempts: num("CREDIT_MAX_ATTEMPTS", 6),
     solana: {
       registry: readJson(path.join(STOCKS, "solana-devnet.json")),
@@ -190,7 +198,7 @@ export function loadConfig(flags) {
 
 export const HELP = `Solidon keeper (testnet)
 
-  node keeper.js [--once] [--dry-run] [--no-api] [--meme=a.testnet,b.testnet] [--only=oracle,bridge,treasury,broadcast,solana]
+  node keeper.js [--once] [--dry-run] [--no-api] [--meme=a.testnet,b.testnet] [--only=oracle,bridge,treasury,broadcast,solana,repeg]
   node indexer.js [--meme=...]   indexer + read API only, never signs
 
   --once      run one cycle and exit
@@ -198,5 +206,8 @@ export const HELP = `Solidon keeper (testnet)
   --meme=     only these memes (default: every meme of the factory)
   --only=     only these steps (default: all)
   --no-api    do not start the indexer and its HTTP API (INDEXER_PORT, default 8788)
+
+  node repeg.js [--chain=base,robinhood,solana] [--ticker=NVDA,...] [--dry-run]   one pool re-peg pass
+  REPEG_EVERY_MIN=30 makes the keeper run that pass itself every 30 minutes (default 0 = off).
 
 Env: see backend/.env.example (keeper section).`;

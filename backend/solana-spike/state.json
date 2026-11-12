@@ -154,6 +154,83 @@
           "poolUsdAfter": "171.9619",
           "done": true,
           "doneAt": "2026-11-11T05:26:36.689Z"
+        },
+        {
+          "oracleUsd": "163.87192843",
+          "poolUsdBefore": "172.1137",
+          "tickBefore": -5431,
+          "targetUsd": "163.0526",
+          "limitTick": -4889.27,
+          "sentinel": [
+            -4890,
+            -4880
+          ],
+          "innerEdge": -5430,
+          "depthStock": "30511632150",
+          "swapBudget": "305116321",
+          "priceInsideRange": true,
+          "startedAt": "2026-11-12T10:31:14.973Z",
+          "mintToTx": "22G6LhK9wFTj8ZG2L8vXvvfCbfgrP5ujPApSK4KT9M41Hp5DPXu3NnwKduXxUQjPcQ4xaDvsXyAYxnWuBewRSAQb",
+          "sentinelTx": "4stf7ju4ckDvkcMPtK8gT2dQnvDXvFnuxnEeYFfnrhupTrzdv5usXT25877eCKeafhmy6drXWj9Daaq7M1Ut2Yx6",
+          "sentinelNft": "46QD6ukMKpDZHxauyn4wTaeL3GK2TrsgLGJb6m8rpiEY",
+          "repegSwapTx": "3GVCc3e9YQS2TKta2dX8B4QLu14v8ksuePpknLRbWHSszmw61Rs2ZWaoER7PK474n3LsSjmFZNX4WWyow6JSpnNe",
+          "repegSwapArrays": [
+            -6000,
+            -5400
+          ],
+          "stockSold": "14532402",
+          "usdcReceived": "24999527",
+          "tickAfterSwap": -4890,
+          "poolUsdAfterSwap": "163.0526",
+          "range": [
+            -5430,
+            -4890
+          ],
+          "positionTx": "fNnHvRvjDwdZKhDbvhwrNCGVTf6nDEZE9hu7haWHtSUQ63kXANnWYFeSiMoLf1P7RgDyyRuW2VnxkAE3AhMw8YS",
+          "positionNft": "CX1ayX2W9y7gHLPCJE3AJuSyK6exfhrxQC6T4V2FY7BH",
+          "positionStock": "30511632150",
+          "edgeUsd": "163.0645",
+          "poolUsdAfter": "163.0526",
+          "done": true,
+          "doneAt": "2026-11-12T10:31:22.681Z"
+        },
+        {
+          "oracleUsd": "163.87192843",
+          "poolUsdBefore": "163.0526",
+          "tickBefore": -4890,
+          "targetUsd": "162.2332",
+          "limitTick": -4838.89,
+          "sentinel": [
+            -4840,
+            -4830
+          ],
+          "innerEdge": -4890,
+          "depthStock": "30511632150",
+          "swapBudget": "305116321",
+          "priceInsideRange": false,
+          "startedAt": "2026-11-12T10:33:19.544Z",
+          "mintToTx": "3ozu2S7Rkw6PiX4DGJY3XCXUws7GvDosfamHfq51ZAz8sNLQ9v7VdoiXUtuHwYeV98Y7VBsXW95SqZp5joYo7cGA",
+          "sentinelTx": "2fdAxPsxzXtsksxQxNvsXj8cu4tPW792AR4QQa14p2uMs82yKcaSuCGC6J1qTcLtAd7RSxPV1fHodpwjU4A4AGeK",
+          "sentinelNft": "8j5VEyKrST3PgxAsbxqrQYUpPbcqBEJZmyZy4J8Bvazh",
+          "repegSwapTx": "3zUd2k4D2iNUT8fiVjzuGaBzosNwFrQdrmCcm2qB7Nuv6D2vLNvbakxRGecw2p5ahKLNGGPZwxBaenX7EyA5nxbi",
+          "repegSwapArrays": [
+            -5400
+          ],
+          "stockSold": "6378",
+          "usdcReceived": "10379",
+          "tickAfterSwap": -4839,
+          "poolUsdAfterSwap": "162.2332",
+          "range": [
+            -4890,
+            -4840
+          ],
+          "positionTx": "5DxQsBTSM42a1wHMe8QF5iujABdTYQjHMnt9ttzfXaqu7JwVGZnSs7NHHaPyyBrzwPRFY7h7aNgEUNLLmf2yGRfH",
+          "positionNft": "6QKT4CLc6FPMms9T1mgJYiBcjFvaYMGBVzbov2DMsgjF",
+          "positionStock": "30511632150",
+          "edgeUsd": "162.2512",
+          "poolUsdAfter": "162.2332",
+          "done": true,
+          "doneAt": "2026-11-12T10:33:28.844Z"
         }
       ]
     },
@@ -189,7 +266,8 @@
           -12540
         ]
       },
-      "done": true
+      "done": true,
+      "repegs": []
     },
     "MSFT": {
       "ref_price_usd": "544.15011543",
@@ -263,6 +341,44 @@
           "poolUsdAfter": "531.3259",
           "done": true,
           "doneAt": "2026-11-11T05:27:10.280Z"
+        },
+        {
+          "oracleUsd": "520.31577704",
+          "poolUsdBefore": "531.3259",
+          "tickBefore": -16703,
+          "targetUsd": "517.7142",
+          "limitTick": -16443.35,
+          "sentinel": [
+            -16450,
+            -16440
+          ],
+          "innerEdge": -16710,
+          "depthStock": "9609549086",
+          "swapBudget": "96095490",
+          "priceInsideRange": false,
+          "startedAt": "2026-11-12T10:31:23.430Z",
+          "mintToTx": "5B9fLhb96519BdikzNSiD6SxPcpCmhZ6ufp57f7szs65H6qEcmEWSkUa1rxBczKuneFL1B6ayN3zrqEBHPza13Gr",
+          "sentinelTx": "3jD8cEFWEwG7kTZMbGpdeqARkhzELcZ319qTvNDivbNcbxjkFUKLTJmHG2crwpYc1xcpvwuGF156wHt44h5vR3jr",
+          "sentinelNft": "8nABfDmdUojCJdhWbjysMH9AXtx3Md1i6gpzahMVDRdP",
+          "repegSwapTx": "622275nGzqp8VgMiLX5PnyjRua4zfKZVSafGYCs6f47hjgEWK3djUvfumYtEFVekG56zfQym2FLi8BN7ZWAJWka7",
+          "repegSwapArrays": [
+            -16800
+          ],
+          "stockSold": "1830",
+          "usdcReceived": "9535",
+          "tickAfterSwap": -16444,
+          "poolUsdAfterSwap": "517.7142",
+          "range": [
+            -16710,
+            -16450
+          ],
+          "positionTx": "179Qe88UxXStmHSor4prJdHLCuK1e58LREREfdiAdr9LMgLV7PoyW9cScDT7bzmB4o6Ld3VWpzGoMKdVsYUdqPX",
+          "positionNft": "G4UvLmX3YLxJqmk3SzySSS592i9p3nTVD3KXSTEbyxMR",
+          "positionStock": "9609549086",
+          "edgeUsd": "518.0584",
+          "poolUsdAfter": "517.7142",
+          "done": true,
+          "doneAt": "2026-11-12T10:31:30.466Z"
         }
       ]
     },
@@ -298,7 +414,8 @@
           17600
         ]
       },
-      "done": true
+      "done": true,
+      "repegs": []
     },
     "AMZN": {
       "ref_price_usd": "268.14020000",
@@ -332,7 +449,8 @@
           -9860
         ]
       },
-      "done": true
+      "done": true,
+      "repegs": []
     },
     "META": {
       "ref_price_usd": "642.58366998",
@@ -366,7 +484,47 @@
           -18600
         ]
       },
-      "done": true
+      "done": true,
+      "repegs": [
+        {
+          "oracleUsd": "628.84654190",
+          "poolUsdBefore": "641.9929",
+          "tickBefore": -18596,
+          "targetUsd": "625.7023",
+          "limitTick": -18337.96,
+          "sentinel": [
+            -18340,
+            -18330
+          ],
+          "innerEdge": -18600,
+          "depthStock": "7951065429",
+          "swapBudget": "79510654",
+          "priceInsideRange": false,
+          "startedAt": "2026-11-12T10:31:31.523Z",
+          "mintToTx": "5UEB4sSuJ9Q6JK9EniH14jss6BmVWafy8KWVpQB8wEY8P9UkZHnR96yekXEAY5C4FgMoMrQT5ZsEAv3Bqtu5oncR",
+          "sentinelTx": "3MBRq13amkqS39v9jMypA3WBpBoQKawhFYcqjGtv5QLW3U2S3wgRAMCodHT4Zsr4AbNzuzNVGYVJXSo9fcyrB5Eg",
+          "sentinelNft": "J1nUyf2jJPbR3imtbPb2rfnRw5es2AbxzKki9hB6nR41",
+          "repegSwapTx": "53EHy5aWrQ1PoTfuLtLLSCuZe3jK4rWdimsGx3xGWm5m5pw9SuuXxoDhvHA7wHwFK5ps7HyrHqD4i4uK3g8z6vmW",
+          "repegSwapArrays": [
+            -18600
+          ],
+          "stockSold": "327",
+          "usdcReceived": "2038",
+          "tickAfterSwap": -18338,
+          "poolUsdAfterSwap": "625.7023",
+          "range": [
+            -18600,
+            -18340
+          ],
+          "positionTx": "4mDYYmVhUsZ2R5TyUnto6Ty8CKvuZFuEoFxUVE8fmuXFNVZHpBeAgM1tzwu9jyFptSCzoHyKvDXejTPGCTAPz1PV",
+          "positionNft": "6nY35HvsgjWxRn8TGdQSoKphfqgA1WayeXNYYpgHVbmo",
+          "positionStock": "7951065429",
+          "edgeUsd": "625.8298",
+          "poolUsdAfter": "625.7023",
+          "done": true,
+          "doneAt": "2026-11-12T10:31:39.615Z"
+        }
+      ]
     },
     "TSLA": {
       "ref_price_usd": "376.77400000",

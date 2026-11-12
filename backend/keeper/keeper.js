@@ -6,6 +6,7 @@
 //   treasury   init_treasury, approve_router, fund_chain, buy_stock, rebalance when due
 //   solana     init_solana_treasury, set_solana_accounts, treasury SOL, buy_stock_solana + broadcast,
 //              resign_solana for an expired buy, fund_chain("solana")
+//   repeg      every REPEG_EVERY_MIN minutes (default off): synthetic stock pools back to Chainlink (src/repeg.js)
 //   api        indexer + read API (src/indexer.js) on its own timers; --no-api disables it
 // Usage: node keeper.js [--once] [--dry-run] [--no-api] [--meme=...] [--only=...]   (see --help)
 import { HELP, loadConfig, parseFlags } from "./src/config.js";
@@ -22,6 +23,7 @@ import { solanaHousekeeping, solanaWalletReport } from "./src/solana.js";
 import { SolanaRpc, keeperKeypair } from "./src/sol.js";
 import { sleep } from "./src/net.js";
 import { startReadService } from "./src/indexer.js";
+import { gapTable, repegAll } from "./src/repeg.js";
 
 const flags = parseFlags(process.argv.slice(2));
 if (flags.help) {
@@ -99,6 +101,7 @@ async function walletReport() {
 }
 
 let lastOracle = 0;
+let lastRepeg = 0;
 async function cycle(first) {
   ctx.world = await discover(cfg, near);
   if (first) await walletReport();
@@ -109,6 +112,17 @@ async function cycle(first) {
       lastOracle = Date.now();
     } catch (e) {
       log.error("oracle", errMsg(e));
+    }
+  }
+
+  // Before any buy: a pool far above the oracle makes the treasury's swap fail its min out.
+  if (runs("repeg") && cfg.repeg.everyMin > 0 && Date.now() - lastRepeg >= cfg.repeg.everyMin * 60_000) {
+    lastRepeg = Date.now();
+    try {
+      const results = await repegAll(cfg, { account: wallet, dryRun: cfg.dryRun, opts: cfg.repeg });
+      log.info("repeg", `pass done: ${results.filter((r) => r.txs?.length).length} pool(s) moved`, { gaps: gapTable(results).map((l) => l.replace(/\s+/g, " ")).join("; ") });
+    } catch (e) {
+      log.error("repeg", errMsg(e));
     }
   }
 
