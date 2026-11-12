@@ -126,7 +126,10 @@ async function cycle(first) {
     }
   }
 
-  const ids = ctx.world.memes.filter((m) => !flags.memes || flags.memes.includes(m));
+  // KEEPER_SKIP_MEMES: memes left alone (a floor demo keeps its cash on NEAR, so buyback and
+  // redemption can be shown by hand; anyone can still call its open methods).
+  const skip = (process.env.KEEPER_SKIP_MEMES || "").split(",").filter(Boolean);
+  const ids = ctx.world.memes.filter((m) => (!flags.memes || flags.memes.includes(m)) && !skip.includes(m));
   log.info("keeper", `${ids.length} meme(s)`, { memes: ids.join(",") || "none" });
   const snapshots = new Map();
   for (const id of ids) {
