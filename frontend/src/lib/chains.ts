@@ -1,5 +1,6 @@
 // Treasury chains: display metadata, normalisation of `get_treasury_chains`, and
-// balance reads straight from each chain's public RPC in the browser.
+// balance reads from the browser, through this app's read-only proxy (/api/rpc/<chain>, which
+// holds the upstream RPC URLs server-side) unless NEXT_PUBLIC_<CHAIN>_RPC points elsewhere.
 
 import { toBig } from "./format";
 import type { ChainViewRaw, Stock, TreasuryChainsRaw } from "./near";
@@ -26,7 +27,7 @@ const BASE_SEPOLIA: ChainMeta = {
   label: "Base Sepolia",
   kind: "evm",
   chainId: 84532,
-  rpc: process.env.NEXT_PUBLIC_BASE_RPC || "https://sepolia.base.org",
+  rpc: process.env.NEXT_PUBLIC_BASE_RPC || "/api/rpc/base",
   explorer: (k, id) => `https://sepolia.basescan.org/${k === "tx" ? "tx" : k}/${id}`,
   usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
   usdcDecimals: 6,
@@ -38,7 +39,7 @@ const HOOD_TESTNET: ChainMeta = {
   label: "Robinhood Chain testnet",
   kind: "evm",
   chainId: 46630,
-  rpc: process.env.NEXT_PUBLIC_ROBINHOOD_RPC || "https://rpc.testnet.chain.robinhood.com",
+  rpc: process.env.NEXT_PUBLIC_ROBINHOOD_RPC || "/api/rpc/robinhood",
   explorer: (k, id) =>
     `https://explorer.testnet.chain.robinhood.com/${k === "tx" ? "tx" : k}/${id}`,
   usdc: "0xbf4479C07Dc6fdc6dAa764A0ccA06969e894275F",
@@ -50,7 +51,7 @@ const SOLANA_DEVNET: ChainMeta = {
   key: "solana",
   label: "Solana devnet",
   kind: "solana",
-  rpc: process.env.NEXT_PUBLIC_SOLANA_RPC || "https://api.devnet.solana.com",
+  rpc: process.env.NEXT_PUBLIC_SOLANA_RPC || "/api/rpc/solana",
   explorer: (k, id) =>
     `https://explorer.solana.com/${k === "token" ? "address" : k}/${id}?cluster=devnet`,
   usdc: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",

@@ -13,10 +13,10 @@ import { MemeIcon } from "./meme-icon";
 import { MnavChart } from "./mnav-chart";
 import { MnavGauge, ZoneBadge } from "./mnav-gauge";
 import { Notice } from "./notice";
+import { RebalanceAction } from "./rebalance-action";
 import { RulesSection, fmtSecs } from "./rules-section";
 import { Stat } from "./stat";
 import { GLOSSARY, Term } from "./term";
-import { useToast } from "./toast";
 import { TradePanel, useUserBalances } from "./trade-panel";
 import { TreasuryChains, coverage, useOnChainReadings, type Coverage } from "./treasury-chains";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -25,15 +25,15 @@ import { AppLink } from "@/lib/app-link";
 import { STOCK_LOGOS } from "@/lib/brands";
 import { NEARBLOCKS, NETWORK } from "@/lib/config";
 import { loadMemeEvents } from "@/lib/events";
-import { fetchHolders } from "@/lib/indexer";
+import { fetchEpochStart, fetchHolders } from "@/lib/indexer";
 import { fmtUsdCompact } from "@/lib/figure";
 import { fmtAmount, fmtRaw, fmtUsd, timeAgo, toBig, toNumber } from "@/lib/format";
 import { lastMnav, oracleUsd } from "@/lib/math";
 import { loadMemeCached, summarize } from "@/lib/market";
 import { fmtPrice, fmtPriceLong } from "@/lib/price";
-import { fmtTimes, mnavSentence } from "@/lib/mnav";
+import { engineState, fmtTimes, mnavSentence } from "@/lib/mnav";
 import { useAsync } from "@/lib/use-async";
-import { errorText, useWallet } from "@/lib/wallet";
+import { useWallet } from "@/lib/wallet";
 
 type DetailKey = "history" | "treasury" | "rules" | "balance" | "holders" | "activity" | "contract";
 
@@ -137,11 +137,14 @@ export function MemePage({ account }: { account: string }) {
   const events = useAsync(() => loadMemeEvents(account), [account]);
   const holders = useAsync(() => fetchHolders(account), [account]);
   const priceHistory = useMemeHistory(account);
-  const { accountId, send, connect, signHint } = useWallet();
+  const { accountId } = useWallet();
   const user = useUserBalances(account, accountId);
-  const toast = useToast();
-  const [rebalanceMsg, setRebalanceMsg] = useState<{ error: boolean; text: string } | null>(null);
-  const [rebalancing, setRebalancing] = useState(false);
+  const epochSecs = snap.data?.params.epoch_secs ?? 0;
+  const epochIssued = snap.data?.treasury?.epoch_issued ?? null;
+  const epochStart = useAsync(
+    () => (epochIssued === null ? Promise.resolve(null) : fetchEpochStart(account, epochSecs, toBig(epochIssued))),
+    [account, epochSecs, epochIssued],
+  );
   const [open, setOpen] = useState<Set<DetailKey>>(() => new Set());
   const chainsForReads = snap.data ? summarize(snap.data).chains : [];
   const readings = useOnChainReadings(chainsForReads);
@@ -184,11 +187,11 @@ export function MemePage({ account }: { account: string }) {
   const now = d.fetchedAt;
   const priceAge = d.price ? now - d.price.publish_time : null;
   const stale = priceAge !== null && priceAge > params.oracle_max_age_secs;
-  const canRebalance = !!treasury && (treasury.last_rebalance === 0 || now >= treasury.next_rebalance);
   const bufferTarget = params.cash_buffer_bps / 10_000;
   const refillAt = params.cash_refill_bps / 10_000;
   const epochCap = toBig(treasury?.epoch_cap);
-  const epochIssued = toBig(treasury?.epoch_issued);
+  const epochIssuedRaw = toBig(treasury?.epoch_issued);
+  const engine = engineState(d, nav, epochStart.data ?? null);
   const cashPct = (nav.cashShare ?? 0) * 100;
   const history = mnavHistory(events.data?.events);
   const hasHistory = (priceHistory.data?.length ?? 0) >= 2 ? priceHistory.data!.length : 0;
@@ -234,32 +237,6 @@ export function MemePage({ account }: { account: string }) {
       el?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
       el?.focus({ preventScroll: true });
     });
-  }
-
-  async function rebalance() {
-    setRebalancing(true);
-    setRebalanceMsg(null);
-    const id = toast.show({ tone: "pending", title: "Running the rules", body: signHint });
-    try {
-      const [hash] = await send([{ receiverId: account, methodName: "rebalance", args: {}, gas: 150, deposit: "0" }]);
-      const text = "Rebalance sent. The outcome appears in the activity log.";
-      setRebalanceMsg({ error: false, text });
-      toast.update(id, {
-        tone: "success",
-        title: "Rebalance sent",
-        body: "The outcome appears in the activity log.",
-        href: hash ? `${NEARBLOCKS}/txns/${hash}` : `${NEARBLOCKS}/address/${account}`,
-        hrefLabel: hash ? "The transaction on NearBlocks" : `${metadata.symbol} on NearBlocks`,
-        confetti: true,
-      });
-    } catch (e) {
-      setRebalanceMsg({ error: true, text: errorText(e) });
-      toast.update(id, { tone: "error", title: "The rebalance did not go through", body: errorText(e) });
-    } finally {
-      setRebalancing(false);
-      reload();
-      events.reload();
-    }
   }
 
   const priceTip = nav.usesTwap
@@ -333,13 +310,22 @@ export function MemePage({ account }: { account: string }) {
         </dl>
 
         <div className="mt-8">
-          <p className="max-w-[62ch] text-[0.9375rem] text-ink-2">{mnavSentence(liveMnav, thresholds, ticker)}</p>
+          <p className="max-w-[62ch] text-[0.9375rem] text-ink-2">{mnavSentence(liveMnav, thresholds, ticker, engine)}</p>
           {stale && d.price && (
             <p className="mt-1 max-w-[62ch] text-sm text-orange-ink">
               The {ticker} price was published {timeAgo(d.price.publish_time)}, so the rules pause until it updates. Trading continues.
             </p>
           )}
           <MnavGauge value={liveMnav} thresholds={thresholds} showValue={false} label="mNAV now" className="mt-1" />
+          <RebalanceAction
+            snap={d}
+            ticker={ticker}
+            onDone={() => {
+              reload();
+              events.reload();
+              epochStart.reload();
+            }}
+          />
         </div>
       </div>
 
@@ -446,7 +432,7 @@ export function MemePage({ account }: { account: string }) {
               params={params}
               oracle={info?.oracle ?? null}
               epochCap={epochCap}
-              epochIssued={epochIssued}
+              epochIssued={epochIssuedRaw}
               swapCap={caps}
               redemptionOpen={redemptionOpen}
               fromContract={d.paramsFromContract}
@@ -458,38 +444,6 @@ export function MemePage({ account }: { account: string }) {
               </p>
             )}
 
-            <div className="panel mt-8 flex flex-wrap items-center justify-between gap-4 px-5 py-4">
-              <div>
-                <p className="text-[0.9375rem]">Run the rules</p>
-                <p className="mt-1 max-w-[52ch] text-sm text-soft">
-                  A rebalance reads the oracle and the average price, then issues, buys back, opens redemption or does nothing.{" "}
-                  {!treasury
-                    ? "Treasury view unavailable."
-                    : treasury.last_rebalance === 0
-                      ? "Never run yet. Available now."
-                      : canRebalance
-                        ? `Last run ${timeAgo(treasury.last_rebalance)}. Available now.`
-                        : `Next run in ${Math.ceil((treasury.next_rebalance - now) / 60)} min.`}
-                </p>
-              </div>
-              {accountId ? (
-                <Button size="sm" variant="outline" disabled={!canRebalance || rebalancing} onClick={rebalance}>
-                  {rebalancing ? <span className="dots">Waiting</span> : canRebalance ? "Rebalance now" : "Cooling down"}
-                </Button>
-              ) : (
-                <Button size="sm" variant="outline" onClick={() => connect().catch(() => undefined)}>
-                  Connect to rebalance
-                </Button>
-              )}
-              {rebalanceMsg && (
-                <p
-                  role={rebalanceMsg.error ? "alert" : "status"}
-                  className={cn("w-full rounded-xl p-2.5 text-sm break-words", rebalanceMsg.error ? "bg-red-wash text-red-ink" : "bg-green-wash text-green-ink")}
-                >
-                  {rebalanceMsg.text}
-                </p>
-              )}
-            </div>
           </DetailItem>
 
           <DetailItem

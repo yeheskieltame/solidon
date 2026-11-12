@@ -275,6 +275,52 @@ export const factory = {
   launchCost: () => view<string>(FACTORY, "launch_cost"),
 };
 
+export type TxResult = {
+  /** Logs written by `executor`, in receipt order. */
+  logs: string[];
+  /** JSON return values of `executor`'s receipts (undecodable ones skipped). */
+  values: unknown[];
+  /** The first failure in the receipts, as the RPC words it; null when none failed. */
+  failure: string | null;
+};
+
+/**
+ * What one contract did in a transaction, from its final receipts (`tx` RPC, which waits for
+ * finality). Null when the RPC does not know the transaction (yet) or is unreachable.
+ */
+export async function txResult(txHash: string, sender: string, executor: string): Promise<TxResult | null> {
+  type Outcome = { executor_id?: string; logs?: string[]; status?: { SuccessValue?: string; Failure?: unknown } };
+  try {
+    const r = (await rpc({
+      jsonrpc: "2.0",
+      id: "solidon",
+      method: "tx",
+      params: { tx_hash: txHash, sender_account_id: sender, wait_until: "FINAL" },
+    })) as { result?: { receipts_outcome?: { outcome?: Outcome }[] } };
+    const receipts = r.result?.receipts_outcome?.map((x) => x.outcome ?? {});
+    if (!receipts) return null;
+    const mine = receipts.filter((o) => o.executor_id === executor);
+    const values: unknown[] = [];
+    for (const o of mine) {
+      const v = o.status?.SuccessValue;
+      if (!v) continue;
+      try {
+        values.push(JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(v), (ch) => ch.charCodeAt(0)))));
+      } catch {
+        /* not JSON */
+      }
+    }
+    const failed = receipts.find((o) => o.status?.Failure !== undefined);
+    return {
+      logs: mine.flatMap((o) => o.logs ?? []),
+      values,
+      failure: failed ? JSON.stringify(failed.status?.Failure).slice(0, 300) : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Stock price from the meme's oracle, without the staleness check the contract applies. */
 export async function oraclePrice(oracle: string, priceId: string): Promise<PythPrice | null> {
   return tryView<PythPrice | null>(oracle, "get_price_unsafe", {

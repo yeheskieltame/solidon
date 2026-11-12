@@ -11,7 +11,9 @@ import { Stat } from "@/components/stat";
 import { STOCK_LOGOS } from "@/lib/brands";
 import { fmtUsdCompact } from "@/lib/figure";
 import { summarize, loadMemeCached } from "@/lib/market";
-import { fmtTimes, mnavSentence } from "@/lib/mnav";
+import { fetchEpochStart } from "@/lib/indexer";
+import { toBig } from "@/lib/format";
+import { engineState, fmtTimes, mnavSentence } from "@/lib/mnav";
 import { fmtPrice } from "@/lib/price";
 import { SHOWCASE_SNAPSHOT } from "@/lib/showcase-snapshot";
 import { MEME_ART, SHOWCASE_MEME, appUrl } from "@/lib/site";
@@ -25,10 +27,18 @@ import { useAsync } from "@/lib/use-async";
 export function TreasuryShowcase() {
   const live = useAsync(() => loadMemeCached(SHOWCASE_MEME), []);
   const isLive = !!live.data;
+  const epochIssued = live.data?.treasury?.epoch_issued ?? null;
+  const epochSecs = live.data?.params.epoch_secs ?? 0;
+  const epochStart = useAsync(
+    () => (epochIssued === null ? Promise.resolve(null) : fetchEpochStart(SHOWCASE_MEME, epochSecs, toBig(epochIssued))),
+    [epochIssued, epochSecs],
+  );
   const row = summarize(live.data ?? SHOWCASE_SNAPSHOT);
   const { nav } = row;
   const ticker = row.ticker ?? "NVDA";
   const art = MEME_ART[SHOWCASE_MEME];
+  // Only a live read says what the next rebalance can do; the frozen snapshot states the rule.
+  const engine = live.data ? engineState(live.data, nav, epochStart.data ?? null) : null;
 
   return (
     <div className="relative rounded-[20px] bg-card p-5 text-left sm:p-8">
@@ -64,7 +74,7 @@ export function TreasuryShowcase() {
         <div className="panel self-start p-5">
           <p className="text-sm text-soft">mNAV against the locked rules</p>
           <MnavGauge value={row.mnav} thresholds={row.thresholds} className="mt-2" />
-          <p className="mt-1 text-sm text-ink-2">{mnavSentence(row.mnav, row.thresholds, ticker)}</p>
+          <p className="mt-1 text-sm text-ink-2">{mnavSentence(row.mnav, row.thresholds, ticker, engine)}</p>
         </div>
         <div>
           <p className="text-sm text-soft">Where the treasury sits</p>
