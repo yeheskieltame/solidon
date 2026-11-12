@@ -2,6 +2,7 @@
 // derived from a MemeSnapshot with the same math the meme page uses. Pure, plus a small
 // in-memory cache so Markets, Dashboard and the landing share one read per meme.
 
+import { HIDDEN_MEMES } from "./site";
 import { ledgerHoldings, normaliseTreasury, type TreasuryChain } from "./chains";
 import { toBig } from "./format";
 import { estimateNav, lastMnav, scaledToUsd, type NavEstimate } from "./math";
@@ -81,7 +82,7 @@ export type MarketLoad = { rows: MarketRow[]; failed: { account: string; error: 
 
 /** Every meme on the factory, summarised. A meme that fails to load is reported, not thrown. */
 export async function loadMarket(fresh = false): Promise<MarketLoad> {
-  const accounts = await factory.memes();
+  const accounts = (await factory.memes()).filter((a) => !HIDDEN_MEMES.has(a));
   const settled = await Promise.allSettled(accounts.map((a) => loadMemeCached(a, fresh)));
   const rows: MarketRow[] = [];
   const failed: MarketLoad["failed"] = [];

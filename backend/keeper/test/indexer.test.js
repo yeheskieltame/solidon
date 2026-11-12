@@ -176,8 +176,8 @@ test("routes: health, memes, history, events, activity", () => {
   assert.equal(memes.body.memes[0].symbol, "E2ETEST");
 
   const h = route(s, "GET", `/v1/memes/${MEME}/history?since=1100&limit=2`);
-  assert.deepEqual(h.body.history.map((p) => p.t), [1120, 1180]);
-  assert.equal(h.body.more, true);
+  assert.deepEqual(h.body.history.map((p) => p.t), [1120, 1240]); // thinned: first and newest
+  assert.equal(h.body.thinned, true);
 
   const ev = route(s, "GET", `/v1/memes/${MEME}/events?limit=3`).body.events;
   assert.equal(ev.length, 3);

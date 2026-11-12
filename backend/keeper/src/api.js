@@ -3,7 +3,7 @@
 // The holders route needs NEAR views, so it alone returns a Promise of { status, body }.
 //   GET /health
 //   GET /v1/memes
-//   GET /v1/memes/:id/history?since=<unix s>&limit=<n>   ascending
+//   GET /v1/memes/:id/history?since=<unix s>&limit=<n>   ascending, thinned evenly to <= limit (max 2000)
 //   GET /v1/memes/:id/events?limit=<n>&before=<block>     newest first
 //   GET /v1/memes/:id/holders?limit=<n>                   biggest first (live views, cached 60 s)
 //   GET /v1/accounts/:id/activity?limit=<n>               newest first, across all memes
@@ -12,6 +12,7 @@ import { involves } from "./events.js";
 
 const ACCOUNT = /^[a-z0-9._-]{2,64}$/;
 const MAX_LIMIT = 500;
+const MAX_HISTORY = 2000; // charts want the whole range; longer histories are thinned evenly
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -27,6 +28,13 @@ function intParam(q, name, { dflt = null, min = 0, max = Number.MAX_SAFE_INTEGER
   const n = Number(v);
   if (n < min || n > max) throw new HttpError(400, `${name} must be between ${min} and ${max}`);
   return n;
+}
+
+/** At most `n` points spread evenly over `points`, always keeping the first and the newest. */
+export function thin(points, n) {
+  if (points.length <= n) return points;
+  if (n === 1) return [points[points.length - 1]];
+  return Array.from({ length: n }, (_, i) => points[Math.round((i * (points.length - 1)) / (n - 1))]);
 }
 
 const limitOf = (q, dflt) => intParam(q, "limit", { dflt, min: 1, max: MAX_LIMIT });
@@ -72,9 +80,9 @@ export function route(service, method, rawUrl) {
       const id = parts.length === 4 ? memeOf(service, parts[2]) : null;
       if (id && parts[3] === "history") {
         const since = intParam(q, "since", { dflt: 0 });
-        const limit = limitOf(q, MAX_LIMIT);
+        const limit = intParam(q, "limit", { dflt: MAX_HISTORY, min: 1, max: MAX_HISTORY });
         const points = (store.history.get(id) ?? []).filter((s) => s.t >= since);
-        return { status: 200, body: { meme: id, history: points.slice(0, limit), more: points.length > limit } };
+        return { status: 200, body: { meme: id, history: thin(points, limit), thinned: points.length > limit } };
       }
       if (id && parts[3] === "events") {
         const before = intParam(q, "before");

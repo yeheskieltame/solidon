@@ -34,3 +34,10 @@ export function appUrl(path = "/"): string {
 export function isAppHost(hostname: string): boolean {
   return hostname.startsWith("app.");
 }
+
+/**
+ * Test launches the factory still lists (a factory cannot unlist a meme): hidden from Markets and the
+ * landing totals, still reachable by URL. e2etest is the end-to-end proof run in docs/DEPLOYMENTS.md;
+ * honeypot is a relaunch with a cropped, immutable icon.
+ */
+export const HIDDEN_MEMES = new Set(["e2etest.solidon.testnet", "honeypot.solidon.testnet"]);
