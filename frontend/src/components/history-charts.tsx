@@ -24,7 +24,7 @@ export const HISTORY_EMPTY = "History appears after the keeper has run a while."
 
 /** The whole history once; ranges are cut in the browser. */
 export function useMemeHistory(account: string) {
-  return useAsync(() => fetchHistory(account, { limit: 5000 }), [account]);
+  return useAsync(() => fetchHistory(account, { limit: 2000 }), [account]);
 }
 
 const W = 800;
