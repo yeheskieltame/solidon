@@ -39,7 +39,7 @@ flowchart LR
 
 - **One NEAR contract owns three treasuries.** Each meme derives an EVM address (ECDSA, used on Base and Robinhood Chain) and a Solana address (EdDSA) from the NEAR MPC network. The contract builds every transaction itself from locked config: an approval to one router, a swap into its stock, a USDC transfer. It checks each signature (`ecrecover`, `ed25519_verify`) before storing it. Anyone can broadcast.
 - **Cash moves with proof where proof exists.** Base arrivals are credited only after the MPC verifies the USDC `Transfer` log (foreign-chain verification). Robinhood Chain and Solana arrivals are reported by the relayer. Every credit is capped by the cash in transit and booked once.
-- **The ledger never overstates.** Each swap books the `minAmountOut` it signed for, so on-chain balances are always a little higher than the ledger.
+- **The ledger books the minimum.** Each swap books the `minAmountOut` it signed for, so a swap that lands leaves the chain a little above the ledger. A swap that reverts on-chain (for example when the pool has drifted more than 1% from the oracle) stays booked while its USDC sits unspent in the treasury. The app flags that chain "Less on-chain", as it does today for HONEY on Base ([reverted swap](https://sepolia.basescan.org/tx/0x9609b7e27e2f741c4286a6c6a1a6dd04867a4d7f6c1b60c092aea942ef7e27fb)).
 
 ## Try it (do X, see Y)
 
@@ -96,7 +96,7 @@ Every issuance was accretive in every seed. mNAV recovered above 0.9 within 2 ho
 Stated openly. The full table is in [docs/SPEC.md](docs/SPEC.md#trust-assumptions--threat-model).
 
 - **No admin key.** No method lets anyone move treasury funds. The treasury addresses belong to the meme contract via MPC, and the contract signs only an approve to a locked router and a swap into its locked stock.
-- **Holdings are booked, not read.** The ledger records each swap's `minAmountOut`, and the app shows the real explorer balance next to it.
+- **Holdings are booked, not read.** The ledger records each swap's `minAmountOut` when it is signed, and the app shows the real explorer balance next to it. On EVM chains, a signed swap that reverts is not unbooked yet: the value stays in the treasury as USDC, but the stock figure overstates until holdings are proven (next step: book Base swaps on an MPC-verified log, as cash already is).
 - **Cash on Robinhood Chain and Solana is relayer-reported.** Only Base arrivals are MPC-proven. A relayer report is capped by cash in transit, once per transaction, so it cannot create value.
 - **The testnet bridge is a trusted keeper account.** On mainnet that leg is NEAR Intents / 1Click.
 - **Manipulation brakes.** 30-minute TWAP, 1-hour cooldown, 1%/day issuance cap, 15-minute oracle staleness stop, 1% max slippage per swap, per-chain swap cap.

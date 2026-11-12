@@ -114,7 +114,7 @@ Holdings after the run (ledger = minOut booked at signing; on-chain = the token'
 | Robinhood testnet | 0.01060760 | 0.01082210 |
 | Solana devnet | 0.02770371 | 0.02831835 |
 
-The ledger is below the on-chain balance on every chain, as designed (it never overstates NAV).
+The ledger is below the on-chain balance on every chain, as designed for swaps that land. (A swap that reverts stays booked: see the threat model in docs/SPEC.md.)
 
 ### Featured meme: Honeypot ($HONEY)
 

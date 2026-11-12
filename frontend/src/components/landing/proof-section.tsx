@@ -50,8 +50,8 @@ const POINTS = [
     body: "Each meme derives its own addresses through NEAR Chain Signatures and can sign only two shapes: an approval to a locked router and a swap into its stock.",
   },
   {
-    title: "Ledger never overstates",
-    body: "The contract books the minimum output it signed for. The chain holds a little more, never less.",
+    title: "Booked at the minimum",
+    body: "The contract books the minimum output it signed for. A swap that lands leaves the chain a little above it; one that reverts is flagged on the meme page.",
   },
   {
     title: "Honest about trust",
