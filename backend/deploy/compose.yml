@@ -1,0 +1,30 @@
+# Solidon backend on a VPS behind a shared Caddy (network deploy_default, see README.md here).
+# Host layout: /opt/solidon/repo (this repo), /opt/solidon/state (indexer data + keeper state.json),
+# /opt/solidon/secrets (solana-keeper.json), /opt/solidon/secrets.env (keys, chmod 600).
+name: solidon
+services:
+  api:
+    build: { context: ../.., dockerfile: backend/keeper/Dockerfile }
+    image: solidon-keeper
+    command: ["node", "indexer.js"]
+    environment:
+      INDEXER_DATA: /state/data
+      NEAR_RPC: https://test.rpc.fastnear.com
+    volumes: ["/opt/solidon/state:/state"]
+    networks: { deploy_default: { aliases: [solidon-api] } }
+    restart: unless-stopped
+  keeper:
+    image: solidon-keeper
+    depends_on: [api]
+    command: ["node", "keeper.js", "--no-api"]
+    env_file: /opt/solidon/secrets.env
+    environment:
+      KEEPER_STATE: /state/state.json
+      KEEPER_SOLANA_KEYPAIR: /secrets/solana-keeper.json
+      NEAR_RPC: https://near-testnet.drpc.org
+      NEAR_RPC_SEND: https://test.rpc.fastnear.com
+    volumes: ["/opt/solidon/state:/state", "/opt/solidon/secrets:/secrets:ro"]
+    networks: [deploy_default]
+    restart: unless-stopped
+networks:
+  deploy_default: { external: true }
