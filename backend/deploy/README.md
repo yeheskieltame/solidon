@@ -1,6 +1,6 @@
 # Deploying the backend on a VPS
 
-The keeper and the indexer run as two containers of one image (`backend/keeper/Dockerfile`) next to a shared Caddy that terminates HTTPS. The web app runs on Vercel and reads the indexer's API.
+The keeper and the indexer run as two containers of one image (`backend/keeper/Dockerfile`) next to a shared Caddy that terminates HTTPS. The web app runs on Vercel and reads the indexer's API. Live: web https://solidon.xyz and https://app.solidon.xyz (Vercel team `tame22`, project `solidon`), API https://api.solidon.xyz on the VPS.
 
 ```
 /opt/solidon/repo         this repo (backend/keeper, backend/deploy, contracts/stocks), shipped with git archive

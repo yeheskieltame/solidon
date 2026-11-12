@@ -4,6 +4,8 @@
 
 Built for NEAR HACKATHON 2026 · Tracks: `defi`, `memecoins` · Author: [@yeheskieltame](https://github.com/yeheskieltame)
 
+**Live demo:** [solidon.xyz](https://solidon.xyz) · app [app.solidon.xyz](https://app.solidon.xyz) · read API [api.solidon.xyz/health](https://api.solidon.xyz/health)
+
 > Everything runs on testnets. The stock tokens are synthetic, priced from the official Chainlink feeds on Robinhood Chain mainnet, and the test USDC has no value.
 
 ## Why
@@ -52,11 +54,11 @@ flowchart LR
 | Open HONEY's [Solana treasury](https://explorer.solana.com/address/9gyosY8RFLdET2AGVj5XU14tpRGLFrun2VrpfZ1tAsLP?cluster=devnet) and [EVM treasury on Robinhood Chain testnet](https://explorer.testnet.chain.robinhood.com/address/0x51b1197be727ce2fb229c4919eca30e5568c802a) | NVDA bought by swaps the NEAR contract signed (example Solana buy: [`3ZfTyZ…`](https://explorer.solana.com/tx/3ZfTyZCAHrGcvd4yUupeWrGG2YC4Lm6e3SakxTtsKn4SGis9FX4bbJEk2Ky?cluster=devnet)) |
 | Read [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md), "End to end" | One meme holding NVDA on all three chains: every MPC signature, bridge transfer, cash proof and swap, with links |
 
-### 2. Run the app locally
+### 2. Use the app (hosted at [app.solidon.xyz](https://app.solidon.xyz), or run it locally)
 
 ```bash
 cd frontend && npm install && npm run build && npm run start   # landing http://localhost:3000 · app http://app.localhost:3000
-cd backend/keeper && npm install && node indexer.js              # optional: charts, activity, holders (no key, never signs)
+cd backend/keeper && npm install && node indexer.js              # optional locally: charts, activity, holders (no key, never signs)
 ```
 
 | Do | See |
