@@ -1,0 +1,8 @@
+**
+!backend/keeper/
+!contracts/stocks/
+backend/keeper/node_modules
+backend/keeper/data
+backend/keeper/state.json
+backend/keeper/.secrets
+backend/keeper/test
