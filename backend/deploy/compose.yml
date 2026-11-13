@@ -28,6 +28,8 @@ services:
       SOLANA_SPIKE_STATE: /state/solana-spike-state.json
       NEAR_RPC: https://near-testnet.drpc.org
       NEAR_RPC_SEND: https://test.rpc.fastnear.com
+      # The floor demo keeps its cash on NEAR so buyback and redemption can be shown by hand.
+      KEEPER_SKIP_MEMES: floor.solidon.testnet
     volumes: ["/opt/solidon/state:/state", "/opt/solidon/secrets:/secrets:ro"]
     networks: [deploy_default]
     restart: unless-stopped
