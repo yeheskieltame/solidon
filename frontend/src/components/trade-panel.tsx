@@ -33,6 +33,8 @@ export type UserBalances = {
 };
 
 export function useUserBalances(account: string, accountId: string | null) {
+  // balanceTick moves after the faucet or any send, so a fresh demo wallet sees its USDC here too.
+  const { balanceTick } = useWallet();
   return useAsync(async (): Promise<UserBalances | null> => {
     if (!accountId) return null;
     const [meme, usdc, claimable, storage] = await Promise.all([
@@ -47,7 +49,7 @@ export function useUserBalances(account: string, accountId: string | null) {
       claimable: toBig(claimable),
       registered: !!storage,
     };
-  }, [account, accountId]);
+  }, [account, accountId, balanceTick]);
 }
 
 /** One summary row: label on the left, value on the right. */
