@@ -1333,3 +1333,9 @@
 @media (prefers-reduced-motion: reduce) {
   .meme-sticker, .meme-sticker:hover { rotate: 0deg; scale: 1; transition: none; }
 }
+
+/* Rules playground: the drag handle shows keyboard focus through the invisible range input. */
+.rules-scale:focus-within .rules-thumb {
+  box-shadow: 0 0 0 4px var(--page), 0 0 0 6px var(--blue);
+}
+.rules-thumb { transition: left 0.08s linear; }
