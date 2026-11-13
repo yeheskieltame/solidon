@@ -51,7 +51,7 @@ flowchart LR
 | --- | --- |
 | Open [`solidon.testnet` on NearBlocks](https://testnet.nearblocks.io/address/solidon.testnet) | The factory: 8 stocks, 3 chains, the memes it launched |
 | Run `near contract call-function as-read-only honey.solidon.testnet get_treasury_chains json-args '{}' network-config testnet now` | HONEY's treasury per chain: address, nonce, USDC, NVDA booked, cash in transit |
-| Open HONEY's [Solana treasury](https://explorer.solana.com/address/9gyosY8RFLdET2AGVj5XU14tpRGLFrun2VrpfZ1tAsLP?cluster=devnet) and [EVM treasury on Robinhood Chain testnet](https://explorer.testnet.chain.robinhood.com/address/0x51b1197be727ce2fb229c4919eca30e5568c802a) | NVDA bought by swaps the NEAR contract signed (example Solana buy: [`3ZfTyZ…`](https://explorer.solana.com/tx/3ZfTyZCAHrGcvd4yUupeWrGG2YC4Lm6e3SakxTtsKn4SGis9FX4bbJEk2Ky?cluster=devnet)) |
+| Open HONEY's [Solana treasury](https://explorer.solana.com/address/9gyosY8RFLdET2AGVj5XU14tpRGLFrun2VrpfZ1tAsLP?cluster=devnet) and [EVM treasury on Robinhood Chain testnet](https://explorer.testnet.chain.robinhood.com/address/0x51b1197be727ce2fb229c4919eca30e5568c802a) | NVDA bought by swaps the NEAR contract signed (example Solana buy: [`3ZfTyZ…`](https://explorer.solana.com/tx/3ZfTyZCAHrGcvd4yUupeWrGG2YC4Lm6e3SakxTtsKn4SGis9FX4bbJEk2Ky8wu696mi1AfcXpL6wwq8QGMJ4roGn?cluster=devnet)) |
 | Read [docs/DEPLOYMENTS.md](docs/DEPLOYMENTS.md), "End to end" | One meme holding NVDA on all three chains: every MPC signature, bridge transfer, cash proof and swap, with links |
 
 ### 2. Use the app (hosted at [app.solidon.xyz](https://app.solidon.xyz), or run it locally)
