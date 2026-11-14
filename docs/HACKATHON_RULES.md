@@ -12,7 +12,7 @@ Summary of [HACKATHON.md](https://nearhackathon.com/HACKATHON.md) as of 8 Nov 20
 | Judging | 16 Nov 2026 |
 | Results announced | by 18 Nov 2026 23:59 UTC |
 | Prizes | $10K / $3K / $2K per track, $55K grand prize, paid in NEAR |
-| Solidon tracks | `defi`, `memecoins` |
+| Solidon tracks | `defi`, `memecoins`, `open` (Open Innovation may be entered alongside any other track) |
 
 ## Rules that matter most for Solidon
 
@@ -42,6 +42,6 @@ Summary of [HACKATHON.md](https://nearhackathon.com/HACKATHON.md) as of 8 Nov 20
 
 ## Submission fields
 
-`projectName`, `leadName`, `email`, `size` (`1`), `tracks` (`["defi","memecoins"]`), `nearAddress` (mainnet account for the prize), `projectUrl` (public repo, unique), `demoUrl` (X post), `idea` (20–2000 characters), `consent`.
+`projectName`, `leadName`, `email`, `size` (`1`), `tracks` (`["defi","memecoins","open"]`), `nearAddress` (mainnet account for the prize), `projectUrl` (public repo, unique), `demoUrl` (X post), `idea` (20–2000 characters), `consent`.
 
 Submit **once**. Mistakes are fixed through https://nearhackathon.com/request-changes, not by submitting again.

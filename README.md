@@ -4,7 +4,7 @@
 
 **Memes with a balance sheet.** Solidon is a memecoin launchpad on NEAR where every meme is a small treasury company. Trading fees buy a tokenized stock (NVIDIA, Apple, Tesla and five more) on Base, Robinhood Chain and Solana at the same time. The NEAR contract signs every treasury transaction itself through Chain Signatures, and its capital rules (issue above 2× NAV, buy back below 1×, open redemptions below 0.9×) are locked in code with no admin key.
 
-Built for NEAR HACKATHON 2026 · Tracks: `defi`, `memecoins` · Author: [@yeheskieltame](https://github.com/yeheskieltame)
+Built for NEAR HACKATHON 2026 · Tracks: `defi`, `memecoins`, `open` · Author: [@yeheskieltame](https://github.com/yeheskieltame)
 
 | Live | Link |
 | --- | --- |
