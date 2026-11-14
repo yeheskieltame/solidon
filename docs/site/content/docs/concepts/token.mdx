@@ -1,0 +1,89 @@
+---
+title: "The meme token"
+description: "The Solidon meme token: a NEP-141 token with a built-in constant-product pool against USDC, a fixed fee split, and a supply changed only by the mNAV engine and redemptions."
+---
+
+Each meme is a NEAR sub-account of the factory, for example `honey.solidon.testnet`. One contract holds the token, its pool and its treasury. There is no owner method and no admin key; launched memes have no access key at all.
+
+## Token standard
+
+| Property | Value |
+| --- | --- |
+| Standard | NEP-141 (NEAR fungible token), with on-chain metadata |
+| Decimals | 18 |
+| Initial supply | 1,000,000,000 tokens |
+| Initial holder | The meme contract itself, as pool inventory |
+| Icon | Stored on-chain at launch; meme icons are immutable |
+
+At launch the whole supply is minted to the contract as the pool's meme inventory. The creator receives no tokens. Anyone who wants tokens buys them from the pool.
+
+**Circulating supply** is total supply minus the pool's inventory. NAV per token and the issuance cap use it.
+
+## Launch and seed
+
+<Steps>
+<Step>
+### Create the meme
+
+The creator calls `create_meme` on the factory with a name, a symbol, a thesis stock from the factory's list and an optional icon, and attaches at least `launch_cost()` (4.46 NEAR on the current testnet factory). The factory deploys the meme contract as a sub-account with locked parameters. See [Launch a meme](/docs/guides/launch).
+</Step>
+<Step>
+### Seed the pool
+
+The creator sends the first USDC liquidity once, with `ft_transfer_call` on USDC and `msg: {"action":"seed"}`. Only the creator can seed, and only once. The pool then holds the full supply against the seed, which sets the starting price. HONEY was seeded with 1,000 USDC.
+</Step>
+<Step>
+### Open the treasury
+
+Anyone calls `init_treasury()` and `init_solana_treasury()` to derive the meme's treasury addresses. See [Treasuries](/docs/concepts/treasuries).
+</Step>
+</Steps>
+
+The factory lists eight stocks: NVDA, AAPL, MSFT, GOOGL, AMZN, META, TSLA and SPCX. The list and every stock venue are fixed when the factory is initialized. See [Stocks](/docs/reference/stocks).
+
+## The built-in pool
+
+The pool is a constant-product AMM (x times y = k) inside the meme contract, between the meme inventory and USDC. Because it lives in the same contract, the mNAV engine reads its price directly. Every reserve change records a price observation for the 30-minute TWAP.
+
+| Action | Call | Notes |
+| --- | --- | --- |
+| Buy | `ft_transfer_call` on USDC with `msg: {"action":"buy","min_out":"<u128>"}` | Full refund of the USDC if the output is below `min_out` |
+| Sell | `sell(amount, min_out)` with 1 yoctoNEAR | USDC is paid out; if the transfer fails, the amount becomes claimable |
+| Quote | `quote_buy(usdc_in)`, `quote_sell(meme_in)` | Views, include the fee |
+| Pool state | `get_pool` | Reserves, treasury cash, spot price and TWAP |
+
+## Fee split
+
+The pool fee is 1% of the USDC side of every trade.
+
+| Part | Rate | Destination |
+| --- | --- | --- |
+| Treasury | 0.8% | Treasury cash on NEAR, later used to buy stock |
+| Creator | 0.2% | Credited to the creator, withdrawn with `claim_usdc()` |
+| Total | 1.0% | |
+
+- **On a buy** the fee is taken from the USDC paid in, before the swap.
+- **On a sell** the fee is taken from the USDC the pool pays out.
+
+Prices are stored as USDC raw units per meme raw unit, scaled by 1e30.
+
+## How supply changes
+
+Only three things change the supply after launch. None of them is a manual mint.
+
+| Event | Effect | Trigger |
+| --- | --- | --- |
+| Issuance | Mints new tokens into the pool and moves the USDC they sell for into treasury cash | `rebalance()` with mNAV above 2.0, at most 1% of circulating supply per 24 hours, only if accretive |
+| Buyback | Buys tokens from the pool with surplus cash and burns them | `rebalance()` with mNAV below 1.0 |
+| Redemption | A holder burns tokens and receives NAV per token in USDC | `redeem(amount, min_usdc)` while mNAV is below 0.9 |
+
+Details and rationale are on [mNAV](/docs/concepts/mnav).
+
+## Sybil resistance
+
+There are no per-account rewards. Every mechanic, from fees to redemption, is proportional to the token amount, so splitting holdings across accounts gains nothing.
+
+<Cards>
+  <Card title="Trade" href="/docs/guides/trade" description="Buy and sell a meme in the app." />
+  <Card title="Contracts reference" href="/docs/reference/contracts" description="Every method and view." />
+</Cards>

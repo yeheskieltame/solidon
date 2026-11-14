@@ -1,0 +1,175 @@
+---
+title: "Deployments"
+description: "Every live Solidon account and address on NEAR testnet, Base Sepolia, Robinhood Chain testnet and Solana devnet, with explorer links."
+---
+
+Everything runs on testnets. Stock tokens are synthetic (Solidon-deployed), priced from the official Chainlink feeds on Robinhood Chain mainnet; the test USDC has no value. Source files: `docs/DEPLOYMENTS.md` and the venue registries in `contracts/stocks/`.
+
+| Surface | URL |
+| --- | --- |
+| Web app | https://app.solidon.xyz |
+| Landing | https://solidon.xyz |
+| Read API | https://api.solidon.xyz (see [API](/docs/reference/api)) |
+
+## NEAR testnet
+
+| Account | Contract | Role |
+| --- | --- | --- |
+| [`solidon.testnet`](https://testnet.nearblocks.io/address/solidon.testnet) | `factory` | Launches memes. 3 treasury chains, 8 stocks. `launch_cost` = 4.45999 NEAR. |
+| [`usdc.solidon.testnet`](https://testnet.nearblocks.io/address/usdc.solidon.testnet) | `mock-ft` | USDC stand-in, 6 decimals, open `mint` |
+| [`pyth.solidon.testnet`](https://testnet.nearblocks.io/address/pyth.solidon.testnet) | `mock-pyth` | Oracle with the Pyth read interface; prices pushed by the keeper from Chainlink |
+| [`keeper.solidon.testnet`](https://testnet.nearblocks.io/address/keeper.solidon.testnet) | none | The factory's `bridge` and `relayer`; runs the [keeper](/docs/reference/keeper) |
+| [`v1.signer-prod.testnet`](https://testnet.nearblocks.io/address/v1.signer-prod.testnet) | NEAR MPC | Chain Signatures signer (secp256k1 domain 0, EdDSA domain 1, foreign-tx verification domain 3) |
+| [`creator.solidon.testnet`](https://testnet.nearblocks.io/address/creator.solidon.testnet) | none | Demo creator account |
+
+Factory config, as returned by `get_chains`:
+
+```json
+{
+  "mpc": "v1.signer-prod.testnet",
+  "bridge": "keeper.solidon.testnet",
+  "relayer": "keeper.solidon.testnet",
+  "evm": [
+    {
+      "name": "base",
+      "chain_id": 84532,
+      "usdc": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "usdc_decimals": 6,
+      "swap_router": "0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4",
+      "pool_fee": 3000,
+      "max_fee_per_gas": "100000000",
+      "max_priority_fee_per_gas": "1000000",
+      "max_swap_usdc": "5000000",
+      "proof": { "Mpc": { "foreign_chain": "Base", "finality": "Latest" } }
+    },
+    {
+      "name": "robinhood",
+      "chain_id": 46630,
+      "usdc": "0xbf4479C07Dc6fdc6dAa764A0ccA06969e894275F",
+      "usdc_decimals": 18,
+      "swap_router": "0x3ce954107b1a675826b33bf23060dd655e3758fe",
+      "pool_fee": 3000,
+      "max_fee_per_gas": "100000000",
+      "max_priority_fee_per_gas": "10000000",
+      "max_swap_usdc": "5000000000000000000",
+      "proof": "Relayer"
+    }
+  ],
+  "solana": {
+    "name": "solana",
+    "usdc_mint": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+    "usdc_token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    "stock_token_program": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+    "clmm_program": "devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH",
+    "amm_config": "GVSwm4smQBYcgAJU7qjFHLQBHTc4AdB3F2HbZp6KqKof",
+    "max_swap_usdc": "5000000"
+  }
+}
+```
+
+`max_swap_usdc` is 5 USDC per swap and per `fund_chain` transfer on every chain.
+
+## Memes
+
+`get_memes` on the factory returns five memes. Two are test launches that the factory cannot unlist; the web app hides them from Markets and landing totals, but they stay reachable by URL.
+
+| Meme | Symbol | Thesis | Creator | Note |
+| --- | --- | --- | --- | --- |
+| [`honey.solidon.testnet`](https://testnet.nearblocks.io/address/honey.solidon.testnet) | `HONEY` ("Honeypot") | NVDA | `solidon-launch2.testnet` | Featured meme |
+| [`spydia.solidon.testnet`](https://testnet.nearblocks.io/address/spydia.solidon.testnet) | `SPYDIA` | NVDA | `solidon-launch.testnet` | Live |
+| [`floor.solidon.testnet`](https://testnet.nearblocks.io/address/floor.solidon.testnet) | `FLOOR` ("The Floor Is Lava") | TSLA | implicit account `19d6c2e1…3e27` | Floor demo: the keeper skips it (`KEEPER_SKIP_MEMES`), so its cash stays on NEAR for manual buyback and redemption |
+| [`e2etest.solidon.testnet`](https://testnet.nearblocks.io/address/e2etest.solidon.testnet) | `E2ETEST` | NVDA | `creator.solidon.testnet` | Hidden. End-to-end proof run in `docs/DEPLOYMENTS.md` |
+| [`honeypot.solidon.testnet`](https://testnet.nearblocks.io/address/honeypot.solidon.testnet) | `HONEYPOT` | NVDA | `solidon-launch.testnet` | Hidden. Abandoned first launch with a cropped, immutable icon; holds only its seed |
+
+## Treasury addresses
+
+Each meme has one EVM address (the same on Base Sepolia and Robinhood testnet) and one Solana address, both derived by the MPC from the meme account. Read them with `get_treasury_chains`.
+
+| Meme | EVM treasury (Base, Robinhood) | Solana treasury |
+| --- | --- | --- |
+| HONEY | `0x51b1197be727ce2fb229c4919eca30e5568c802a` ([Base](https://sepolia.basescan.org/address/0x51b1197be727ce2fb229c4919eca30e5568c802a), [Robinhood](https://explorer.testnet.chain.robinhood.com/address/0x51b1197be727ce2fb229c4919eca30e5568c802a)) | [`9gyosY8RFLdET2AGVj5XU14tpRGLFrun2VrpfZ1tAsLP`](https://explorer.solana.com/address/9gyosY8RFLdET2AGVj5XU14tpRGLFrun2VrpfZ1tAsLP?cluster=devnet) |
+| SPYDIA | `0xc8c8407717e388ed21e5b2fd5a047c6743318c50` ([Base](https://sepolia.basescan.org/address/0xc8c8407717e388ed21e5b2fd5a047c6743318c50), [Robinhood](https://explorer.testnet.chain.robinhood.com/address/0xc8c8407717e388ed21e5b2fd5a047c6743318c50)) | [`5DdM4FKEsvLwjr2t2GZGxpwg8D3RN9HQoCo4Lpd51Xmr`](https://explorer.solana.com/address/5DdM4FKEsvLwjr2t2GZGxpwg8D3RN9HQoCo4Lpd51Xmr?cluster=devnet) |
+| FLOOR | `0x68c1e3adc85bf1fcb60697dbef01db4521dbbb72` ([Base](https://sepolia.basescan.org/address/0x68c1e3adc85bf1fcb60697dbef01db4521dbbb72), [Robinhood](https://explorer.testnet.chain.robinhood.com/address/0x68c1e3adc85bf1fcb60697dbef01db4521dbbb72)) | not initialised |
+| E2ETEST | `0x582be22a62a466284817298848be90bf8a6f37e4` ([Base](https://sepolia.basescan.org/address/0x582be22a62a466284817298848be90bf8a6f37e4), [Robinhood](https://explorer.testnet.chain.robinhood.com/address/0x582be22a62a466284817298848be90bf8a6f37e4)) | [`BnhYneFsvh45UDJy7B7CVwvdAev1p1gNzGjWdf9KERNV`](https://explorer.solana.com/address/BnhYneFsvh45UDJy7B7CVwvdAev1p1gNzGjWdf9KERNV?cluster=devnet) |
+| HONEYPOT | `0xcfb5fe7a549f3886bbb671fb3efe2b3488910b11` | `Fx3V5mfKsQj9MJ1Y2TnXKYZQxfm3PmVzaYEecAnC4je3` |
+
+HONEY's Solana token accounts: USDC `GFqkQg9GC7yYbeFLUkCGPXJK1ZLacig2GUzrnk3ADMt5`, NVDAx `FR7UKctLZvR8qJBriNUmRA2WThDWZ6XXNpFuMAwxAhAz`.
+
+```bash
+near contract call-function as-read-only honey.solidon.testnet get_treasury_chains json-args '{}' network-config testnet now
+```
+
+## Base Sepolia (chain 84532)
+
+| Contract | Address |
+| --- | --- |
+| USDC (Circle, 6 decimals) | [`0x036CbD53842c5426634e7929541eC2318f3dCF7e`](https://sepolia.basescan.org/address/0x036CbD53842c5426634e7929541eC2318f3dCF7e) |
+| Uniswap v3 SwapRouter02 | [`0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4`](https://sepolia.basescan.org/address/0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4) |
+| Uniswap v3 factory | [`0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24`](https://sepolia.basescan.org/address/0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24) |
+| NonfungiblePositionManager | [`0x27F971cb582BF9E50F397e4d29a5C7A34f11faA2`](https://sepolia.basescan.org/address/0x27F971cb582BF9E50F397e4d29a5C7A34f11faA2) |
+
+Cash arrivals on Base are proven by the MPC (`credit_cash`). Stock tokens are Solidon `MockERC20` (owner-only mint); pools are USDC/stock, fee 0.3%.
+
+| Ticker | Symbol | Token | Decimals | Pool |
+| --- | --- | --- | --- | --- |
+| NVDA | `NVDAc` | [`0x8f13563130684478E617C1797308A081Cb2c2654`](https://sepolia.basescan.org/address/0x8f13563130684478E617C1797308A081Cb2c2654) | 8 | [`0x93A765030deB0352d22EbBe8335A2B79aF153129`](https://sepolia.basescan.org/address/0x93A765030deB0352d22EbBe8335A2B79aF153129) |
+| AAPL | `AAPLc` | [`0xEbF01E9d3d578AD3af778C281E56aDA483ebB9bD`](https://sepolia.basescan.org/address/0xEbF01E9d3d578AD3af778C281E56aDA483ebB9bD) | 8 | [`0x0Fa222947220935106bA9C8Fed888B8Bfd74ca4e`](https://sepolia.basescan.org/address/0x0Fa222947220935106bA9C8Fed888B8Bfd74ca4e) |
+| MSFT | `MSFTc` | [`0x4fE929688f9A5598bE4559daC9B92a9A05cD2265`](https://sepolia.basescan.org/address/0x4fE929688f9A5598bE4559daC9B92a9A05cD2265) | 8 | [`0x1791E60Fd6CDB6294366b8C92e34946a5a2B6e16`](https://sepolia.basescan.org/address/0x1791E60Fd6CDB6294366b8C92e34946a5a2B6e16) |
+| GOOGL | `GOOGLc` | [`0x12e763e9C1ceeb82f9AaCdf8a87b152bE05A7eeF`](https://sepolia.basescan.org/address/0x12e763e9C1ceeb82f9AaCdf8a87b152bE05A7eeF) | 8 | [`0x07914c5774361f222bdCd991f0b872b7CF955A03`](https://sepolia.basescan.org/address/0x07914c5774361f222bdCd991f0b872b7CF955A03) |
+| AMZN | `AMZNc` | [`0x9b931cb9EE0A70b88d89b3c21687d4a6ccee32a3`](https://sepolia.basescan.org/address/0x9b931cb9EE0A70b88d89b3c21687d4a6ccee32a3) | 8 | [`0x3F35161b0E85E3FFdA761c49Ad469b607B67Fc58`](https://sepolia.basescan.org/address/0x3F35161b0E85E3FFdA761c49Ad469b607B67Fc58) |
+| META | `METAc` | [`0x845A964b112a33B6A0881b36e121fdDFFDe2477d`](https://sepolia.basescan.org/address/0x845A964b112a33B6A0881b36e121fdDFFDe2477d) | 8 | [`0x6861ADbEE1c0BBb1aaC9f7166fBe9828E26BdDD5`](https://sepolia.basescan.org/address/0x6861ADbEE1c0BBb1aaC9f7166fBe9828E26BdDD5) |
+| TSLA | `TSLAc` | [`0x431190511D177106Fa49588f7e1Dc3B845c95Bc5`](https://sepolia.basescan.org/address/0x431190511D177106Fa49588f7e1Dc3B845c95Bc5) | 8 | [`0xfF7b55617F5D24686139526588977A02eE5A59a4`](https://sepolia.basescan.org/address/0xfF7b55617F5D24686139526588977A02eE5A59a4) |
+| SPCX | `SPCXc` | [`0x486FECA986219f7d4eC52Cbf56d9ca14D4955035`](https://sepolia.basescan.org/address/0x486FECA986219f7d4eC52Cbf56d9ca14D4955035) | 8 | [`0xda6BFf78b5513b6818EDE36C1769363d99F07f9f`](https://sepolia.basescan.org/address/0xda6BFf78b5513b6818EDE36C1769363d99F07f9f) |
+
+## Robinhood Chain testnet (chain 46630)
+
+| Contract | Address |
+| --- | --- |
+| USDC (18 decimals) | [`0xbf4479C07Dc6fdc6dAa764A0ccA06969e894275F`](https://explorer.testnet.chain.robinhood.com/address/0xbf4479C07Dc6fdc6dAa764A0ccA06969e894275F) |
+| Uniswap v3 SwapRouter02 | [`0x3ce954107b1a675826b33bf23060dd655e3758fe`](https://explorer.testnet.chain.robinhood.com/address/0x3ce954107b1a675826b33bf23060dd655e3758fe) |
+| Uniswap v3 factory | [`0x911b4000d3422f482f4062a913885f7b035382df`](https://explorer.testnet.chain.robinhood.com/address/0x911b4000d3422f482f4062a913885f7b035382df) |
+| NonfungiblePositionManager | [`0x54A0EF7da351cb8fD1998E7945cc51E5825fB233`](https://explorer.testnet.chain.robinhood.com/address/0x54A0EF7da351cb8fD1998E7945cc51E5825fB233) |
+
+Cash arrivals on Robinhood are reported by the relayer (`report_cash`). The faucet's official TSLA and AMZN trade at arbitrary testnet prices, so all eight stocks here are Solidon `MockERC20` tokens. Pools: fee 0.3%, each with a small USDC float for the fork's up-front protocol fee.
+
+| Ticker | Symbol | Token | Decimals | Pool |
+| --- | --- | --- | --- | --- |
+| NVDA | `NVDA` | [`0x82289af84B9a0faf598a4D2052E16c8D1619f7f4`](https://explorer.testnet.chain.robinhood.com/address/0x82289af84B9a0faf598a4D2052E16c8D1619f7f4) | 18 | [`0x7AD201DB77530864213f30Bd87Ddc2c520D86E07`](https://explorer.testnet.chain.robinhood.com/address/0x7AD201DB77530864213f30Bd87Ddc2c520D86E07) |
+| AAPL | `AAPL` | [`0x3ab373732E7bE9fD387e767F0e36040677a14057`](https://explorer.testnet.chain.robinhood.com/address/0x3ab373732E7bE9fD387e767F0e36040677a14057) | 18 | [`0x9f34D4E076DD19a36C36ff28DeA2F8C671D28eD0`](https://explorer.testnet.chain.robinhood.com/address/0x9f34D4E076DD19a36C36ff28DeA2F8C671D28eD0) |
+| MSFT | `MSFT` | [`0x8d26425Ea6B44032938b290Bab5C032CaA747cdD`](https://explorer.testnet.chain.robinhood.com/address/0x8d26425Ea6B44032938b290Bab5C032CaA747cdD) | 18 | [`0x2016FfecC830012aaDB3B378b4D3b59829045fed`](https://explorer.testnet.chain.robinhood.com/address/0x2016FfecC830012aaDB3B378b4D3b59829045fed) |
+| GOOGL | `GOOGL` | [`0xaf95AE21417c4a1489C7C49990a9C03DD3C6B98C`](https://explorer.testnet.chain.robinhood.com/address/0xaf95AE21417c4a1489C7C49990a9C03DD3C6B98C) | 18 | [`0x116B775D35C0A53708b515156eF962171411bddd`](https://explorer.testnet.chain.robinhood.com/address/0x116B775D35C0A53708b515156eF962171411bddd) |
+| AMZN | `AMZN` | [`0x9f555Fa3247304bEd0033EC31c8d6A88c36c6A37`](https://explorer.testnet.chain.robinhood.com/address/0x9f555Fa3247304bEd0033EC31c8d6A88c36c6A37) | 18 | [`0x7CEE8466204C628edBE122597DdB993753893cbF`](https://explorer.testnet.chain.robinhood.com/address/0x7CEE8466204C628edBE122597DdB993753893cbF) |
+| META | `META` | [`0x4d65dBeD417B42Ecef039aF0931948bC07507D53`](https://explorer.testnet.chain.robinhood.com/address/0x4d65dBeD417B42Ecef039aF0931948bC07507D53) | 18 | [`0x4CFbc8761a81367C2BEAf301dc2DaAB142bD7fAE`](https://explorer.testnet.chain.robinhood.com/address/0x4CFbc8761a81367C2BEAf301dc2DaAB142bD7fAE) |
+| TSLA | `TSLA` | [`0x3D3E8Cf6F9F92b9a1574cdB4C5686261cF52b47B`](https://explorer.testnet.chain.robinhood.com/address/0x3D3E8Cf6F9F92b9a1574cdB4C5686261cF52b47B) | 18 | [`0x16916cACEb6be1107eF7AEDa3d8c5cE34C098F9D`](https://explorer.testnet.chain.robinhood.com/address/0x16916cACEb6be1107eF7AEDa3d8c5cE34C098F9D) |
+| SPCX | `SPCX` | [`0xf0c264689aC444FFe95b9F03e8eFF2bA36E508E0`](https://explorer.testnet.chain.robinhood.com/address/0xf0c264689aC444FFe95b9F03e8eFF2bA36E508E0) | 18 | [`0x1d285a27509Fa8eeC6ab8eac73635F4b270afB81`](https://explorer.testnet.chain.robinhood.com/address/0x1d285a27509Fa8eeC6ab8eac73635F4b270afB81) |
+
+## Solana devnet
+
+| Account | Address |
+| --- | --- |
+| USDC mint (Circle devnet, 6 decimals) | [`4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`](https://explorer.solana.com/address/4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU?cluster=devnet) |
+| Raydium CLMM program (devnet) | [`devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH`](https://explorer.solana.com/address/devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH?cluster=devnet) |
+| Raydium AMM config (0.05% fee tier, tick spacing 10) | [`GVSwm4smQBYcgAJU7qjFHLQBHTc4AdB3F2HbZp6KqKof`](https://explorer.solana.com/address/GVSwm4smQBYcgAJU7qjFHLQBHTc4AdB3F2HbZp6KqKof?cluster=devnet) |
+| SPL Token program (USDC) | `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA` |
+| Token-2022 program (stocks) | `TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb` |
+
+Cash arrivals on Solana are reported by the relayer (`report_cash` with the transaction signature). Stocks are Solidon Token-2022 mints with on-chain metadata. Each pool's vaults, observation and bitmap extension accounts are in `contracts/stocks/solana-devnet.json`.
+
+| Ticker | Symbol | Mint | Decimals | Raydium CLMM pool |
+| --- | --- | --- | --- | --- |
+| NVDA | `NVDAx` | [`88Bseqdd57C3sD5E8SaLPfwQ18e47RvzCXsRApiwSqbB`](https://explorer.solana.com/address/88Bseqdd57C3sD5E8SaLPfwQ18e47RvzCXsRApiwSqbB?cluster=devnet) | 8 | [`FEstNywAgrVXixWbLkFaqqMjT7jbdjwmkoPdmudtRCqU`](https://explorer.solana.com/address/FEstNywAgrVXixWbLkFaqqMjT7jbdjwmkoPdmudtRCqU?cluster=devnet) |
+| AAPL | `AAPLx` | [`FtYHpjhYBFVrUE1inx7w48Wp1s7AzxnsFptvpgZcGkW5`](https://explorer.solana.com/address/FtYHpjhYBFVrUE1inx7w48Wp1s7AzxnsFptvpgZcGkW5?cluster=devnet) | 8 | [`8HtcC4dszMQcnrPvow8iYF6aNDTigtFsZ8PP4BiRypsV`](https://explorer.solana.com/address/8HtcC4dszMQcnrPvow8iYF6aNDTigtFsZ8PP4BiRypsV?cluster=devnet) |
+| MSFT | `MSFTx` | [`Bah7NyVk64eL7ADuHuJYwqKeG6vQTD5YRPQKLMtzG4SP`](https://explorer.solana.com/address/Bah7NyVk64eL7ADuHuJYwqKeG6vQTD5YRPQKLMtzG4SP?cluster=devnet) | 8 | [`EhyAxindqL3HiK6VPXjpJtrxKHgh2kJkePML3r5cXsdv`](https://explorer.solana.com/address/EhyAxindqL3HiK6VPXjpJtrxKHgh2kJkePML3r5cXsdv?cluster=devnet) |
+| GOOGL | `GOOGLx` | [`XLYZw9YeVrUNsp4dAVVYayMdT5jWrmk6wFjUNWu8AnH`](https://explorer.solana.com/address/XLYZw9YeVrUNsp4dAVVYayMdT5jWrmk6wFjUNWu8AnH?cluster=devnet) | 8 | [`5dRjF2Zpc7crjrqp8NzrpntYnhGTVcLFN5QumB2iftu9`](https://explorer.solana.com/address/5dRjF2Zpc7crjrqp8NzrpntYnhGTVcLFN5QumB2iftu9?cluster=devnet) |
+| AMZN | `AMZNx` | [`D4GVCzUpbJRkqQ4ymbpXxKTC5jCxWK1gRvDXwRAHERZk`](https://explorer.solana.com/address/D4GVCzUpbJRkqQ4ymbpXxKTC5jCxWK1gRvDXwRAHERZk?cluster=devnet) | 8 | [`6pRZ79bnqssPy3HhyN3TijrCjXoqzZ4auD77kcM5mVhK`](https://explorer.solana.com/address/6pRZ79bnqssPy3HhyN3TijrCjXoqzZ4auD77kcM5mVhK?cluster=devnet) |
+| META | `METAx` | [`66aQ8CyXmgYkvreikf76EzETQC4oVgv9bbdxbPgFrKj8`](https://explorer.solana.com/address/66aQ8CyXmgYkvreikf76EzETQC4oVgv9bbdxbPgFrKj8?cluster=devnet) | 8 | [`EgV8KMGkUbzpLZUru3ivLi9Cx7YgxxhtopxcDFQC6JLA`](https://explorer.solana.com/address/EgV8KMGkUbzpLZUru3ivLi9Cx7YgxxhtopxcDFQC6JLA?cluster=devnet) |
+| TSLA | `TSLAx` | [`229y3sTgdfFBEWGxmuvQ4yvpj8puVrpmeSFNp7ZRkmSq`](https://explorer.solana.com/address/229y3sTgdfFBEWGxmuvQ4yvpj8puVrpmeSFNp7ZRkmSq?cluster=devnet) | 8 | [`8cZfaL77SdxBZPc3SVPe7mrmNpqPJa61ixqqjsBqqm2o`](https://explorer.solana.com/address/8cZfaL77SdxBZPc3SVPe7mrmNpqPJa61ixqqjsBqqm2o?cluster=devnet) |
+| SPCX | `SPCXx` | [`8mdbWErQneCkM6jpE5epezYrk8W6uhjjG9nnPwxLQDKp`](https://explorer.solana.com/address/8mdbWErQneCkM6jpE5epezYrk8W6uhjjG9nnPwxLQDKp?cluster=devnet) | 8 | [`3uwogu11qDBBw7mSVFHdTFq1YXnMrgaah1bYjuAJCF5K`](https://explorer.solana.com/address/3uwogu11qDBBw7mSVFHdTFq1YXnMrgaah1bYjuAJCF5K?cluster=devnet) |
+
+## Older contracts
+
+Memes launched by earlier factory code (BSC era, before 10 Nov 2026) still exist, because memes have no access key, but they are not listed by the current factory: `nvda.solidon.testnet`, `elondoge.solidon.testnet`, and the Chain Signatures test account `chainsig-e2e.solidon.testnet`. The keeper gives memes without `get_treasury_chains` only `rebalance()`.
+
+<Callout type="warn" title="Factory key">
+During development the factory account still has a full-access key, which could redeploy the factory. Launched memes have no access key. See [Security](/docs/security).
+</Callout>

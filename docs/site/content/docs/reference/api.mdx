@@ -1,0 +1,286 @@
+---
+title: "Read API"
+description: "The Solidon indexer's read-only HTTP API for meme lists, price history, events, holders and account activity."
+---
+
+The indexer (`backend/keeper/src/indexer.js`) records one price-history point per meme per interval and every `EVENT_JSON` log of the factory and its memes. `backend/keeper/src/api.js` serves them as JSON.
+
+| | |
+| --- | --- |
+| Base URL | `https://api.solidon.xyz` |
+| Local | `http://localhost:8788` (`INDEXER_PORT`) |
+| Methods | `GET`, `HEAD`; `OPTIONS` answers 204; anything else 405 |
+| Auth | none |
+| CORS | `access-control-allow-origin: *`, `access-control-allow-methods: GET, OPTIONS`, `access-control-allow-headers: content-type` |
+| Caching | `cache-control: no-store` on every response. Holders are cached server-side for 60 s per meme. |
+| Content type | `application/json; charset=utf-8` |
+
+The API is read-only. The process that serves it loads no key and sends no transaction.
+
+## Routes
+
+| Route | Query | Answer |
+| --- | --- | --- |
+| `GET /health` | none | Indexer status |
+| `GET /v1/memes` | none | Every tracked meme with metadata and its newest snapshot |
+| `GET /v1/memes/:id/history` | `since` (unix seconds, default 0), `limit` (1 to 2000, default 2000) | Snapshots, ascending, thinned evenly to at most `limit` |
+| `GET /v1/memes/:id/events` | `limit` (1 to 500, default 50), `before` (block height) | Events of the meme, newest first |
+| `GET /v1/memes/:id/holders` | `limit` (1 to 500, default 50) | Holders, biggest first, from live NEAR views |
+| `GET /v1/accounts/:id/activity` | `limit` (1 to 500, default 50), `before` (block height) | Events across all memes that involve the account, newest first |
+
+`:id` must match `^[a-z0-9._-]{2,64}$`. Meme routes return 404 for an account the indexer does not track (the factory's memes, from `get_memes`). The API lists every meme the factory returns, including the test memes the web app hides (`e2etest`, `honeypot`).
+
+### Errors
+
+Errors are `{"error": "<message>"}`:
+
+| Status | When |
+| --- | --- |
+| 400 | Bad parameter (`limit must be between 1 and 2000`), invalid account id, bad URL encoding |
+| 404 | Unknown meme (`unknown meme <id>`) or route (`no such route`) |
+| 405 | Method other than `GET`, `HEAD`, `OPTIONS` |
+| 500 | Internal error |
+| 502 | Holders only: NEAR RPC unavailable (`NEAR RPC unavailable, try again`) |
+
+## GET /health
+
+```bash
+curl -s https://api.solidon.xyz/health
+```
+
+```json
+{
+  "ok": true,
+  "last_block": 277608489,
+  "memes": 5,
+  "lag_s": 20,
+  "events": 555,
+  "transactions": 770,
+  "backfilled": 6,
+  "tracked": 6,
+  "last_snapshot": 1794630782
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `ok` | `false` before the first event poll, or when the last poll is older than `3 * INDEXER_POLL_SECS + 60` seconds |
+| `last_block` | Final NEAR block at the last finished poll |
+| `lag_s` | Seconds since the last finished poll |
+| `events` | Stored events across all accounts |
+| `transactions` | Indexed transactions |
+| `backfilled`, `tracked` | Accounts fully backfilled, out of the factory plus every meme |
+| `last_snapshot` | Unix time of the last history snapshot |
+
+## GET /v1/memes
+
+```bash
+curl -s https://api.solidon.xyz/v1/memes
+```
+
+```json
+{
+  "memes": [
+    {
+      "id": "honey.solidon.testnet",
+      "symbol": "HONEY",
+      "name": "Honeypot",
+      "creator": "solidon-launch2.testnet",
+      "ticker": "NVDA",
+      "latest": {
+        "t": 1794630782,
+        "price": 0.000011843000782134,
+        "twap": 0.000011843000782134,
+        "nav": 4.06123708214e-7,
+        "mnav": 29.161067,
+        "stock_price": 161.40001379,
+        "oracle_stale": false,
+        "treasury_value": 295.977105,
+        "circulating": 728785586.7885972,
+        "chains": {
+          "base": "11708036",
+          "robinhood": "112317573164105596",
+          "solana": "5697440"
+        }
+      },
+      "events": 195
+    }
+  ]
+}
+```
+
+`latest` is the newest snapshot, or `null` before the first one. `events` is the number of stored events for the meme. The array is trimmed here; the live response holds every meme.
+
+### Snapshot fields
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `t` | number | Unix seconds |
+| `price` | number | Pool spot price, USD per whole meme token |
+| `twap` | number \| null | 30-minute TWAP, `null` while the pool is younger than the window |
+| `nav` | number \| null | Treasury value / circulating supply, USD per token |
+| `mnav` | number \| null | (TWAP, else spot) / NAV, as `rebalance` computes it |
+| `stock_price` | number \| null | Oracle price of the thesis stock, USD |
+| `oracle_stale` | boolean | `true` when the fresh read (`get_price_no_older_than`) returned nothing and `get_price_unsafe` was used |
+| `treasury_value` | number \| null | NEAR cash + USDC on and in transit to every chain + stock on every chain, USD |
+| `circulating` | number | Circulating supply, whole tokens |
+| `chains` | object | Stock held per chain, raw units of that chain's venue token (8 decimals on Base and Solana, 18 on Robinhood) |
+
+Values are computed exactly as the contract's `Meme::assets` and `Meme::nav` (`backend/keeper/src/history.js`).
+
+## GET /v1/memes/:id/history
+
+```bash
+curl -s "https://api.solidon.xyz/v1/memes/honey.solidon.testnet/history?limit=2"
+```
+
+```json
+{
+  "meme": "honey.solidon.testnet",
+  "history": [
+    {
+      "t": 1794380675,
+      "price": 0,
+      "twap": null,
+      "nav": null,
+      "mnav": null,
+      "stock_price": 172.82606149,
+      "oracle_stale": false,
+      "treasury_value": 0,
+      "circulating": 0,
+      "chains": { "base": "0", "robinhood": "0", "solana": "0" }
+    },
+    {
+      "t": 1794630782,
+      "price": 0.000011843000782134,
+      "twap": 0.000011843000782134,
+      "nav": 4.06123708214e-7,
+      "mnav": 29.161067,
+      "stock_price": 161.40001379,
+      "oracle_stale": false,
+      "treasury_value": 295.977105,
+      "circulating": 728785586.7885972,
+      "chains": { "base": "11708036", "robinhood": "112317573164105596", "solana": "5697440" }
+    }
+  ],
+  "thinned": true
+}
+```
+
+- Points with `t >= since` are selected, then thinned evenly to `limit`, always keeping the first and the newest point. `thinned` is `true` when points were dropped.
+- `limit` above 2000 is rejected with 400.
+- Storage: every point from the last 24 hours is kept; older points are compacted to one per 15 minutes.
+- History starts at the first indexer run. The contracts keep no price history, so there are no earlier points.
+
+## GET /v1/memes/:id/events
+
+```bash
+curl -s "https://api.solidon.xyz/v1/memes/honey.solidon.testnet/events?limit=2"
+```
+
+```json
+{
+  "meme": "honey.solidon.testnet",
+  "events": [
+    {
+      "block_height": 277607788,
+      "timestamp": 1794630345,
+      "tx_hash": "9unCEdGi1kxsZhixzdUY4SX7FdqExSEdjJ535VTqA92Z",
+      "receipt_id": "2GGC5HtBXYfQqBZy56bzpbPun1Ybnjp1jYBwZAvcwsma",
+      "signer": "keeper.solidon.testnet",
+      "predecessor": "honey.solidon.testnet",
+      "receiver": "honey.solidon.testnet",
+      "log_index": 0,
+      "data_index": 0,
+      "event": "rebalance",
+      "standard": "solidon",
+      "version": "1.0.0",
+      "data": {
+        "caller": "keeper.solidon.testnet",
+        "mnav_bps": "291610",
+        "nav": "406123708214",
+        "twap": "11843000782134",
+        "redemption_open": false,
+        "outcome": "no_action",
+        "tip": "0"
+      }
+    }
+  ],
+  "more": true
+}
+```
+
+- Page backwards with `before` = the last `block_height` you received.
+- `receiver` is the contract that emitted the event: the meme, the factory, or the USDC contract. NEP-141 events of USDC that name a meme (buys, payouts, `fund_chain` transfers) are stored under that meme.
+- One record per item of the log's `data` array (`data_index`). Failed receipts emit no logs, so failed trades do not appear.
+- Event names and fields: [Contracts, Events](/docs/reference/contracts#events).
+
+## GET /v1/memes/:id/holders
+
+```bash
+curl -s "https://api.solidon.xyz/v1/memes/honey.solidon.testnet/holders?limit=3"
+```
+
+```json
+{
+  "meme": "honey.solidon.testnet",
+  "holders": [
+    { "account": "solidon-launch2.testnet", "balance": "441964285714285714285714284", "share": 0.433567 },
+    { "account": "solidon-alice.testnet", "balance": "183889147947937141707060708", "share": 0.180395 },
+    { "account": "solidon-frank.testnet", "balance": "37410443083619633438874869", "share": 0.036699 }
+  ],
+  "pool_reserve": "290582276511498352598087637",
+  "total_supply": "1019367863300095556102907722",
+  "updated_at": 1794630796
+}
+```
+
+- Candidates are every account named in the meme's indexed events plus the creator; each is asked `ft_balance_of`. Zero balances are dropped.
+- `balance` is raw (18 decimals). `share` = balance / total supply, truncated to 6 decimals, or `null` if the supply is unknown.
+- The meme contract's own balance is the pool inventory and is reported as `pool_reserve`, not as a holder.
+- Results are cached for 60 s per meme; at most 3 views run in parallel, with retries on RPC rate limits.
+
+## GET /v1/accounts/:id/activity
+
+```bash
+curl -s "https://api.solidon.xyz/v1/accounts/solidon-alice.testnet/activity?limit=2"
+```
+
+```json
+{
+  "account": "solidon-alice.testnet",
+  "events": [
+    {
+      "block_height": 277358928,
+      "timestamp": 1794484223,
+      "tx_hash": "CWTz3cCmULuHpnGM9tPiSDmLqVh7C7sBNiCEBMaKbWKm",
+      "receipt_id": "HwBoFZYBicmMncZhAfimJWs8a1xrLg8NhamoaX5p9eHq",
+      "signer": "solidon-alice.testnet",
+      "predecessor": "usdc.solidon.testnet",
+      "receiver": "honey.solidon.testnet",
+      "log_index": 1,
+      "data_index": 0,
+      "event": "buy",
+      "standard": "solidon",
+      "version": "1.0.0",
+      "data": {
+        "account": "solidon-alice.testnet",
+        "usdc_in": "900000000",
+        "meme_out": "104551375261073980932937751"
+      }
+    }
+  ],
+  "more": true
+}
+```
+
+An event involves the account when it is the `signer`, the `predecessor`, or named in `data` under `account`, `owner_id`, `old_owner_id`, `new_owner_id`, `caller`, `creator` or `account_id`. The account does not need to be a meme. Page with `before`.
+
+## How the data is collected
+
+| Source | Interval | What |
+| --- | --- | --- |
+| NEAR RPC views | `SNAPSHOT_SECS` (default `LOOP_SECS`, 60 s) | Per meme: `get_pool`, `get_treasury`, `get_treasury_chains`, and the oracle price; one history point |
+| FastNear transactions API (`https://tx.test.fastnear.com`) | `INDEXER_POLL_SECS` (20 s) | Transactions of the factory and every meme (`POST /v0/account`), fetched with receipts and logs (`POST /v0/transactions`, 20 per call) |
+
+The first run backfills each account from its creation; `data/cursor.json` lets a restart resume. Data lives in `backend/keeper/data/` (`INDEXER_DATA`): `history/<meme>.jsonl`, `events/<account>.jsonl`, `cursor.json`. See [Keeper](/docs/reference/keeper) for the env vars and [Run locally](/docs/reference/run-locally) to start it.

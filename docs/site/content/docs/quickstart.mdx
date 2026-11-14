@@ -1,0 +1,122 @@
+---
+title: "Try it in five minutes"
+description: "Open the app, get a funded testnet wallet, buy HONEY, and check its treasury on three chains."
+---
+
+This walkthrough uses the hosted app at [app.solidon.xyz](https://app.solidon.xyz). Everything is on NEAR testnet. You need no extension and no real money.
+
+<Steps>
+<Step>
+
+### Open the app
+
+Go to [app.solidon.xyz](https://app.solidon.xyz). The header has three tabs: **Markets**, **Launch** and **Dashboard**. Markets lists every meme the factory `solidon.testnet` launched.
+
+</Step>
+<Step>
+
+### Get a funded wallet
+
+<Tabs items={["Demo wallet", "Your own wallet"]}>
+<Tab value="Demo wallet">
+
+Click **Try a demo wallet** in the header (or **Connect wallet**, then **Start with a demo wallet**).
+
+- The app generates an ed25519 key in your browser and uses its implicit NEAR testnet account.
+- The Solidon faucet creates the account and sends 0.5 NEAR for gas plus 1,000 test USDC. You sign nothing and pay no gas.
+- A toast shows "Creating and funding your demo wallet", then "Test NEAR and 1,000 USDC sent", with links to each transaction on NearBlocks.
+- The header shows a **Demo** chip with your account. Its menu has **View on NearBlocks**, **Export key**, **Disconnect (keep the key)** and **Forget demo wallet**.
+
+The key lives only in this browser. Transactions sign without popups.
+
+</Tab>
+<Tab value="Your own wallet">
+
+Click **Connect wallet** and pick a NEAR wallet under "Or use your own wallet". Use a testnet account.
+
+Then click **Get test funds** in the header. The server-side faucet pays, so you need no NEAR first:
+
+- 0.5 NEAR for gas, only if your account holds less than 0.3 NEAR.
+- 1,000 test USDC (`usdc.solidon.testnet`), with storage registration.
+
+The toast reads "Test NEAR and 1,000 USDC sent" or "1,000 test USDC minted". One request per account every 10 minutes.
+
+</Tab>
+</Tabs>
+
+You see your USDC balance in the header.
+
+</Step>
+<Step>
+
+### Open HONEY
+
+On **Markets**, open **HONEY** (Honeypot, `honey.solidon.testnet`). Its treasury holds NVDA.
+
+You see the price, **mNAV**, **Treasury value**, an mNAV gauge, the trade panel on the right, and "Where the treasury is": one row per chain plus "Cash on NEAR".
+
+</Step>
+<Step>
+
+### Buy 10 USDC of HONEY
+
+In the trade panel, stay on **Buy**. "You pay" is prefilled with 10 USDC. The line under it says "You get ≈ … HONEY · fee 1%".
+
+Click **Buy ~… HONEY for 10 USDC**.
+
+- Demo wallet: it signs at once ("Signing").
+- Your own wallet: approve in the wallet. The first buy also registers your account on HONEY (0.00125 NEAR storage), so the wallet asks twice.
+
+The toast goes from "Buying HONEY" to "Bought HONEY". Your HONEY balance appears in the panel, and the treasury value rises by the 0.8% treasury fee.
+
+</Step>
+<Step>
+
+### See the transaction on the explorer
+
+Click **The transaction on NearBlocks** in the success toast. You see a `ft_transfer_call` on `usdc.solidon.testnet` with receiver `honey.solidon.testnet` and `msg` `{"action":"buy","min_out":"…"}`, then the meme's `buy` event. See [Trade](/docs/guides/trade) for the details.
+
+</Step>
+<Step>
+
+### Details: Treasury per chain
+
+Scroll to **Details** and open **Treasury per chain**. For Base Sepolia, Robinhood Chain testnet and Solana devnet you see:
+
+- The treasury address (only this contract can sign for it) and whether the router is approved.
+- A proof label: **MPC-proven** (Base) or **Relayer-reported** (Robinhood Chain, Solana).
+- **Ledger** (what the contract booked) against **On-chain** (read live by your browser), with a verdict: "Matches", "Covered, +…" or "Short by …".
+
+A chain whose on-chain balance is below the ledger shows "Less on-chain" in "Where the treasury is". HONEY shows it on Base and Robinhood Chain today, from two swaps that reverted. See the [FAQ](/docs/faq).
+
+</Step>
+<Step>
+
+### Details: Holders
+
+Open **Holders**. Every holder is read from `ft_balance_of`. Your account is tagged **You**. "Pool reserve" is the tokens held by the contract's own pool.
+
+</Step>
+<Step>
+
+### Dashboard
+
+Open **Dashboard**. You see **Portfolio value** (your memes at pool price), **At NAV** (the treasury assets behind your tokens), **USDC**, and **Claimable** (creator fees, caller tips and failed payouts). Each position lists Balance, At pool price, At NAV and Share of treasury.
+
+</Step>
+<Step>
+
+### Launch your own meme
+
+Open **Launch**. Name it, pick a ticker and a stock, seed the pool, open the treasury. Three transactions. See [Launch a meme](/docs/guides/launch).
+
+</Step>
+</Steps>
+
+## Read the live state without the app
+
+| Do | See |
+| --- | --- |
+| Open [`solidon.testnet` on NearBlocks](https://testnet.nearblocks.io/address/solidon.testnet) | The factory and the memes it launched |
+| `near contract call-function as-read-only honey.solidon.testnet get_treasury_chains json-args '{}' network-config testnet now` | HONEY's treasury per chain: address, nonce, USDC, NVDA booked, cash in transit |
+| Open [api.solidon.xyz/health](https://api.solidon.xyz/health) | The read API is up |

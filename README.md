@@ -1,10 +1,18 @@
 # Solidon
 
+![Solidon: memes with a balance sheet](docs/assets/banner.jpg)
+
 **Memes with a balance sheet.** Solidon is a memecoin launchpad on NEAR where every meme is a small treasury company. Trading fees buy a tokenized stock (NVIDIA, Apple, Tesla and five more) on Base, Robinhood Chain and Solana at the same time. The NEAR contract signs every treasury transaction itself through Chain Signatures, and its capital rules (issue above 2× NAV, buy back below 1×, open redemptions below 0.9×) are locked in code with no admin key.
 
 Built for NEAR HACKATHON 2026 · Tracks: `defi`, `memecoins` · Author: [@yeheskieltame](https://github.com/yeheskieltame)
 
-**Live demo:** [solidon.xyz](https://solidon.xyz) · app [app.solidon.xyz](https://app.solidon.xyz) · read API [api.solidon.xyz/health](https://api.solidon.xyz/health)
+| Live | Link |
+| --- | --- |
+| Landing | [solidon.xyz](https://solidon.xyz) |
+| App | [app.solidon.xyz](https://app.solidon.xyz) |
+| Documentation | [docs.solidon.xyz](https://docs.solidon.xyz) |
+| Read API | [api.solidon.xyz/health](https://api.solidon.xyz/health) |
+| Demo video (2:16) | [Post on X](https://x.com/solidonxyz/status/2121455441050051059) |
 
 > Everything runs on testnets. The stock tokens are synthetic, priced from the official Chainlink feeds on Robinhood Chain mainnet, and the test USDC has no value.
 
@@ -39,7 +47,7 @@ flowchart LR
   S1 -- Raydium CLMM --> NVDA3[NVDA]
 ```
 
-- **One NEAR contract owns three treasuries.** Each meme derives an EVM address (ECDSA, used on Base and Robinhood Chain) and a Solana address (EdDSA) from the NEAR MPC network. The contract builds every transaction itself from locked config: an approval to one router, a swap into its stock, a USDC transfer. It checks each signature (`ecrecover`, `ed25519_verify`) before storing it. Anyone can broadcast.
+- **One NEAR contract owns three treasuries.** Each meme derives an EVM address (ECDSA, used on Base and Robinhood Chain) and a Solana address (EdDSA) from the NEAR MPC network. The contract builds every transaction itself from locked config: an approval to one router, and a swap into its stock. It checks each signature (`ecrecover`, `ed25519_verify`) before storing it. Anyone can broadcast.
 - **Cash moves with proof where proof exists.** Base arrivals are credited only after the MPC verifies the USDC `Transfer` log (foreign-chain verification). Robinhood Chain and Solana arrivals are reported by the relayer. Every credit is capped by the cash in transit and booked once.
 - **The ledger books the minimum.** Each swap books the `minAmountOut` it signed for, so a swap that lands leaves the chain a little above the ledger. A swap that reverts on-chain (for example when the pool has drifted more than 1% from the oracle) stays booked while its USDC sits unspent in the treasury. The app flags that chain "Less on-chain", as it does today for HONEY on Base and Robinhood Chain from two swaps that reverted before the automatic re-peg ran ([Base example](https://sepolia.basescan.org/tx/0x9609b7e27e2f741c4286a6c6a1a6dd04867a4d7f6c1b60c092aea942ef7e27fb)).
 
@@ -76,7 +84,7 @@ cd backend/keeper && npm install && node indexer.js              # optional loca
 | Do | See |
 | --- | --- |
 | `cd contracts && cargo test` | Unit tests plus NEAR sandbox integration tests (factory → meme → pool → mNAV → signing) |
-| `cd backend/keeper && npm test` | 56 keeper tests (treasury steps, bridge, Solana re-sign, holders), no network |
+| `cd backend/keeper && npm test` | 68 keeper tests (treasury steps, bridge, Solana re-sign, holders), no network |
 | `python3 simulation/sim.py` | The 60-day simulation below, regenerated from scratch |
 
 ## 60-day simulation
@@ -112,7 +120,7 @@ Stated openly. The full table is in [docs/SPEC.md](docs/SPEC.md#trust-assumption
 | [`backend/`](backend) | Node.js keeper (oracle push, housekeeping, broadcaster, testnet bridge, indexer + read API) and spike scripts |
 | [`frontend/`](frontend) | Next.js landing + app (Markets, Launch, Dashboard, meme pages) |
 | [`simulation/`](simulation) | 60-day mNAV simulation |
-| [`docs/`](docs) | [Spec](docs/SPEC.md), [deployments](docs/DEPLOYMENTS.md), [integration spikes](docs/SPIKE.md), [references](docs/REFERENCES.md), [hackathon rules](docs/HACKATHON_RULES.md) |
+| [`docs/`](docs) | Documentation site source ([`docs/site`](docs/site), Fumadocs, served at [docs.solidon.xyz](https://docs.solidon.xyz)), [Spec](docs/SPEC.md), [deployments](docs/DEPLOYMENTS.md), [integration spikes](docs/SPIKE.md), [references](docs/REFERENCES.md), [hackathon rules](docs/HACKATHON_RULES.md) |
 
 ## Hackathon disclosures
 

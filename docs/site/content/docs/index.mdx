@@ -1,0 +1,59 @@
+---
+title: "Introduction"
+description: "Solidon is a memecoin launchpad on NEAR where every meme is a small treasury company that holds a tokenized stock on three chains."
+---
+
+Solidon is a memecoin launchpad on NEAR. Every meme it launches is a small treasury company: trading fees buy a tokenized stock (NVDA, TSLA, AAPL and five more) held on Base Sepolia, Robinhood Chain testnet and Solana devnet at the same time. The NEAR contract signs every treasury transaction itself through NEAR Chain Signatures, and its capital rules are locked in code with no admin key.
+
+<Callout type="warn" title="Testnets only">
+Everything runs on testnets. The stock tokens are synthetic, priced from the official Chainlink feeds on Robinhood Chain mainnet, and the test USDC has no value.
+</Callout>
+
+- Landing: [solidon.xyz](https://solidon.xyz)
+- App: [app.solidon.xyz](https://app.solidon.xyz)
+- Read API: [api.solidon.xyz/health](https://api.solidon.xyz/health)
+
+## The problem
+
+Memecoins have attention but nothing underneath. When the hype fades, holders are left with a token backed by nothing.
+
+Treasury companies such as MicroStrategy do the opposite. They hold an asset and grow the amount held per share by issuing shares at a premium. But they can only be bought on stock exchanges, and their issuance is decided by management, not by code.
+
+Tokenized stocks are also split across chains (Base, Robinhood Chain, Solana). Users on NEAR cannot reach them easily.
+
+## What Solidon does
+
+Solidon gives every meme the treasury-company engine. Hype becomes stock per token, and the meme gets a NAV floor that anyone can verify on-chain.
+
+**mNAV** is the meme's market cap divided by its treasury value. The contract acts on it at most once an hour, from a 30-minute TWAP and a fresh oracle price:
+
+| mNAV | Action, enforced by the contract |
+| --- | --- |
+| above 2.0× | Issue new tokens (at most 1% of supply per day) and buy more stock |
+| 1.0× to 2.0× | Hold |
+| below 1.0× | Buy back with cash above the 20% buffer (never sells stock to do it) |
+| below 0.9× | Open redemptions: burn tokens for NAV per token in USDC |
+
+## Three ideas
+
+### 1. A treasury per meme
+
+Each meme is its own NEAR contract (for example `honey.solidon.testnet`): a NEP-141 token, a meme/USDC pool, and a treasury. 0.8% of every trade goes to the treasury, and the treasury buys the meme's thesis stock.
+
+### 2. Treasuries on three chains through Chain Signatures
+
+Each meme derives one EVM address (used on Base and Robinhood Chain) and one Solana address from the NEAR MPC network. Only the meme contract can request signatures for them. The contract builds each transaction from locked config (an approval to one router, a swap into its stock), checks the signature, and anyone can broadcast it.
+
+### 3. mNAV rules locked in the contract
+
+Every parameter is set at launch and readable by anyone. There is no owner and no setter. `rebalance()` is public: anyone can run the rules once per hour and earn a small tip.
+
+## Where to go next
+
+<Cards>
+  <Card title="Quickstart" href="/docs/quickstart" description="Try the app in five minutes with a demo wallet." />
+  <Card title="How it works" href="/docs/concepts/how-it-works" description="Contracts, Chain Signatures and the money flow." />
+  <Card title="Launch a meme" href="/docs/guides/launch" description="Create, seed and open the treasury of your own meme." />
+  <Card title="Deployments" href="/docs/reference/deployments" description="Every contract, token, pool and example transaction." />
+  <Card title="Security" href="/docs/security" description="Trust assumptions and the threat model, stated openly." />
+</Cards>

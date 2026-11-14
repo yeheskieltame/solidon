@@ -1,0 +1,128 @@
+---
+title: "mNAV"
+description: "How a Solidon meme compares its pool price with the value of its treasury, and the four rules the contract applies to that ratio."
+---
+
+mNAV is the ratio between what the market pays for a meme and what its treasury is worth. Solidon borrows the idea from treasury companies such as MicroStrategy: when the shares trade at a premium to the asset held, the company issues shares to buy more of the asset. In Solidon the rule is written in the meme contract, runs automatically, and is the same for everyone.
+
+## Definitions
+
+**NAV per token** is the treasury value divided by the circulating supply:
+
+```text
+NAV per token = ( sum over chains of
+                    stock units x oracle price
+                  + USDC on the chain
+                  + USDC in transit to the chain )
+                + USDC cash on NEAR
+                ---------------------------------
+                circulating supply
+```
+
+**mNAV** is the pool price divided by NAV per token:
+
+```text
+mNAV = meme price in the pool (30-minute TWAP) / NAV per token
+```
+
+Equivalently, meme market cap divided by treasury value.
+
+- **Circulating supply** is total supply minus the pool's meme inventory.
+- **One price per stock.** The stock on every chain is valued at the same oracle price.
+- **Cash in transit counts.** USDC sent from NEAR to a treasury chain stays in NAV while it travels, so moving cash never changes NAV.
+- **Stock is booked, not read.** Stock units are the `minAmountOut` the contract signed for. See [Treasuries](/docs/concepts/treasuries).
+
+## The four zones
+
+<Mermaid chart={`flowchart LR
+  R["mNAV below 0.9: redemption window open"] --- BB["0.9 to 1.0: buyback from surplus cash"]
+  BB --- H["1.0 to 2.0: hold"]
+  H --- I["above 2.0: accretive issuance"]`} />
+
+| mNAV | Contract action | Limit |
+| --- | --- | --- |
+| above 2.0 | Mint new tokens and sell them into the pool; the USDC proceeds go to treasury cash and later buy stock | At most 1% of circulating supply per 24 hours. Only if every new token is sold at or above NAV |
+| 1.0 to 2.0 | No action. The premium moves freely | None |
+| below 1.0 | Buy memes from the pool with treasury cash and burn them | Only cash above the 20% buffer. Never sells stock to fund a buyback |
+| below 0.9 | Open the redemption window: holders burn tokens and receive NAV per token in USDC | Paid from NEAR cash only. The buyback rule also still applies |
+| stale oracle | No action | Price older than 15 minutes |
+
+The thresholds are stored in basis points in the contract's `Params` (`issuance_mnav_bps: 20000`, `buyback_mnav_bps: 10000`, `redemption_mnav_bps: 9000`) and can be read with `get_params`. There is no method that changes them.
+
+## How one rebalance runs
+
+<Steps>
+<Step>
+### Anyone calls rebalance()
+
+`rebalance()` takes 100 TGas and can be called by any account. It fails if less than one hour has passed since the last action.
+</Step>
+<Step>
+### The contract reads the oracle
+
+It calls `get_price_no_older_than(price_id, 900)` on the oracle. If no price fresher than 15 minutes exists, the outcome is `StalePrice` and nothing changes. Pool trading keeps working.
+</Step>
+<Step>
+### It computes NAV and mNAV
+
+NAV per token uses the fresh price. The pool price is the 30-minute TWAP, built from checkpoints taken every 5 minutes. If the pool has no TWAP yet, the outcome is `NoMarket`.
+</Step>
+<Step>
+### It applies the zone rule
+
+Issuance above 2.0, buyback below 1.0, redemption window flag below 0.9. The caller receives a tip of 0.05% of the action value, paid from treasury cash.
+</Step>
+</Steps>
+
+## Why each rule exists
+
+### Issuance above 2.0, capped at 1% per day
+
+- **The premium can run.** Issuance starts only at a high premium, so a rally is not capped early.
+- **Issuance is accretive.** The contract sells only enough new tokens to bring the pool toward 2.0 times NAV, and it checks that the proceeds per new token are at least NAV. Every issuance therefore adds more value than it dilutes, and stock units per token rise. This is the MicroStrategy flywheel, enforced by code.
+- **No sudden dilution.** The cap is 1% of circulating supply per 24-hour epoch. A parameter sweep of thresholds 2.0, 2.5, 3.0 and caps 0.5%, 1% kept the floor identical, and a 0.5% cap hurt the bull case, so 2.0 and 1% were kept.
+
+### Hold between 1.0 and 2.0
+
+The premium belongs to the market. The contract does nothing in this band, so the meme can move harder than the stock in both directions.
+
+### Buyback below 1.0, from surplus cash only
+
+When the pool trades below NAV, the contract buys memes from the pool and burns them. It spends only NEAR cash above the 20% buffer and never sells stock to do it.
+
+<Callout type="warn" title="Simulation finding: a buyback must not sell stock">
+  Tokens bought back come from the pool's inventory, not from holders, so circulating supply does not fall and each buyback lowers NAV per token. An earlier rule let buybacks spend cash down to 10% of NAV, after which a stock sale refilled the buffer and the next buyback spent it again. In the stock crash scenario that rule ended with +56.4% stock units per token and +0.9% NAV per token; the adopted rule ended with +68.8% and +3.9%. Redemption, which is value-neutral, carries the floor instead. See [Simulation](/docs/simulation).
+</Callout>
+
+### Redemption below 0.9
+
+Holders burn tokens with `redeem(amount, min_usdc)` and receive NAV per token in USDC from treasury cash. Redemption at NAV is value-neutral for holders who stay. The window opens only when a rebalance measures mNAV below 0.9, so the floor is stated as "back at 0.9 or above within 2 hours". Worst case across all simulation runs: minimum mNAV 0.87, at most 1 hour below 0.9.
+
+Each redemption reads a fresh price. If the price is stale, the window has closed, `min_usdc` is not met, or cash is short, the tokens are returned. See [Redeem](/docs/guides/redeem).
+
+### 30-minute TWAP and 1-hour cooldown
+
+A single large trade cannot push the pool price far enough, for long enough, to trigger issuance or a buyback. The engine reads an average over 30 minutes and acts at most once per hour.
+
+### 15-minute oracle staleness stop
+
+Equity prices do not always update, for example while the stock market is closed. If the price is older than 15 minutes, every mNAV action stops: no issuance, no buyback, no redemption, no `fund_chain` and no `buy_stock`.
+
+## Locked parameters
+
+| Parameter | Value |
+| --- | --- |
+| Issuance threshold | mNAV above 2.0 |
+| Max issuance | 1% of circulating supply per 24 hours |
+| Buyback threshold | mNAV below 1.0 |
+| Redemption threshold | mNAV below 0.9 |
+| Cash buffer on NEAR | 20% of NAV |
+| Pool price for mNAV | 30-minute TWAP |
+| Oracle staleness limit | 15 minutes |
+| Rebalance cooldown | 1 hour |
+| Caller tip | 0.05% of the action value |
+| Target leverage | 1.0x (MVP) |
+
+<Callout type="info" title="A NAV floor, not a price guarantee">
+  If the stock falls, NAV falls with it. The floor removes the extra loss from the hype premium collapsing below NAV; it does not protect against the stock itself.
+</Callout>

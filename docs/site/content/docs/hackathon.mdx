@@ -1,0 +1,77 @@
+---
+title: "Hackathon submission"
+description: "Solidon's NEAR HACKATHON 2026 submission facts: tracks, baseline code, tag, other project by the same author, tools and disclosures, and license."
+---
+
+## Submission facts
+
+| Item | Value |
+| --- | --- |
+| Event | NEAR HACKATHON 2026 |
+| Tracks | `defi` (Unstoppable DeFi) and `memecoins` (Memecoins With Mechanics) |
+| Team size | 1 |
+| Author | yeheskieltame |
+| Repository created | 8 Nov 2026, inside the hackathon window |
+| Baseline code | None. Every commit is new work |
+| Submission tag | `hackathon-submission` on the submitted commit. No `pre-hackathon` tag is needed because there is no baseline |
+| Deadline | 14 Nov 2026 23:59 UTC (15 Nov 2026 06:59 WIB) |
+| Live demo | [solidon.xyz](https://solidon.xyz), app at [app.solidon.xyz](https://app.solidon.xyz), read API at [api.solidon.xyz/health](https://api.solidon.xyz/health) |
+| Networks | NEAR testnet, Base Sepolia, Robinhood Chain testnet, Solana devnet. NEAR Intents 1Click quotes from mainnet (dry) |
+| License | MIT (`LICENSE`) |
+
+## Other project by the same author
+
+**NYXERON** is an independent project by the same author, submitted separately. The rules allow at most two projects per person, provided they are independent and name each other.
+
+## How Solidon maps to the tracks
+
+| Criterion | Evidence in Solidon |
+| --- | --- |
+| `defi`: cross-chain settlement | Enter from any chain via NEAR Intents 1Click (live dry quotes in the app); treasury cash sent to Base, Robinhood Chain and Solana, through Intents on mainnet |
+| `defi`: no custodian | Treasuries at contract-owned addresses via Chain Signatures; `rebalance()` callable by anyone |
+| `defi`: exchange and vault | Internal AMM pool and a per-meme stock vault on three chains |
+| `memecoins`: mechanic in the contract | mNAV engine, issuance, buyback and redemption all run in the meme contract |
+| `memecoins`: locked parameters | Parameters locked at launch, publicly readable, no admin key |
+| `memecoins`: treasury with rules | 20% cash buffer, 1% per day issuance cap, redemption window |
+| `memecoins`: simulation | 60-day simulation across five scenarios. See [Simulation](/docs/simulation) |
+| `memecoins`: sybil resistance | No per-account rewards; every mechanic is proportional to token amount |
+
+## Reproduce it
+
+Start with [Quickstart](/docs/quickstart). Every claim on this site has a "do X, see Y" path: a view call, an explorer link, a test, or the simulation script. The full list of live transactions is on [Deployments](/docs/reference/deployments).
+
+## Tools and disclosure
+
+### AI
+
+- **Claude Code** was used throughout for code, tests and docs, under the author's direction and review.
+- **GPT Image (ChatGPT)** generated the mascot and meme art.
+
+### Libraries
+
+| Area | Libraries |
+| --- | --- |
+| Contracts | near-sdk, cargo-near |
+| Backend | near-api-js, viem, @solana/web3.js, Raydium SDK v2 (devnet pool setup only) |
+| Frontend | Next.js, Tailwind CSS, shadcn/ui, Motion, @hot-labs/near-connect |
+| Simulation | Python standard library |
+
+### Services
+
+| Purpose | Service |
+| --- | --- |
+| Signing | NEAR Chain Signatures (`v1.signer-prod.testnet`) |
+| Prices | Chainlink price feeds (Robinhood Chain mainnet) |
+| Cross-chain entry | NEAR Intents 1Click (quotes) |
+| Chain access | FastNear and dRPC (NEAR), Alchemy (EVM, Solana) |
+
+### Assets
+
+- The hero background is a licensed MotionSites gradient.
+- Stock, chain and platform logos are trademarks of their owners. Sources are listed in `frontend/public/logos/SOURCES.md`.
+
+## Testnet and legal notice
+
+<Callout type="warn" title="Not for US persons">
+  Everything runs on testnets. The stock tokens are synthetic, priced from the official Chainlink feeds on Robinhood Chain mainnet, and the test USDC has no value. Tokenized stocks are regulated securities in many places. Solidon is a testnet prototype and is not for US persons.
+</Callout>

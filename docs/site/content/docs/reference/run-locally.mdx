@@ -1,0 +1,134 @@
+---
+title: "Run locally"
+description: "How to run the Solidon web app, indexer, keeper, contract tests, keeper tests and simulation on your own machine."
+---
+
+Everything below runs against the live testnet deployment (`solidon.testnet`). You do not need to deploy contracts to use the app or the indexer locally.
+
+## Requirements
+
+| Part | Needs |
+| --- | --- |
+| Web app (`frontend/`) | Node.js 20+, npm |
+| Keeper and indexer (`backend/keeper/`) | Node.js 20+, npm |
+| Contracts (`contracts/`) | Rust with the `wasm32-unknown-unknown` target, cargo-near 0.23+ |
+| Simulation (`simulation/`) | Python 3.10+, standard library only |
+| CLI reads (optional) | near-cli-rs (`near`) |
+
+## Web app
+
+<Steps>
+<Step>
+
+### Install and start
+
+```bash
+cd frontend
+npm install
+npm run dev          # landing http://localhost:3000, app http://localhost:3000/app and http://app.localhost:3000
+```
+
+Production build: `npm run build && npm run start`. Lint: `npm run lint`.
+
+</Step>
+<Step>
+
+### Configure (optional)
+
+Copy `frontend/.env.example` to `frontend/.env.local`. The defaults target NEAR testnet on a single host, so no variable is required to browse and trade with your own wallet.
+
+</Step>
+</Steps>
+
+| Variable | Kind | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_NETWORK` | public | NEAR network (`testnet`) |
+| `NEXT_PUBLIC_FACTORY` | public | Factory account (`solidon.testnet`) |
+| `NEXT_PUBLIC_USDC` | public | USDC token (`usdc.solidon.testnet`) |
+| `NEXT_PUBLIC_NEAR_RPC` | public | NEAR RPCs, comma separated, tried in order |
+| `NEXT_PUBLIC_NEARBLOCKS_API` | public | NearBlocks API base |
+| `NEXT_PUBLIC_BASE_RPC`, `NEXT_PUBLIC_ROBINHOOD_RPC`, `NEXT_PUBLIC_SOLANA_RPC` | public | Bypass the app's `/api/rpc/<chain>` read proxy with a public URL |
+| `NEXT_PUBLIC_INDEXER_URL` | public | Read API base, default `http://localhost:8788` |
+| `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL` | public | Two-domain setup (app subdomain and landing) |
+| `ALCHEMY_API_KEY` | server-only | Upstream of `/api/rpc/<chain>` |
+| `BASE_RPC_URL`, `ROBINHOOD_RPC_URL`, `SOLANA_RPC_URL` | server-only | Per-chain upstreams of `/api/rpc/<chain>` |
+| `ONECLICK_JWT` | server-only, optional | NEAR Intents 1Click API key for `/api/oneclick/*` |
+| `FAUCET_ACCOUNT_ID`, `FAUCET_PRIVATE_KEY` | server-only secret | Testnet faucet account and its key; needed for the demo wallet and "Get test funds" |
+| `FAUCET_DAILY_NEAR`, `FAUCET_IP_PER_HOUR` | server-only | Faucet limits |
+
+`NEXT_PUBLIC_*` values are read at build time and are public. Never commit the faucet key.
+
+## Indexer and read API
+
+```bash
+cd backend/keeper
+npm install
+node indexer.js                       # http://localhost:8788, no key, never signs
+curl -s http://localhost:8788/health
+```
+
+The first run backfills every meme's events from the FastNear transactions API; history starts at the first run. Point the app at it with `NEXT_PUBLIC_INDEXER_URL=http://localhost:8788`. Data goes to `backend/keeper/data/` (`INDEXER_DATA`). Routes: [API](/docs/reference/api).
+
+## Keeper
+
+```bash
+cd backend/keeper
+npm install
+node keeper.js --once --dry-run       # real reads, logs every transaction it would send; no key needed
+node repeg.js --dry-run               # synthetic pools vs Chainlink, plan only
+```
+
+<Callout type="error" title="Do not run a second live keeper">
+The production keeper already serves `solidon.testnet`. A live keeper needs the keys of `keeper.solidon.testnet` and must be the only one running. Use `--dry-run`, or deploy your own factory with your own keeper account.
+</Callout>
+
+Variables a live keeper needs (names only; full list with defaults on [Keeper](/docs/reference/keeper)):
+
+| Variable | Why |
+| --- | --- |
+| `KEEPER_NEAR_PRIVATE_KEY` (or `~/.near-credentials/testnet/<KEEPER_ACCOUNT>.json`) | Sign NEAR transactions as the keeper |
+| `KEEPER_EVM_PRIVATE_KEY` (or `EVM_DEPLOYER_PRIVATE_KEY` in `contracts/.env`) | Bridge deliveries, treasury gas, EVM re-peg |
+| `ALCHEMY_API_KEY` (or `HOOD_MAINNET_RPC`) | Chainlink reads for the oracle step; default RPC for every chain |
+| `KEEPER_SOLANA_KEYPAIR` | Devnet wallet; created on first run if missing |
+| `SOLANA_PAYER_KEYPAIR` | Solana re-peg only |
+| `FACTORY`, `KEEPER_ACCOUNT` | Point at your own factory |
+
+Put them in `backend/.env` (template `backend/.env.example`; gitignored).
+
+## Contracts
+
+```bash
+cd contracts
+./build.sh           # builds mock-ft, mock-pyth, meme, factory to target/near/ (the factory embeds meme.wasm)
+cargo test           # unit tests + NEAR sandbox integration tests
+```
+
+Run `./build.sh` before `cargo test`: the factory embeds `target/near/meme/meme.wasm` and the sandbox tests deploy the built wasm files.
+
+`./deploy-testnet.sh` deploys a factory with the keychain of the signing account; `DRY_RUN=1 ./deploy-testnet.sh` prints the init args built from `contracts/stocks/` and sends nothing.
+
+## Keeper tests
+
+```bash
+cd backend/keeper
+npm test             # node --test "test/*.test.js": logic, treasury and bridge flows, Solana re-sign, indexer, history API, holders, re-peg
+```
+
+No network, no key.
+
+## Simulation
+
+```bash
+python3 simulation/sim.py
+```
+
+Runs the 60-day simulation (five scenarios, 12 seeds each) with the contract's rules, writes `simulation/RESULTS.md` and `simulation/charts/*.svg`, and exits non-zero if any SPEC check fails. Takes about 2 seconds. See [Simulation](/docs/simulation).
+
+## Read the chain without running anything
+
+```bash
+NET="network-config testnet"
+near contract call-function as-read-only solidon.testnet get_memes json-args '{}' $NET now
+near contract call-function as-read-only honey.solidon.testnet get_treasury_chains json-args '{}' $NET now
+curl -s https://api.solidon.xyz/v1/memes
+```

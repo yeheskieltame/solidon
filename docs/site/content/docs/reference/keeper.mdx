@@ -1,0 +1,164 @@
+---
+title: "Keeper"
+description: "What the Solidon testnet keeper does each loop, its flags and environment variables, and how it is deployed."
+---
+
+The keeper (`backend/keeper/keeper.js`, Node.js 20+) is a convenience process. Every treasury method it calls is open to anyone and checked by the contract; the keeper only decides when to call. It also plays two trusted testnet roles: it feeds the mock oracle, and its NEAR account `keeper.solidon.testnet` is the factory's `bridge` and `relayer`.
+
+<Callout type="error" title="One keeper only">
+Run at most one keeper against a factory. Its `state.json` keys every bridge transfer by NEAR receipt id; a second keeper with its own state could deliver the same transfer twice. To move a keeper, stop it and move (never copy) its `state.json`.
+</Callout>
+
+## The loop
+
+One cycle runs every `LOOP_SECS` (60 s). Steps run in this order; `--only=` selects a subset.
+
+<Mermaid chart={`flowchart TD
+  A[discover: factory config and memes] --> B[oracle: Chainlink to mock Pyth]
+  B --> C[repeg: synthetic pools to Chainlink]
+  C --> D[broadcast: signed treasury txs]
+  D --> E[bridge: deliver fund_chain cash, then prove it]
+  E --> F[per meme: treasury steps, broadcast again, solana steps]`} />
+
+| Step (`--only` name) | When | What it does |
+| --- | --- | --- |
+| `oracle` | every `ORACLE_INTERVAL_SECS` (300 s) | Reads `latestRoundData()` of the 8 Chainlink proxies on Robinhood Chain mainnet and calls `set_price` on the mock oracle for each, in one NEAR transaction. Skips a feed older than `ORACLE_MAX_FEED_AGE_SECS` (25 h) or non-positive, so the contracts' 15-minute staleness brake applies. Refuses to write to `pyth-oracle.near` / `pyth-oracle.testnet` or any non-`.testnet` account. |
+| `repeg` | every `REPEG_EVERY_MIN` minutes (default 0 = off; 30 in production) | Moves every synthetic stock pool whose next buy fills more than `THRESHOLD_PCT` above Chainlink to `TARGET` x Chainlink, adding `DEPTH_USD` of stock liquidity. EVM pools in-process (`src/repeg-evm.js`), Solana pools via `backend/solana-spike/3_repeg.js`. Runs before any buy, so the contract's `minOut` (oracle minus 1%) can fill. |
+| `broadcast` | every cycle | For each meme and EVM chain, sends `get_signed_tx(chain, nonce)` for every nonce between the treasury's on-chain nonce and the meme's next nonce, and waits for the receipt. Tops up treasury gas from the keeper wallet below `TREASURY_GAS_MIN_ETH`. |
+| `bridge` | every cycle | Lists USDC transfers to the keeper on NearBlocks, re-reads each one from NEAR RPC (`EXPERIMENTAL_receipt`), parses the memo `solidon fund <chain> <treasury>`, and sends the same amount of that chain's testnet USDC to the treasury, capped by the meme's `in_transit` minus what was already delivered. Then proves it: `credit_cash` on Base (MPC-verified log, 300 TGas), `report_cash` on Robinhood and Solana (30 TGas). The signed delivery is saved before broadcast, so a restart resumes instead of paying twice. |
+| `treasury` | every cycle, per meme | `init_treasury` if no address; per EVM chain with a venue: `approve_router` if not approved, `buy_stock` if the chain holds USDC and the price is fresh, `fund_chain` when nothing is in transit, the chain's USDC is spent, it is the chain holding the fewest shares, and the estimated cash above the 20% buffer is at least `FUND_MIN_USDC`. Then `rebalance` (100 TGas) when the cooldown is over and the price is fresh; a `no_market` answer is retried at most every 600 s. Signing steps wait while a signature is in flight. |
+| `solana` | every cycle, per meme with a Solana venue | `init_solana_treasury`; `set_solana_accounts` with the canonical ATA bumps (also corrects wrong ones); keeps treasury SOL above `TREASURY_SOL_MIN`; checks the last signed buy first (landed: done; valid blockhash: resend; expired: `resign_solana` after 200 NEAR blocks, at most `SOLANA_MAX_RESIGNS` times); then `buy_stock_solana` with up to 3 tick arrays and a recent blockhash, broadcast at once; then `fund_chain("solana")` under the EVM rule. |
+
+The keeper never calls `clear_stuck_signature`. Memes on code without `get_treasury_chains` only get `rebalance()`.
+
+## Indexer and API
+
+`keeper.js` also starts the indexer and the [read API](/docs/reference/api) on their own timers, so they never delay the treasury loop. `--no-api` turns them off; `--once` never starts them. `node indexer.js` runs them alone: that process loads no key and never signs.
+
+## Flags
+
+```bash
+node keeper.js [--once] [--dry-run] [--no-api] [--meme=a.testnet,b.testnet] [--only=oracle,broadcast,bridge,treasury,solana,repeg]
+node indexer.js [--meme=...]
+node repeg.js [--chain=base,robinhood,solana] [--ticker=NVDA,...] [--dry-run]
+```
+
+| Flag | Effect |
+| --- | --- |
+| `--once` | One cycle, then exit. No indexer, no API. |
+| `--dry-run` | Real reads, no writes: every transaction is logged as `DRY ... would ...`. No key needed. |
+| `--no-api` | Do not start the indexer and its HTTP API (use when `indexer.js` runs separately, so only one process writes `data/`). |
+| `--meme=` | Only these memes (comma separated). Default: every meme of the factory. |
+| `--only=` | Only these steps. Default: all. |
+| `--help`, `-h` | Print usage. |
+
+npm scripts: `npm start` (`node keeper.js`), `npm run once`, `npm run dry-run` (`--once --dry-run`), `npm test`.
+
+## Environment variables
+
+The keeper reads `backend/.env` and `contracts/.env` (values already in the environment win) and never prints secrets; RPC URLs and keys are redacted from logs. Template: `backend/.env.example`. Every non-secret value has a testnet default.
+
+### Accounts and keys
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `FACTORY` | `solidon.testnet` | Factory whose memes the keeper serves |
+| `KEEPER_ACCOUNT` | `keeper.<FACTORY>` | NEAR account of the keeper: the factory's `bridge` and `relayer` |
+| `KEEPER_NEAR_PRIVATE_KEY` | `~/.near-credentials/testnet/<KEEPER_ACCOUNT>.json` | Secret. NEAR key of the keeper account |
+| `KEEPER_EVM_PRIVATE_KEY` | `EVM_DEPLOYER_PRIVATE_KEY` from `contracts/.env` | Secret. Keeper EVM wallet: bridge deliveries, treasury gas, re-peg (must own the `MockERC20` stocks). Without it, deliveries and gas top-ups are off. |
+| `KEEPER_EVM_ADDRESS` | `EVM_DEPLOYER_ADDRESS` | Expected EVM address; the keeper refuses to start if the key does not match |
+| `KEEPER_SOLANA_KEYPAIR` | `backend/keeper/.secrets/solana-keeper.json` | Secret. Devnet keypair, created on first run |
+| `ALCHEMY_API_KEY` | none | Secret. Default RPC for Base Sepolia, Robinhood testnet and mainnet, Solana devnet |
+| `NEARBLOCKS_API_KEY` | none | Secret, optional. Raises the NearBlocks rate limit |
+| `PYTH_API_KEY` | none | Secret, optional. Redacted from logs |
+| `SOLIDON_ENV`, `SOLIDON_CONTRACTS_ENV` | `backend/.env`, `contracts/.env` | Paths of the two env files |
+
+### RPC endpoints
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `NEAR_RPC` | `https://test.rpc.fastnear.com` | NEAR RPC for views |
+| `NEAR_RPC_SEND` | `NEAR_RPC` | NEAR RPC for transactions. Must support `broadcast_tx_commit` (dRPC fails it); keep FastNear here |
+| `BASE_SEPOLIA_RPC` | Alchemy `base-sepolia`, else `https://sepolia.base.org` | Base Sepolia |
+| `HOOD_TESTNET_RPC` | Alchemy `robinhood-testnet`, else `https://rpc.testnet.chain.robinhood.com` | Robinhood Chain testnet |
+| `HOOD_MAINNET_RPC` | Alchemy `robinhood-mainnet` | Chainlink reads. Required for the oracle step |
+| `SOLANA_DEVNET_RPC` | Alchemy `solana-devnet`, else `https://api.devnet.solana.com` | Solana devnet |
+| `NEARBLOCKS_API` | `https://api-testnet.nearblocks.io` | Bridge transfer discovery |
+
+Views and transactions use separate endpoints because views are many and transactions are few but need an RPC that waits for the outcome. Production uses `NEAR_RPC=https://near-testnet.drpc.org` for views and `NEAR_RPC_SEND=https://test.rpc.fastnear.com` for transactions.
+
+### Loop and thresholds
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `LOOP_SECS` | `60` | Cycle interval |
+| `ORACLE_INTERVAL_SECS` | `300` | Oracle push interval; must stay under the contracts' 900 s staleness limit |
+| `ORACLE_MAX_FEED_AGE_SECS` | `90000` (25 h) | Older Chainlink answers are not pushed |
+| `KEEPER_SKIP_MEMES` | empty | Comma-separated memes the keeper leaves alone (production: `floor.solidon.testnet`, so its cash stays on NEAR for a manual buyback and redemption demo) |
+| `FUND_MIN_USDC` | `1` | Smallest `fund_chain` amount or chain cash the keeper acts on |
+| `TREASURY_GAS_MIN_ETH` | `0.0002` | Top up an EVM treasury below this |
+| `TREASURY_GAS_TOPUP_ETH` | `0.0005` | Amount sent; `0` disables top-ups |
+| `RECEIPT_TIMEOUT_SECS` | `120` | Wait for an EVM receipt |
+| `CREDIT_MAX_ATTEMPTS` | `6` | Retries of a failed `credit_cash` before it is left as `credit-failed` |
+| `KEEPER_STATE` | `backend/keeper/state.json` | Bridge transfer state |
+| `TREASURY_SOL_MIN` | `0.01` | Top up a Solana treasury below this |
+| `TREASURY_SOL_TOPUP` | `0.02` | Top-up target |
+| `KEEPER_SOL_MIN` | `0.1` | Below this the keeper requests a 1 SOL devnet airdrop |
+| `SOLANA_CONFIRM_SECS` | `60` | Wait for a Solana confirmation |
+| `SOLANA_MAX_RESIGNS` | `5` | `resign_solana` attempts for one failing buy |
+
+### Re-peg
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `REPEG_EVERY_MIN` | `0` (off) | Run a re-peg pass every N minutes |
+| `THRESHOLD_PCT` | `0.5` | Re-peg a pool whose next buy fills this many percent above Chainlink |
+| `TARGET` | `0.995` | New pool price as a fraction of Chainlink |
+| `DEPTH_USD` | `50000` | New one-sided stock liquidity, USD |
+| `SOLANA_PAYER_KEYPAIR` | `backend/solana-spike/.secrets/payer.json` | Secret. Devnet payer, mint authority of the Solana stocks |
+| `SOLANA_SPIKE_STATE` | the spike's `state.json` | Writable copy of the Solana spike state |
+| `DRY_RUN` | unset | For `repeg.js`: same as `--dry-run` |
+
+### Indexer
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `INDEXER_PORT` | `8788` | HTTP port of the read API |
+| `INDEXER_DATA` | `backend/keeper/data` | `history/`, `events/`, `cursor.json` |
+| `INDEXER_POLL_SECS` | `20` | Event poll interval |
+| `SNAPSHOT_SECS` | `LOOP_SECS` | One history point per meme per interval |
+| `FASTNEAR_TX_API` | `https://tx.test.fastnear.com` | FastNear transactions API |
+
+## Deployment
+
+Production runs on a VPS as two containers of one image (`backend/keeper/Dockerfile`, `node:24-alpine`, build context = repo root) from `backend/deploy/compose.yml`, behind a shared Caddy that terminates HTTPS for `api.solidon.xyz`.
+
+| Service | Command | Notes |
+| --- | --- | --- |
+| `api` | `node indexer.js` | Read-only, no key. `INDEXER_DATA=/state/data`. Caddy proxies `api.solidon.xyz` to `solidon-api:8788`. |
+| `keeper` | `node keeper.js --no-api` | Secrets from `/opt/solidon/secrets.env`. `REPEG_EVERY_MIN=30`, `NEAR_RPC=https://near-testnet.drpc.org`, `NEAR_RPC_SEND=https://test.rpc.fastnear.com`, `KEEPER_SKIP_MEMES=floor.solidon.testnet`, `KEEPER_STATE=/state/state.json`. |
+
+```bash
+# ship the code, then (re)build and start both services
+git archive --format=tar HEAD backend/keeper backend/solana-spike backend/deploy contracts/stocks \
+  | ssh root@<vps> 'rm -rf /opt/solidon/repo && mkdir -p /opt/solidon/repo && tar -x -C /opt/solidon/repo'
+ssh root@<vps> 'cd /opt/solidon/repo/backend/deploy && docker compose up -d --build'
+
+# one re-peg pass by hand, plan only
+docker compose exec keeper node repeg.js --dry-run
+```
+
+Host layout: `/opt/solidon/state` (indexer data, `state.json`), `/opt/solidon/secrets` (Solana keypairs, read-only mount), `/opt/solidon/secrets.env` (keys, mode 600). See `backend/deploy/README.md`.
+
+## Trust
+
+| Step | Trust required |
+| --- | --- |
+| Oracle | The mock oracle is trusted on testnet (anyone can set it). The contracts read whichever Pyth-interface oracle the factory fixed at init. |
+| Broadcast | None. Transactions are MPC-signed and checked by the contract; anyone can broadcast. |
+| Bridge | The testnet bridge is trusted to deliver. On mainnet this leg is NEAR Intents / 1Click. |
+| Cash proof | Base arrivals are MPC-verified. Robinhood and Solana arrivals are relayer-reported. |
+| Treasury, Solana buys | None. Open methods; the contract builds every transaction from locked config. Wrong live Solana inputs only make a buy fail. |
+| Re-peg | Testnet only; the pools and tokens are Solidon's own. |
+
+See [Security](/docs/security) for the full threat model.

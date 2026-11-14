@@ -1,0 +1,80 @@
+---
+title: "FAQ"
+description: "Short answers about testnets, stock tokens, keys, fees, failure cases and why Solidon is built on NEAR."
+---
+
+<Accordions>
+<Accordion title="Is Solidon on mainnet?">
+No. Everything runs on testnets: NEAR testnet, Base Sepolia, Robinhood Chain testnet and Solana devnet. The one live mainnet piece is the **Pay from another chain** panel: it requests live NEAR Intents 1Click quotes (dry quotes) to show the mainnet route. On testnet it issues no deposit address and swaps nothing.
+</Accordion>
+
+<Accordion title="Are the stocks real?">
+No. Testnets have no real stock tokens. On every treasury chain the stock is a Solidon synthetic token in its own pool (Uniswap v3 on Base Sepolia and Robinhood Chain testnet, Raydium CLMM on Solana devnet). Each pool was seeded at the reference price from the official Chainlink feeds on Robinhood Chain mainnet, and the keeper feeds those Chainlink prices to the mock oracle on NEAR. The test USDC has no value. Addresses are in [Deployments](/docs/reference/deployments).
+</Accordion>
+
+<Accordion title="Who holds the keys to the treasuries?">
+No person. Each meme's treasury addresses (one EVM address for Base and Robinhood Chain, one Solana address) are derived from the NEAR MPC network (`v1.signer-prod.testnet`) for the meme contract's own account. Only that contract can request a signature for them. It builds every transaction itself from locked config and checks each signature (`ecrecover` on EVM, `ed25519_verify` on Solana) before storing it. Anyone can broadcast the signed transaction.
+
+Launched meme contracts have no access key at all.
+</Accordion>
+
+<Accordion title="Can the team move the funds?">
+No method lets anyone move treasury funds. The contract only signs an approve to one locked router and a swap into its locked stock (plus USDC sent to the bridge by `fund_chain`).
+
+Two trusted roles remain on testnet, stated openly:
+
+- **The bridge is a keeper account.** `fund_chain` sends NEAR cash above the 20% buffer, at most one swap's worth, to the keeper, which delivers it as USDC on the treasury chain. On mainnet that leg is NEAR Intents / 1Click.
+- **The relayer reports cash on Robinhood Chain and Solana.** Only Base arrivals are proven by the MPC. A relayer report is capped by the cash in transit, once per transaction, so it cannot create value.
+
+During development the factory account still has a full-access key, which could redeploy the factory (not the memes already launched).
+</Accordion>
+
+<Accordion title="What happens if the stock falls?">
+NAV falls with it. The floor is a NAV floor, not a price guarantee. What the rules remove is the extra loss from the hype premium collapsing: below 1.0× mNAV the contract buys back with surplus cash, and below 0.9× holders can redeem tokens for NAV per token in USDC. See [Redeem](/docs/guides/redeem).
+</Accordion>
+
+<Accordion title="What if a treasury swap reverts?">
+The ledger books the minimum. When the contract signs a swap, it books the swap's `minAmountOut` (oracle value minus 1%). A swap that lands leaves the chain a little above the ledger.
+
+A swap that reverts on-chain (for example when the pool has drifted more than 1% from the oracle: "Too little received") stays booked, while its USDC sits unspent in the treasury. Total value is unchanged, but the split between stock and USDC is wrong until holdings are proven. The app flags that chain **Less on-chain**. This is the case today for HONEY on Base and Robinhood Chain, from two swaps that reverted before the automatic re-peg ran ([Base example](https://sepolia.basescan.org/tx/0x9609b7e27e2f741c4286a6c6a1a6dd04867a4d7f6c1b60c092aea942ef7e27fb)).
+
+The planned fix: book EVM swaps only after the MPC verifies the swap's `Transfer` log on Base, and give relayer chains a capped "swap failed" report.
+</Accordion>
+
+<Accordion title="What are the fees?">
+| Fee | Amount | Goes to |
+| --- | --- | --- |
+| Pool fee, every buy and sell | 1% | 0.8% treasury, 0.2% creator |
+| Launch | `launch_cost()`, 4.46 NEAR today | The new meme's storage |
+| Token registration, first buy with your own wallet | 0.00125 NEAR | Storage on the meme contract |
+| Rebalance tip | 0.05% of what a rebalance moves | The caller, from treasury cash |
+| Pay from another chain | Route cost shown in the 1Click quote | NEAR Intents 1Click |
+
+Creator fees and tips are credited as claimable USDC. Claim them with **Claim … USDC** in the trade panel, or **Claim** on the Dashboard.
+</Accordion>
+
+<Accordion title="Why NEAR?">
+Two NEAR features carry the design:
+
+- **Chain Signatures** let one NEAR contract own addresses on Base, Robinhood Chain and Solana and sign their transactions itself. No custodian, no bridge contract per chain.
+- **NEAR Intents (1Click)** let users enter from other chains (SOL, ETH on Base, BTC, USDC on Arbitrum and more) arriving as USDC on NEAR, and carry treasury cash to the treasury chains on mainnet.
+
+The MPC can also verify foreign-chain logs, which is how Base cash arrivals are proven.
+</Accordion>
+
+<Accordion title="Who runs the rules?">
+Anyone. `rebalance()` is public and runs at most once per hour. The caller earns 0.05% of what it moves. The Solidon keeper calls it when due, and the app shows a **Run rebalance** button when the cooldown is over. See [Rebalance](/docs/guides/rebalance).
+</Accordion>
+
+<Accordion title="Can the rules be changed after launch?">
+No. Every parameter (fees, thresholds, buffer, cooldown, tip) is set when the factory deploys the meme and is readable with `get_params`. The meme has no owner and no setter. The factory's stock list is fixed at factory init.
+</Accordion>
+
+<Accordion title="What stops someone from manipulating mNAV?">
+mNAV uses a 30-minute TWAP of the pool price, not spot. The rules run at most once an hour, issuance is capped at 1% of circulating supply per day, and every mNAV action stops if the oracle price is older than 15 minutes. Each treasury swap allows at most 1% slippage against the oracle.
+</Accordion>
+
+<Accordion title="Is this available to US persons?">
+No. Tokenized stocks are regulated securities in many places. This is a testnet prototype with synthetic tokens.
+</Accordion>
+</Accordions>
