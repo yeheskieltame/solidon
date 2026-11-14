@@ -5,6 +5,12 @@ description: "Solidon is a memecoin launchpad on NEAR where every meme is a smal
 
 Solidon is a memecoin launchpad on NEAR. Every meme it launches is a small treasury company: trading fees buy a tokenized stock (NVDA, TSLA, AAPL and five more) held on Base Sepolia, Robinhood Chain testnet and Solana devnet at the same time. The NEAR contract signs every treasury transaction itself through NEAR Chain Signatures, and its capital rules are locked in code with no admin key.
 
+## Watch the demo
+
+Two minutes: a demo wallet, a buy confirmed on the explorer, the treasury on three chains, a Solana swap signed by the NEAR contract, and a new meme launched from scratch.
+
+<DemoVideo caption="Solidon demo, 2:16. Also posted on X." />
+
 <Callout type="warn" title="Testnets only">
 Everything runs on testnets. The stock tokens are synthetic, priced from the official Chainlink feeds on Robinhood Chain mainnet, and the test USDC has no value.
 </Callout>
@@ -12,6 +18,8 @@ Everything runs on testnets. The stock tokens are synthetic, priced from the off
 - Landing: [solidon.xyz](https://solidon.xyz)
 - App: [app.solidon.xyz](https://app.solidon.xyz)
 - Read API: [api.solidon.xyz/health](https://api.solidon.xyz/health)
+
+<Screenshot src="/screens/landing.jpg" url="solidon.xyz" alt="The landing page: one meme, its stock, its treasury and its mNAV, read live from NEAR." caption="The landing page: one meme, its stock, its treasury and its mNAV, read live from NEAR." />
 
 ## The problem
 
@@ -33,6 +41,8 @@ Solidon gives every meme the treasury-company engine. Hype becomes stock per tok
 | 1.0× to 2.0× | Hold |
 | below 1.0× | Buy back with cash above the 20% buffer (never sells stock to do it) |
 | below 0.9× | Open redemptions: burn tokens for NAV per token in USDC |
+
+<Screenshot src="/screens/meme.jpg" url="app.solidon.xyz/meme/honey.solidon.testnet" alt="A meme page: price, mNAV, treasury value, where the treasury is, and the trade panel." caption="A meme page: price, mNAV, treasury value, where the treasury is, and the trade panel." />
 
 ## Three ideas
 

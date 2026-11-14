@@ -24,6 +24,8 @@ On a meme page, **Buy** → **Pay from another chain** asks 1Click for a quote f
 
 The app talks to 1Click through a narrow server proxy (`/api/oneclick/tokens`, `/api/oneclick/quote`, `/api/oneclick/status`). The destination asset is fixed to USDC on NEAR (`nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1`), so the proxy cannot be used as an open relay. Unless the app is built with `NEXT_PUBLIC_NETWORK=mainnet`, every quote is forced to dry.
 
+<Screenshot src="/screens/pay-any-chain.jpg" url="app.solidon.xyz/meme/honey.solidon.testnet" alt="Pay from another chain: pick SOL, ETH, BTC or USDC on Arbitrum and get a live 1Click quote." caption="Pay from another chain: pick SOL, ETH, BTC or USDC on Arbitrum and get a live 1Click quote." />
+
 On mainnet the same component requests a deposit address, the user sends the origin asset there, and the app follows the swap status until the USDC lands in the user's NEAR account. The user then buys the meme with it.
 
 ### What the spikes measured
