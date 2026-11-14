@@ -12,6 +12,9 @@ This walkthrough uses the hosted app at [app.solidon.xyz](https://app.solidon.xy
 
 Go to [app.solidon.xyz](https://app.solidon.xyz). The header has three tabs: **Markets**, **Launch** and **Dashboard**. Markets lists every meme the factory `solidon.testnet` launched.
 
+
+<Screenshot src="/screens/markets.jpg" url="app.solidon.xyz" alt="Markets: every meme on the factory, its thesis stock, price, NAV per token, mNAV and treasury." caption="Markets: every meme on the factory, its thesis stock, price, NAV per token, mNAV and treasury." />
+
 </Step>
 <Step>
 
@@ -55,6 +58,9 @@ On **Markets**, open **HONEY** (Honeypot, `honey.solidon.testnet`). Its treasury
 
 You see the price, **mNAV**, **Treasury value**, an mNAV gauge, the trade panel on the right, and "Where the treasury is": one row per chain plus "Cash on NEAR".
 
+
+<Screenshot src="/screens/meme.jpg" url="app.solidon.xyz/meme/honey.solidon.testnet" alt="HONEY holds NVDA. The bar under mNAV shows which locked rule applies." caption="HONEY holds NVDA. The bar under mNAV shows which locked rule applies." />
+
 </Step>
 <Step>
 
@@ -76,6 +82,9 @@ The toast goes from "Buying HONEY" to "Bought HONEY". Your HONEY balance appears
 
 Click **The transaction on NearBlocks** in the success toast. You see a `ft_transfer_call` on `usdc.solidon.testnet` with receiver `honey.solidon.testnet` and `msg` `{"action":"buy","min_out":"…"}`, then the meme's `buy` event. See [Trade](/docs/guides/trade) for the details.
 
+
+<Screenshot src="/screens/buy-tx.jpg" url="testnet.near.rocks/tx/Gye2gq…" alt="A 50 USDC buy on the explorer: 50 USDC to honey.solidon.testnet, HONEY back to the buyer." caption="A 50 USDC buy on the explorer: 50 USDC to honey.solidon.testnet, HONEY back to the buyer." />
+
 </Step>
 <Step>
 
@@ -89,12 +98,18 @@ Scroll to **Details** and open **Treasury per chain**. For Base Sepolia, Robinho
 
 A chain whose on-chain balance is below the ledger shows "Less on-chain" in "Where the treasury is". HONEY shows it on Base and Robinhood Chain today, from two swaps that reverted. See the [FAQ](/docs/faq).
 
+
+<Screenshot src="/screens/treasury-per-chain.jpg" url="app.solidon.xyz/meme/honey.solidon.testnet" alt="Treasury per chain: what the contract booked next to what each chain holds, and how cash is proven." caption="Treasury per chain: what the contract booked next to what each chain holds, and how cash is proven." />
+
 </Step>
 <Step>
 
 ### Details: Holders
 
 Open **Holders**. Every holder is read from `ft_balance_of`. Your account is tagged **You**. "Pool reserve" is the tokens held by the contract's own pool.
+
+
+<Screenshot src="/screens/holders.jpg" url="app.solidon.xyz/meme/honey.solidon.testnet" alt="Holders, read from ft_balance_of. Your wallet is tagged." caption="Holders, read from ft_balance_of. Your wallet is tagged." />
 
 </Step>
 <Step>
@@ -103,12 +118,18 @@ Open **Holders**. Every holder is read from `ft_balance_of`. Your account is tag
 
 Open **Dashboard**. You see **Portfolio value** (your memes at pool price), **At NAV** (the treasury assets behind your tokens), **USDC**, and **Claimable** (creator fees, caller tips and failed payouts). Each position lists Balance, At pool price, At NAV and Share of treasury.
 
+
+<Screenshot src="/screens/dashboard.jpg" url="app.solidon.xyz/dashboard" alt="Dashboard: positions, value at NAV, share of each treasury, claimable creator fees." caption="Dashboard: positions, value at NAV, share of each treasury, claimable creator fees." />
+
 </Step>
 <Step>
 
 ### Launch your own meme
 
 Open **Launch**. Name it, pick a ticker and a stock, seed the pool, open the treasury. Three transactions. See [Launch a meme](/docs/guides/launch).
+
+
+<Screenshot src="/screens/launch.jpg" url="app.solidon.xyz/launch" alt="Launch: name, ticker, thesis stock and icon, then three transactions." caption="Launch: name, ticker, thesis stock and icon, then three transactions." />
 
 </Step>
 </Steps>

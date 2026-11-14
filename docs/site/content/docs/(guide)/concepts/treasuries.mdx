@@ -49,6 +49,8 @@ One signature is in flight at a time across all chains. If a signing callback ne
 
 Signed transactions are public. `get_signed_tx(chain, nonce)` returns them ready to send: `0x` hex on EVM, base64 on Solana. Any account can broadcast them. The official keeper does this as a convenience; if it stops, anyone else can take over. The treasury needs a little ETH (Base, Robinhood Chain) and SOL (Solana) for gas, which anyone can top up.
 
+<Screenshot src="/screens/treasury-per-chain.jpg" url="app.solidon.xyz/meme/honey.solidon.testnet" alt="Each chain's treasury address, the ledger against the on-chain balance, and the proof used for cash." caption="Each chain's treasury address, the ledger against the on-chain balance, and the proof used for cash." />
+
 ## Cash arrivals
 
 USDC leaves NEAR through `fund_chain(chain)` and is booked as *in transit* for that chain. When it arrives, the chain's USDC ledger is credited out of that in-transit amount.
@@ -91,3 +93,6 @@ A Solana transaction expires about 60 to 90 seconds after its blockhash. If a si
 | One meme holding NVDA on all three chains, every step signed at the contract's request | `docs/DEPLOYMENTS.md`, "End to end" |
 
 See [Security](/docs/security) for the full threat model and [Contracts reference](/docs/reference/contracts) for method details.
+
+
+<Screenshot src="/screens/solana-swap.jpg" url="explorer.solana.com/tx/3ZfTyZ…" alt="A Solana devnet swap into NVDA, signed by the NEAR meme contract through the MPC network." caption="A Solana devnet swap into NVDA, signed by the NEAR meme contract through the MPC network." />

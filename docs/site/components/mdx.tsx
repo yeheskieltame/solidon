@@ -5,6 +5,7 @@ import { Accordion, Accordions } from 'fumadocs-ui/components/accordion';
 import { TypeTable } from 'fumadocs-ui/components/type-table';
 import type { MDXComponents } from 'mdx/types';
 import { Mermaid } from './mdx/mermaid';
+import { DemoVideo, Screenshot } from './mdx/media';
 
 export function getMDXComponents(components?: MDXComponents) {
   return {
@@ -16,6 +17,8 @@ export function getMDXComponents(components?: MDXComponents) {
     Accordions,
     Mermaid,
     TypeTable,
+    Screenshot,
+    DemoVideo,
     ...components,
   } satisfies MDXComponents;
 }

@@ -22,6 +22,8 @@ Open a meme from **Markets**. The trade panel has a **Buy** tab and a **Sell** t
 | Details → Max slippage | 0.5%, 1% (default) or 3%. Sets Minimum received |
 | Details → Network | NEAR testnet |
 
+<Screenshot src="/screens/meme.jpg" url="app.solidon.xyz/meme/honey.solidon.testnet" alt="The trade panel sits on the right of every meme page." caption="The trade panel sits on the right of every meme page." />
+
 The button says exactly what happens: **Buy ~… SYMBOL for 10 USDC**. If something blocks the trade, the button says why instead: "Enter an amount", "Not enough USDC", "Amount too small".
 
 After you confirm, a toast shows "Buying SYMBOL", then "Bought SYMBOL" with a link **The transaction on NearBlocks**. If you run out of USDC, the panel shows "Out of USDC? It is free on testnet." with a **Get test funds** button.
@@ -37,6 +39,8 @@ A buy is one call on the USDC token, not on the meme:
   "msg": "{\"action\":\"buy\",\"min_out\":\"<minimum tokens, 18 decimals>\"}"
 }
 ```
+
+<Screenshot src="/screens/buy-tx.jpg" url="testnet.near.rocks/tx/Gye2gq…" alt="The buy on the explorer: ft_transfer_call to usdc.solidon.testnet with the buy message, HONEY transferred back." caption="The buy on the explorer: ft_transfer_call to usdc.solidon.testnet with the buy message, HONEY transferred back." />
 
 The USDC contract calls the meme's `ft_on_transfer`. The meme then:
 
@@ -67,6 +71,8 @@ Under the Buy tab, **Pay from another chain** opens a NEAR Intents 1Click quote:
 - Common assets are listed first: SOL, ETH on Base, ETH on Arbitrum, BTC, and USDC on Base, Solana and Arbitrum. **Search all assets** lists the rest.
 - Enter an amount in "You send". About 500 ms after you stop typing, the app requests a quote and shows "You get ≈ … USDC on NEAR".
 - Details show **Minimum received**, **Route cost**, **Arrives in** and **To**.
+
+<Screenshot src="/screens/pay-any-chain.jpg" url="app.solidon.xyz/meme/honey.solidon.testnet" alt="A live NEAR Intents 1Click quote: 2 SOL into USDC on NEAR." caption="A live NEAR Intents 1Click quote: 2 SOL into USDC on NEAR." />
 
 <Callout type="info" title="On testnet this is a preview">
 The panel reads: "Mainnet route preview — on testnet use Get test funds. Quotes are live; no deposit address is issued and nothing is swapped." Quotes are real 1Click mainnet quotes requested with `dry: true`. A testnet account does not exist on mainnet, so the preview quotes to `intents.near` as a stand-in recipient.

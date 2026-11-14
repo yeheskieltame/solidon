@@ -1,7 +1,9 @@
 {
-  "title": "Solidon",
+  "title": "Documentation",
+  "root": true,
+  "icon": "BookOpen",
   "pages": [
-    "---Start---",
+    "---Overview---",
     "index",
     "quickstart",
     "faq",
@@ -9,8 +11,6 @@
     "...concepts",
     "---Guides---",
     "...guides",
-    "---Reference---",
-    "...reference",
     "---Trust---",
     "security",
     "simulation",

@@ -1,4 +1,5 @@
 import { RootProvider } from 'fumadocs-ui/provider/next';
+import { Banner } from 'fumadocs-ui/components/banner';
 import type { Metadata } from 'next';
 import { Bricolage_Grotesque, Geist, Geist_Mono } from 'next/font/google';
 import { siteUrl } from '@/lib/shared';
@@ -20,6 +21,9 @@ export default function Layout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="en" className={`${geist.variable} ${bricolage.variable} ${mono.variable}`} suppressHydrationWarning>
       <body className="flex min-h-screen flex-col font-sans">
+        <Banner id="testnet-2026" className="bg-[#3a6ff7] text-[0.85rem] font-medium text-white">
+          Solidon runs on NEAR testnet, Base Sepolia, Robinhood Chain testnet and Solana devnet. Test USDC and synthetic stock tokens have no value.
+        </Banner>
         <RootProvider>{children}</RootProvider>
       </body>
     </html>
