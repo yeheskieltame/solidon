@@ -1,0 +1,83 @@
+---
+title: "Redeem and buybacks"
+description: "How the contract defends NAV below 1.0x mNAV with buybacks and below 0.9x with redemptions, and what a holder does and sees."
+---
+
+The meme may trade above the value of its treasury (the premium is hype), but the contract does not let it stay far below. Two rules defend NAV. Both run inside `rebalance()`, which anyone can call once an hour (see [Rebalance](/docs/guides/rebalance)).
+
+| mNAV at the last rebalance | What happens | Who acts |
+| --- | --- | --- |
+| below 1.0× | Buyback: the contract buys tokens from the pool with surplus cash and burns them | The contract, during `rebalance()` |
+| below 0.9× | Redemption window opens: holders can burn tokens for NAV per token in USDC | Each holder, with `redeem` |
+
+mNAV here is the pool's 30-minute TWAP price divided by NAV per token, at a fresh oracle price.
+
+## The cash buffer
+
+Treasury cash on NEAR is USDC kept ready for buybacks and redemptions, so neither has to wait for a stock sale on another chain.
+
+- **Target: 20% of NAV.** Only cash above this buffer is sent to the treasury chains to buy stock, and only cash above it funds buybacks.
+- **Refill line: 10% of NAV.** The spec schedules a partial stock sale to refill the buffer to 20% when it falls below this line.
+
+The meme page shows the buffer under **Details → Balance sheet and cash buffer**, with one of these lines: "Above target: only this surplus can fund buybacks.", "Below target but above the refill line: new fees rebuild the buffer.", or "Below the refill line: a stock sale refills the buffer."
+
+## Buyback, below 1.0×
+
+When a rebalance sees mNAV below 1.0×, the contract:
+
+1. Computes how much USDC would lift the pool price to NAV.
+2. Spends the smaller of that amount and the cash above the 20% buffer.
+3. Buys tokens from its own pool with it and burns them (`ft_burn`, memo `buyback`).
+
+It never sells stock to fund a buyback. The simulation showed that selling stock to refill cash destroys NAV, so the adopted rule spends only surplus cash. If there is no surplus, the rebalance does nothing.
+
+As a holder you do nothing. You see the result in **Activity** and, if you ran the rebalance yourself, in the toast "Bought back tokens" ("Bought and burned … SYMBOL for $…").
+
+## Redemption, below 0.9×
+
+A rebalance that sees mNAV below 0.9× sets the redemption window open. The next rebalance closes it again if mNAV has recovered. The window state is public: `get_treasury` returns `redemption_open`, and **Details → Rules** shows "Redemption window open" or "Redemption window closed".
+
+### What a holder does
+
+<Steps>
+<Step>
+
+### Open the Redeem tab
+
+While the window is open, the trade panel shows a third tab, **Redeem**, with the line: "The redemption window is open: burn tokens for NAV per token in USDC from the cash buffer." The tab does not exist while the window is closed.
+
+</Step>
+<Step>
+
+### Enter the amount
+
+Type the amount in "You burn" (or **MAX**). The panel shows "You get ≈ … USDC at the last NAV". Details show **Minimum received** (the estimate minus your max slippage) and **Paid at**: "NAV with a fresh oracle price".
+
+</Step>
+<Step>
+
+### Burn
+
+Click **Burn … SYMBOL for ~… USDC**. This calls `redeem(amount, min_usdc)` on the meme with 1 yoctoNEAR attached. The toast reads "Redeeming SYMBOL", then "Redemption sent. USDC arrives if the oracle price is fresh; otherwise your tokens are returned."
+
+</Step>
+</Steps>
+
+### What the contract does
+
+1. Refuses if the window is closed ("Redemption window is closed").
+2. Takes your tokens and reads a fresh oracle price (no older than 15 minutes).
+3. Computes NAV per token at that price and pays `amount × NAV` in USDC from treasury cash on NEAR, then logs `redeem` and burns the tokens.
+4. Returns your tokens instead (event `redeem_refunded`) if the price is stale, the payout is below your `min_usdc`, the window closed in the meantime, or treasury cash on NEAR cannot cover the payout.
+
+If the USDC transfer itself fails, the amount becomes claimable and appears in the trade panel as "… USDC waiting for you".
+
+Redemption at NAV is value-neutral for everyone who stays: each token leaves with exactly its share of the treasury.
+
+<Callout type="info" title="A NAV floor, not a price guarantee">
+If the stock falls, NAV falls with it, and so does what a redemption pays. What the rules remove is the extra loss from the hype premium collapsing below NAV.
+</Callout>
+
+## Seeing it live
+
+On most memes the keeper sends cash above the buffer to the treasury chains and runs the rules every hour. `floor.solidon.testnet` ($FLOOR, holding TSLA) is excluded from the hosted keeper, so its cash stays on NEAR and a buyback or a redemption can be triggered by hand with **Run rebalance** when its mNAV is below 1.0× or 0.9×.

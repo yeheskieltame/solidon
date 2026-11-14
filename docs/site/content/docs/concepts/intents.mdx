@@ -1,0 +1,55 @@
+---
+title: "NEAR Intents"
+description: "Where NEAR Intents 1Click fits in Solidon, what the app does with it on testnet, and what is and is not live."
+---
+
+NEAR Intents moves value between chains by letting solvers fill a swap request. Solidon uses its 1Click API in two places: to let a user pay from another chain, and, on mainnet, to carry treasury cash from NEAR to the treasury chains.
+
+<Callout type="warn" title="Intents has no testnet">
+  NEAR Intents runs on mainnet only. Solidon runs on testnets, so no Intents swap is executed. The app requests live 1Click quotes from mainnet with `dry: true`: real routes, real prices and fees, but no deposit address and no swap.
+</Callout>
+
+## What is live and what is not
+
+| Use | Status |
+| --- | --- |
+| "Pay from another chain" quotes in the app | Live: real 1Click dry quotes from mainnet |
+| Executing a cross-chain payment into USDC on NEAR | Mainnet only. Built into the app behind `NEXT_PUBLIC_NETWORK=mainnet`; not used on testnet |
+| Treasury bridge leg (NEAR cash to Base, Robinhood Chain, Solana) | Testnet: a trusted keeper account. Mainnet design: Intents / 1Click |
+| Routing tokenized stocks through 1Click | Not possible: no tokenized stock is routable through 1Click on any chain. The treasury buys the stock locally |
+
+## Pay from another chain
+
+On a meme page, **Buy** → **Pay from another chain** asks 1Click for a quote from an asset on another chain, for example SOL, ETH on Base, BTC or USDC on Arbitrum, into USDC on NEAR. USDC on NEAR is the asset a Solidon buy is paid in.
+
+The app talks to 1Click through a narrow server proxy (`/api/oneclick/tokens`, `/api/oneclick/quote`, `/api/oneclick/status`). The destination asset is fixed to USDC on NEAR (`nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1`), so the proxy cannot be used as an open relay. Unless the app is built with `NEXT_PUBLIC_NETWORK=mainnet`, every quote is forced to dry.
+
+On mainnet the same component requests a deposit address, the user sends the origin asset there, and the app follows the swap status until the USDC lands in the user's NEAR account. The user then buys the meme with it.
+
+### What the spikes measured
+
+From live dry quotes (`docs/SPIKE.md` S6, S11, S17):
+
+- User entry into USDC on NEAR: quotes work from $20 (the smallest size tried).
+- Outbound from USDC on NEAR (the treasury leg): quotes work from $0.50 to Base, Robinhood Chain (as ETH) and Solana.
+- Indicative times: SOL about 20 seconds, USDC on Base about 35 seconds, BTC about 13 minutes.
+- Fee about 0.2% without a 1Click JWT. A JWT is optional (`ONECLICK_JWT`, server-only).
+- A recipient NEAR account that does not exist makes every quote fail with a generic `400`.
+
+## Where Intents fits on mainnet
+
+<Mermaid chart={`flowchart LR
+  A["User asset on any chain: BTC, SOL, ETH, USDC"] -- "1Click" --> N["USDC on NEAR"]
+  N -- "buy" --> M["Meme contract"]
+  M -- "fund_chain: cash above the 20% buffer" --> BR["Bridge leg: Intents 1Click"]
+  BR -- "USDC" --> T["Treasuries on Base, Robinhood Chain, Solana"]`} />
+
+1. **Entry from any chain.** A user pays with BTC, SOL, ETH or USDC from another chain and receives USDC on NEAR, then buys the meme.
+2. **The treasury bridge leg.** `fund_chain(chain)` sends cash above the 20% buffer to the factory's bridge account, booked as in transit. On mainnet that account's job is done by an Intents / 1Click swap from USDC on NEAR to USDC on the treasury chain. The spikes measured a full cycle (cash to the treasury chain, buy stock, prove it) at about $0.02 to $0.05 on Base, Robinhood Chain or Solana, above $0.50.
+
+## Open work
+
+- **A contract-driven Intents swap.** Today the bridge account is trusted to deliver. The candidate design: the meme registers an MPC-derived ed25519 key on `intents.near` and MPC-signs its own NEP-413 intents, so nobody has to supply a 1Click deposit address. Mainnet only, not built.
+- **Redeem to another chain.** Paying a redemption straight to a chain of choice through Intents is listed as later work.
+
+See [Security](/docs/security) for how the bridge trust assumption is bounded.

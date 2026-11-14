@@ -1,0 +1,82 @@
+---
+title: "Rebalance"
+description: "The public rebalance() method that runs the mNAV rules, who can call it, the tip, the cooldown, and when it does nothing."
+---
+
+`rebalance()` runs a meme's mNAV rules. It is public: any NEAR account can call it, at most once per hour per meme, and the caller earns a small tip when the call moves value. No backend is needed for the rules to run. The Solidon keeper is one caller among many.
+
+## What one call does
+
+<Mermaid chart={`flowchart TD
+  A[rebalance called] --> B{Cooldown over?}
+  B -- no --> X[Panics: Rebalance cooldown has not ended]
+  B -- yes --> C[Read oracle price, max age 15 min]
+  C --> D{Fresh price?}
+  D -- no --> S[stale_price: nothing runs, cooldown not used]
+  D -- yes --> E{Pool TWAP and NAV available?}
+  E -- no --> N[no_market: nothing runs, cooldown not used]
+  E -- yes --> F[Compute mNAV = TWAP / NAV, start cooldown]
+  F --> G{mNAV}
+  G -- above 2.0x --> I[Issue new tokens, proceeds to treasury cash]
+  G -- 1.0x to 2.0x --> H[no_action]
+  G -- below 1.0x --> K[Buy back and burn with cash above the buffer]
+  F --> R[Redemption window open if mNAV below 0.9x]`} />
+
+In detail:
+
+1. **Cooldown.** The call fails with "Rebalance cooldown has not ended" until one hour has passed since the last evaluated rebalance. The first call on a new meme is always allowed.
+2. **Price.** The meme reads its stock's price from the oracle with `get_price_no_older_than` (15 minutes). With no fresh price the outcome is `stale_price` and the cooldown is not used.
+3. **TWAP.** mNAV uses the pool's 30-minute average price. A pool younger than that window gives `no_market`, and the cooldown is not used.
+4. **Evaluate.** The contract records NAV and mNAV, starts the cooldown, sets the redemption window (open below 0.9×), and takes at most one action:
+
+| mNAV | Outcome | Limits |
+| --- | --- | --- |
+| above 2.0× | `issued`: sells just enough new tokens into the pool to bring the price toward 2.0× NAV. The USDC goes to treasury cash and later buys stock | At most 1% of circulating supply per 24 hours. Only if every new token sells at or above NAV (accretive) |
+| 1.0× to 2.0× | `no_action` | |
+| below 1.0× | `bought_back`: buys tokens from the pool with cash above the 20% buffer and burns them | Never sells stock |
+
+Every evaluated call logs a `rebalance` event with the caller, `mnav_bps`, NAV, TWAP, `redemption_open`, the outcome and the tip.
+
+## The tip
+
+The caller earns **0.05%** of the USDC value an issuance or buyback moved, capped by treasury cash. The tip is credited as claimable USDC on the meme, not sent. Claim it with **Claim … USDC** in the trade panel (`claim_usdc`).
+
+A call that ends in `no_action` moves nothing and pays no tip.
+
+## Running it from the app
+
+On a meme page, under the mNAV gauge, one line reads: "Anyone can run the rules once an hour, for a 0.05% tip on what they move." On the right it shows one of:
+
+| Shown | Meaning |
+| --- | --- |
+| **Run rebalance** | The cooldown is over and the oracle price is fresh. Click to call `rebalance()` with 100 TGas |
+| Next in … | The cooldown is still running |
+| Waits for a fresh … price | The oracle price is older than 15 minutes |
+| **Connect to run** | No wallet connected |
+
+After the call, the toast reads "Running the rules", then one of:
+
+| Toast title | Outcome |
+| --- | --- |
+| Issued new tokens | "Sold … new SYMBOL into the pool for $…, now treasury cash for more TICKER." plus your tip |
+| Bought back tokens | "Bought and burned … SYMBOL for $…." plus your tip |
+| Rules ran: nothing to do | mNAV was inside the hold zone, or nothing was allowed within the caps and the buffer. "No tip without a move." |
+| Nothing ran: stale price | No price within the allowed age. The cooldown is not used |
+| Nothing ran: no average price yet | The pool is younger than its average-price window. The cooldown is not used |
+
+When a tip was paid, the toast adds "Your tip, $…, is claimable in the trade panel."
+
+## Running it from the CLI
+
+```bash
+near contract call-function as-transaction honey.solidon.testnet rebalance json-args '{}' \
+  prepaid-gas '100.0 Tgas' attached-deposit '0 NEAR' sign-as <you>.testnet network-config testnet sign-with-keychain send
+```
+
+Read the state first with `get_treasury`: `last_rebalance`, `next_rebalance` (Unix seconds), `last_mnav_bps`, `redemption_open`, `epoch_cap` and `epoch_issued`.
+
+## The keeper
+
+The Solidon keeper (`backend/keeper`) runs on the hosted testnet deployment. For every meme the factory lists, it calls `rebalance()` with 100 TGas whenever the cooldown allows and the oracle price is fresh. It also pushes Chainlink prices to the testnet oracle and runs the treasury steps (`init_treasury`, `approve_router`, `fund_chain`, `buy_stock` and the Solana equivalents).
+
+The keeper holds no special power over the rules. If it stops, anyone can call `rebalance()` and collect the tips. Memes listed in `KEEPER_SKIP_MEMES` are left alone: on the hosted deployment that is `floor.solidon.testnet`, so its rules can be run by hand from the app.

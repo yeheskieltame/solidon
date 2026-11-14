@@ -1,0 +1,84 @@
+---
+title: "Trade a meme"
+description: "How to buy and sell a meme with USDC in the app, what each field means, and what the transaction contains on-chain."
+---
+
+Every meme trades against USDC in a constant-product pool inside its own contract. There is no external DEX. Prices, fees and the mNAV rules all live in the same contract.
+
+On testnet the USDC is `usdc.solidon.testnet`, a mock token with 6 decimals and no value. Get 1,000 of it with **Get test funds** (see [Quickstart](/docs/quickstart)).
+
+## Buy
+
+Open a meme from **Markets**. The trade panel has a **Buy** tab and a **Sell** tab (and **Redeem** while the redemption window is open).
+
+| Field | Meaning |
+| --- | --- |
+| You pay | USDC amount. Prefilled with 10. **MAX** fills your whole balance |
+| You get | Estimated tokens out, after the fee, from the pool's current reserves |
+| Details → Minimum received | The least you accept. The contract refuses the trade below it |
+| Details → Average price | USDC paid per token for this trade |
+| Details → Price impact, fee included | Average price against the current spot price |
+| Details → Fee | `1% (0.8% treasury, 0.2% creator)` |
+| Details → Max slippage | 0.5%, 1% (default) or 3%. Sets Minimum received |
+| Details → Network | NEAR testnet |
+
+The button says exactly what happens: **Buy ~… SYMBOL for 10 USDC**. If something blocks the trade, the button says why instead: "Enter an amount", "Not enough USDC", "Amount too small".
+
+After you confirm, a toast shows "Buying SYMBOL", then "Bought SYMBOL" with a link **The transaction on NearBlocks**. If you run out of USDC, the panel shows "Out of USDC? It is free on testnet." with a **Get test funds** button.
+
+### What the buy transaction contains
+
+A buy is one call on the USDC token, not on the meme:
+
+```json title="ft_transfer_call on usdc.solidon.testnet (1 yoctoNEAR attached)"
+{
+  "receiver_id": "honey.solidon.testnet",
+  "amount": "10000000",
+  "msg": "{\"action\":\"buy\",\"min_out\":\"<minimum tokens, 18 decimals>\"}"
+}
+```
+
+The USDC contract calls the meme's `ft_on_transfer`. The meme then:
+
+1. Splits the 1% fee: 0.8% to treasury cash, 0.2% credited to the creator as claimable USDC.
+2. Swaps the rest through the pool (`x * y = k`).
+3. Refuses with "Slippage: output below min_out" if the output is below `min_out`. Any refusal refunds the full USDC through the token standard.
+4. Sends the tokens to you and logs a `buy` event.
+
+With your own wallet, the first buy of a meme also calls `storage_deposit` on the meme (0.00125 NEAR) so you can hold its token. The wallet asks twice. The demo wallet signs both without popups.
+
+## Sell
+
+On the **Sell** tab, enter an amount in "You sell" (or **MAX**). The panel shows "You get ≈ … USDC", with the same Details rows.
+
+The button reads **Sell … SYMBOL for ~… USDC**. It calls `sell(amount, min_out)` on the meme with 1 yoctoNEAR attached. The contract:
+
+1. Swaps your tokens through the pool.
+2. Takes the same 1% fee from the USDC out (0.8% treasury, 0.2% creator).
+3. Refuses if the net USDC is below `min_out`.
+4. Sends you the USDC with `ft_transfer`.
+
+The success toast says "Sold SYMBOL. USDC is on its way; if the transfer fails it becomes claimable." Claimable USDC appears in the trade panel as "… USDC waiting for you" with a **Claim … USDC** button, which calls `claim_usdc`.
+
+## Pay from another chain
+
+Under the Buy tab, **Pay from another chain** opens a NEAR Intents 1Click quote: any asset 1Click routes into USDC on NEAR, the asset a Solidon buy is paid in.
+
+- Common assets are listed first: SOL, ETH on Base, ETH on Arbitrum, BTC, and USDC on Base, Solana and Arbitrum. **Search all assets** lists the rest.
+- Enter an amount in "You send". About 500 ms after you stop typing, the app requests a quote and shows "You get ≈ … USDC on NEAR".
+- Details show **Minimum received**, **Route cost**, **Arrives in** and **To**.
+
+<Callout type="info" title="On testnet this is a preview">
+The panel reads: "Mainnet route preview — on testnet use Get test funds. Quotes are live; no deposit address is issued and nothing is swapped." Quotes are real 1Click mainnet quotes requested with `dry: true`. A testnet account does not exist on mainnet, so the preview quotes to `intents.near` as a stand-in recipient.
+</Callout>
+
+On a mainnet build, the same panel offers **Get a … deposit address**, an optional refund address, and then follows the swap: "Waiting for your deposit", "Deposit seen, waiting for confirmations", "Swapping into USDC on NEAR", "Done: the USDC is in your NEAR account".
+
+## Where the fees go
+
+| Share | Destination | Effect |
+| --- | --- | --- |
+| 0.8% | Treasury cash on NEAR | Raises NAV. Cash above the 20% buffer is sent to the treasury chains and buys stock |
+| 0.2% | Creator, claimable USDC | Claimed with `claim_usdc` |
+
+See [How it works](/docs/concepts/how-it-works) for how treasury cash becomes stock on Base, Robinhood Chain and Solana.

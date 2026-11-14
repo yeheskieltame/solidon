@@ -1,0 +1,93 @@
+---
+title: "Treasuries"
+description: "How each meme contract controls its own addresses on Base, Robinhood Chain and Solana through NEAR Chain Signatures, and how cash and stock are booked."
+---
+
+Every meme owns two treasury addresses outside NEAR: one EVM address used on both Base and Robinhood Chain, and one Solana address. Both are derived from the meme's NEAR account by the NEAR MPC network (Chain Signatures). No person holds a key to them. Only the meme contract can ask the MPC network to sign for them.
+
+## Derived addresses
+
+| Treasury | Signature scheme | MPC domain | Derivation path | Set by |
+| --- | --- | --- | --- | --- |
+| EVM (Base Sepolia and Robinhood Chain testnet) | ECDSA (secp256k1) | 0 | `evm-treasury` | `init_treasury()`, anyone, once |
+| Solana devnet | EdDSA (Ed25519) | 1 | `solana-treasury` | `init_solana_treasury()`, anyone, once |
+
+The MPC signer is `v1.signer-prod.testnet`. The contract reads its derived public key and stores the resulting address. The same EVM address is used on every EVM chain, with a separate nonce per chain. On Solana the relayer then sets the treasury's USDC and stock token accounts with `set_solana_accounts`, from canonical bumps.
+
+Example, HONEY (`honey.solidon.testnet`):
+
+- EVM treasury on Robinhood Chain testnet: [`0x51b1197be727ce2fb229c4919eca30e5568c802a`](https://explorer.testnet.chain.robinhood.com/address/0x51b1197be727ce2fb229c4919eca30e5568c802a)
+- Solana treasury: [`9gyosY8RFLdET2AGVj5XU14tpRGLFrun2VrpfZ1tAsLP`](https://explorer.solana.com/address/9gyosY8RFLdET2AGVj5XU14tpRGLFrun2VrpfZ1tAsLP?cluster=devnet)
+
+## What the contract signs
+
+The contract builds every treasury transaction itself, from config that was locked when the factory was initialized. A caller cannot supply calldata, a recipient or a token.
+
+| Method | Chain | Transaction built by the contract |
+| --- | --- | --- |
+| `approve_router(chain)` | Base, Robinhood Chain | `approve(router, max)` on that chain's USDC, for the locked Uniswap v3 SwapRouter02 |
+| `buy_stock(chain)` | Base, Robinhood Chain | SwapRouter02 `exactInputSingle` of up to `max_swap_usdc` USDC into the meme's locked stock, `minAmountOut` = oracle value minus 1% |
+| `buy_stock_solana(blockhash, tick_arrays)` | Solana | A legacy message with `CreateIdempotent` for the stock token account and Raydium CLMM `swap_v2` of up to `max_swap_usdc` USDC into the stock, `minAmountOut` = oracle value minus 1% |
+| `resign_solana(blockhash, tick_arrays)` | Solana | The last Solana buy again, same amount and `minAmountOut`, with a new blockhash |
+
+On Solana, two inputs come from the caller: a recent blockhash and the pool's tick arrays. Every other account comes from locked config and the contract's own derivations. A wrong blockhash or tick array can only make the swap fail on Solana; it cannot redirect funds.
+
+The testnet cap is 5 USDC per swap per chain, so the 0.3% pool fee plus price impact stays inside the 1% slippage allowed against the oracle. Larger balances are swapped over several transactions.
+
+## Signature verification before storing
+
+The contract does not trust the MPC response blindly. On every signature it runs:
+
+- `ecrecover` on EVM, and
+- `ed25519_verify` on Solana, over the exact message,
+
+and stores the signed transaction only if the signature matches its own treasury key. A wrong or malicious signature is discarded.
+
+One signature is in flight at a time across all chains. If a signing callback never completes, anyone can call `clear_stuck_signature()` after 300 blocks to free the slot; the nonce is not consumed.
+
+## Anyone broadcasts
+
+Signed transactions are public. `get_signed_tx(chain, nonce)` returns them ready to send: `0x` hex on EVM, base64 on Solana. Any account can broadcast them. The official keeper does this as a convenience; if it stops, anyone else can take over. The treasury needs a little ETH (Base, Robinhood Chain) and SOL (Solana) for gas, which anyone can top up.
+
+## Cash arrivals
+
+USDC leaves NEAR through `fund_chain(chain)` and is booked as *in transit* for that chain. When it arrives, the chain's USDC ledger is credited out of that in-transit amount.
+
+<Tabs items={["Base: MPC-proven", "Robinhood Chain: relayer-reported", "Solana: relayer-reported"]}>
+<Tab value="Base: MPC-proven">
+Anyone calls `credit_cash(chain, tx_hash, log_index, log)` with the USDC `Transfer` log from the transaction receipt. The contract checks that the log is a `Transfer` from the chain's USDC to the treasury, computes the MPC payload hash itself, and calls `verify_foreign_transaction` on `v1.signer-prod.testnet` (domain 3) with that `expected_payload_hash`. The MPC answers only if its nodes see that exact log. A wrong claim gets no answer. Each log is credited once.
+</Tab>
+<Tab value="Robinhood Chain: relayer-reported">
+Robinhood Chain is not in the MPC network's foreign-chain list, so the contract cannot prove an arrival there. The factory's relayer account calls `report_cash(chain, tx_hash, amount)`. Only the relayer can call it, once per transaction, and the credit is capped by the cash in transit.
+</Tab>
+<Tab value="Solana: relayer-reported">
+The relayer calls `report_cash("solana", signature, amount)`. The MPC network can prove a Solana account's state, but a balance is not an arrival: while a signed buy has not landed, the USDC balance still holds cash the ledger already moved to stock, so a credit from a balance could count it twice. Crediting from MPC-proven state is a follow-up.
+</Tab>
+</Tabs>
+
+Because every credit is capped by cash already counted in NAV, a credit can only move value from "in transit" to "on the chain". It cannot create value.
+
+## The ledger books the minimum
+
+Stock holdings are booked, not read. When a swap is signed, the ledger records its `minAmountOut`, the least it can receive. A swap that lands leaves the chain slightly above the ledger. The app shows the ledger next to the real explorer balance for each chain.
+
+<Callout type="warn" title="Disclosure: reverted swaps stay booked">
+  A signed EVM swap can revert on-chain, for example when the pool has drifted more than 1% from the oracle ("Too little received"). The ledger booked `minAmountOut` at signing, so the stock figure is overstated while the USDC stays unspent in the treasury. Total value is unchanged, but its split is wrong. The chain's USDC ledger reads 0, so that USDC is not spent again. The app flags the chain "Less on-chain". This is the case today for HONEY on Base and Robinhood Chain, from two swaps that reverted before the automatic re-peg of the synthetic pools ran. Base example: [`0x9609b7…`](https://sepolia.basescan.org/tx/0x9609b7e27e2f741c4286a6c6a1a6dd04867a4d7f6c1b60c092aea942ef7e27fb).
+
+  Planned fix: book EVM swaps only after the MPC verifies the swap's `Transfer` log on Base, and give relayer chains a capped "swap failed" report that returns the booking to USDC.
+</Callout>
+
+## Expired Solana buys
+
+A Solana transaction expires about 60 to 90 seconds after its blockhash. If a signed buy never lands, anyone can call `resign_solana` once 200 NEAR blocks have passed since it was signed and nothing else is in flight. The same buy is signed again with a new blockhash, and the ledger is not touched again. The 200-block wait (at least 2 minutes) is longer than a blockhash lifetime, so the old and new transaction can never both land.
+
+## Proven live
+
+| What | Evidence |
+| --- | --- |
+| MPC-signed EVM transactions mined on Base Sepolia and Robinhood Chain testnet | `docs/SPIKE.md` S23 |
+| MPC EdDSA controls a Solana address; hand-built Raydium swap signed by the MPC and finalized on devnet | `docs/SPIKE.md` S21, S25 |
+| The contract's own expected payload hash for a Base USDC `Transfer` log, signed by the live testnet MPC | `docs/SPIKE.md` S26 |
+| One meme holding NVDA on all three chains, every step signed at the contract's request | `docs/DEPLOYMENTS.md`, "End to end" |
+
+See [Security](/docs/security) for the full threat model and [Contracts reference](/docs/reference/contracts) for method details.

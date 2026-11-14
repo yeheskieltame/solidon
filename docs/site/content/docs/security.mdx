@@ -1,0 +1,103 @@
+---
+title: "Security and trust"
+description: "Solidon's trust assumptions, threat model, manipulation brakes and known gaps, stated openly."
+---
+
+Solidon is a testnet prototype. This page lists what a user has to trust, what the contract enforces, and what is not solved yet. The source of truth is the threat model in `docs/SPEC.md`.
+
+## Trust assumptions
+
+### No admin key
+
+No method lets anyone move treasury funds or change a parameter. Launched memes have no access key at all (for example, `honey.solidon.testnet` has an empty access key list). The treasury addresses can only be signed for by the meme contract through the NEAR MPC network, and the contract signs only an approve to its chain's locked router and a swap into its locked stock. Every parameter is readable with `get_params`.
+
+### Holdings are booked, not read
+
+The stock ledger records each swap's `minAmountOut` when the swap is signed. That is conservative for a swap that lands. A signed EVM swap that reverts is not unbooked yet: its USDC stays in the treasury, but the stock figure is overstated until holdings are proven. The app shows the explorer balance next to the ledger and flags such a chain "Less on-chain". See [Treasuries](/docs/concepts/treasuries).
+
+### Cash on Robinhood Chain and Solana is relayer-reported
+
+Cash arriving on Base is proven by MPC verification of the USDC `Transfer` log. Robinhood Chain is not in the MPC's foreign-chain list. Solana is, but only as account state, and a proven balance is not a proven arrival. Arrivals on both are booked on the word of the factory's relayer account, capped by the cash in transit and once per transaction, so a report cannot create value.
+
+### The bridge delivers
+
+Cash in transit counts in NAV from the moment it leaves NEAR. On testnet the bridge is a trusted keeper account (`keeper.solidon.testnet`, which is also the relayer). On mainnet that leg is NEAR Intents / 1Click. Exposure is bounded: each transfer is capped by `max_swap_usdc`, and only cash above the 20% buffer leaves NEAR, so redemptions are untouched.
+
+### The oracle
+
+On testnet the oracle is a mock with a Pyth read interface, fed live Chainlink prices from Robinhood Chain mainnet by the keeper. Testnet mNAV numbers are therefore a demo, not a market signal. The mainnet price source is still open: Pyth equity feeds need a paid grant, and Chainlink logs verified through the MPC are the candidate.
+
+## Manipulation brakes
+
+| Brake | Value | What it stops |
+| --- | --- | --- |
+| Pool price for mNAV | 30-minute TWAP | One large trade triggering issuance or a buyback |
+| Rebalance cooldown | 1 hour | Repeated actions in a short window |
+| Issuance cap | 1% of circulating supply per 24 hours | Sudden dilution |
+| Oracle staleness stop | 15 minutes | Any mNAV action, `fund_chain` or `buy_stock` on an old price |
+| Max slippage per swap | 1% against the oracle (`minAmountOut`) | Front-running and sandwiching the treasury swap |
+| Per-chain swap cap | 5 USDC per transaction on testnet | Pool fee and price impact exceeding the 1% slippage |
+
+<Callout type="warn" title="A NAV floor, not a price guarantee">
+  The floor defends NAV, not the price. If the stock falls, NAV falls with it. Buyback starts below 1.0 times NAV and redemption below 0.9 times NAV. The UI and README state this.
+</Callout>
+
+## Threat model
+
+| Threat | Mitigation |
+| --- | --- |
+| Creator or admin drains the treasury | No admin key. The treasury addresses can only be signed for by the meme contract via MPC, and the contract only signs an approve and a swap to each chain's locked router |
+| Stock ledger drifts from the on-chain balance | The ledger records `minAmountOut`, not an estimate. The dashboard shows the real explorer balance per chain next to the ledger. Upgrade: OutLayer TEE reads the balance and attests to it |
+| A fake or replayed cash arrival inflates a chain's USDC ledger | Every credit is capped by that chain's cash in transit, so it only moves value already counted in NAV. Each (chain, tx, log) is credited once. On Base the log must be a `Transfer` from the chain's USDC to the treasury, and the MPC must confirm the contract's own payload hash |
+| The relayer misreports cash on Robinhood Chain or Solana | Only the factory's relayer can report, only for relayer chains, once per transaction, capped by the cash in transit. Worst case it books in-transit cash as arrived early: NAV is unchanged, and a swap signed against it reverts on-chain |
+| A signed Solana buy expires without landing | `resign_solana` signs the same buy with a new blockhash, without touching the ledger, only when nothing is in flight and 200 NEAR blocks have passed, so the old and new transaction can never both land. Residual: only the last Solana buy can be signed again |
+| A signed EVM swap reverts on-chain | Found live on 11 Nov 2026 (HONEY, Base, [`0x9609b7…`](https://sepolia.basescan.org/tx/0x9609b7e27e2f741c4286a6c6a1a6dd04867a4d7f6c1b60c092aea942ef7e27fb)). Total value is unchanged but the stock is overstated; the chain's USDC ledger reads 0, so the USDC is not spent again. Flagged "Less on-chain". Fix planned (see Known gaps) |
+| Wrong live inputs for a Solana buy (blockhash, tick arrays) | Every other account comes from locked config and the contract's own derivations, so a wrong input only makes the swap fail. Recovery is `resign_solana` |
+| Wrong Solana token accounts | Set by the relayer from canonical bumps (`set_solana_accounts`), which may correct them. A wrong one only makes buys fail |
+| The bridge keeps or loses cash in transit | Bounded per transfer by `max_swap_usdc`; only cash above the 20% buffer leaves NEAR. Mainnet uses Intents / 1Click; the testnet keeper is a trusted stand-in |
+| Pool price manipulation to trigger issuance or buyback | 30-minute TWAP, 1-hour cooldown, issuance capped at 1% of supply per day |
+| Stale oracle while the stock market is closed | All mNAV actions stop if the price is older than 15 minutes. Pool trading keeps working |
+| Bank run on redemptions | Redemptions only draw on the cash buffer. A redemption that cash cannot cover is refunded |
+| Stock token issuer blocks, pauses or upgrades the token | Accepted trust assumption. Stock sales stop on that chain, the stock is still valued at the oracle price, and redemptions use the USDC buffer on NEAR |
+| Fake token with a stock symbol | The factory's stock list is immutable: every venue (chain, token, decimals) comes from the registries in `contracts/stocks/` and is fixed at factory init |
+| Relayer withholds transactions | Anyone can broadcast a signed transaction |
+| Front-running the swap | `minAmountOut` from the oracle price with at most 1% slippage; each swap capped per chain |
+| A callback panics on an unexpected MPC or oracle response and locks the contract | Callbacks that hold state parse raw results with a size bound and never panic: a bad response refunds or frees the slot. `clear_stuck_signature` frees a signing slot after 300 blocks |
+| The MPC network returns a wrong or malicious signature | `ecrecover` (EVM) or `ed25519_verify` (Solana) on every signature; the transaction is stored only if it matches the treasury key |
+| Nobody pays gas for the treasury | Liveness only. Anyone can top up ETH or SOL; on mainnet Intents can deliver it with the cash |
+| Premium bubble then crash | Buyback below 1.0, redemption below 0.9. Issuance is accretive, so a bubble leaves holders with more stock per token |
+| Users read the floor as a price guarantee | UI and README state that the floor is a NAV floor |
+
+## Sybil resistance
+
+No per-account rewards exist. Every mechanic is proportional to token amount, so splitting holdings across accounts gains nothing.
+
+## Known gaps and next steps
+
+<Accordions>
+<Accordion title="Book EVM swaps on a proven log">
+  Today a reverted EVM swap stays booked. Next step: book Base swaps only after the MPC verifies the swap's `Transfer` log, as cash already is, and give relayer chains a capped "swap failed" report that returns the booking to USDC.
+</Accordion>
+<Accordion title="Prove holdings">
+  The MPC can verify Base logs and Solana account state, but not Robinhood Chain. Proven holdings would replace the booked ledger on Base and Solana. A TEE keeper on OutLayer that reads and attests balances is later work.
+</Accordion>
+<Accordion title="Credit Solana cash from proven state">
+  Solana arrivals are relayer-reported because a proven balance can double count while a signed buy has not landed. Crediting from MPC-proven state is a follow-up.
+</Accordion>
+<Accordion title="Refill the cash buffer from stock">
+  The spec schedules a partial stock sale when the NEAR buffer falls below 10% of NAV, and a redemption queue when the buffer runs out. The contract carries the 10% refill parameter but has no stock-sale method yet; a redemption that cash cannot cover is refunded.
+</Accordion>
+<Accordion title="Trustless bridge leg">
+  The testnet bridge is a trusted keeper. The mainnet design uses Intents / 1Click; a contract-driven intent signed by an MPC-derived key on `intents.near` would remove the need to trust whoever supplies the deposit address. Not built.
+</Accordion>
+<Accordion title="Mainnet price source">
+  Pyth equity feeds need a paid grant. Chainlink logs verified through the mainnet MPC are the candidate and need one mainnet run.
+</Accordion>
+<Accordion title="Factory access key on testnet">
+  The testnet factory account `solidon.testnet` still has a full-access key during development. Launched memes have no access key and copy their stock and chains config at launch, so the key cannot change an existing meme. Before a mainnet deployment the factory's keys are to be deleted so the "no admin" claim holds for the factory too.
+</Accordion>
+</Accordions>
+
+## Legal
+
+Tokenized stocks are regulated securities in many places. Robinhood Stock Tokens may not be offered, sold or delivered to US persons. Solidon is a testnet prototype with synthetic tokens and is not for US persons.

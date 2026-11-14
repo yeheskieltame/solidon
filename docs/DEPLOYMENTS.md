@@ -138,6 +138,16 @@ The ledger is below the on-chain balance on every chain, as designed for swaps t
 | Seed 1,000 USDC | [`HCBnzsT…`](https://testnet.nearblocks.io/txns/HCBnzsTtGsu9hnCnpBctpZA52R2rwFU3CMTpcRsnBoi8) |
 | Buys of 400, 150 and 250 USDC | [`4RNCs63…`](https://testnet.nearblocks.io/txns/4RNCs63GFb5Q33nmwM9FA2y9a78zdc577KRDZYs6Bdb3), [`H67hFSt…`](https://testnet.nearblocks.io/txns/H67hFStpeQhYeyMMAY2J2Qrazf6WUGWPLyYs4zSnNgPd), [`9qGqv8S…`](https://testnet.nearblocks.io/txns/9qGqv8SZmVHADnR9Rryjh83gZiGtborChBMA872o3uHr) |
 
+### The Floor Is Lava ($FLOOR)
+
+[`floor.solidon.testnet`](https://testnet.nearblocks.io/address/floor.solidon.testnet), thesis TSLA, was launched on 13 Nov 2026 from the app's Launch page with a demo wallet (`19d6c2e1…3a27`), as recorded in the demo video. Its EVM treasury is [`0x68c1e3ad…bb72`](https://sepolia.basescan.org/address/0x68c1e3adc85bf1fcb60697dbef01db4521dbbb72). The production keeper skips it on purpose (`KEEPER_SKIP_MEMES`), so its cash stays on NEAR and it can demonstrate the buyback and redemption rules without stock moving.
+
+| Step | Transaction |
+| --- | --- |
+| `create_meme` (4.46 NEAR, name, symbol, TSLA, icon) | [`FYksRfS…`](https://testnet.nearblocks.io/txns/FYksRfSVMa3NogLoxszJU3QMNiRgpDe366ZYTZYJ6oN6) |
+| Seed 100 USDC | [`8omCZa5…`](https://testnet.nearblocks.io/txns/8omCZa5MGSYmBJS77bwhNjmv8CsvCGyUBqeHbtdg7bg1) |
+| `init_treasury` | [`9PZPgpf…`](https://testnet.nearblocks.io/txns/9PZPgpfYhfBQ7kS3NSyuDUZbKqjzNWN9YVbtqMKugT9c) |
+
 ## NEAR testnet (history)
 
 ### Current factory (9 Nov 2026, second deploy)

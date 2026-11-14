@@ -1,0 +1,278 @@
+---
+title: "Contracts"
+description: "Every public method of the Solidon factory and meme contracts on NEAR, with arguments, deposits, callers, effects and emitted events."
+---
+
+Solidon is two Rust contracts on NEAR (near-sdk), in one cargo workspace under `contracts/`:
+
+| Crate | Account | Role |
+| --- | --- | --- |
+| `factory` | `solidon.testnet` | Deploys each meme as `<symbol>.solidon.testnet`. Fixes USDC, oracle, treasury chains and stock list at init. No owner. |
+| `meme` | `<symbol>.solidon.testnet` | NEP-141 token, internal meme/USDC pool, mNAV engine, multichain treasury via Chain Signatures. No owner, no setter. |
+| `mock-ft` | `usdc.solidon.testnet` | Testnet USDC stand-in (NEP-141, 6 decimals, open `mint`). |
+| `mock-pyth` | `pyth.solidon.testnet` | Testnet oracle with the Pyth read interface and an open `set_price`. |
+
+Conventions used on this page:
+
+- `U128` values are JSON strings (`"1000000"`). USDC amounts are raw units with 6 decimals; meme amounts are raw units with 18 decimals.
+- Prices returned by the pool (`spot_price`, `twap_price`, `nav`) are USDC raw units per meme raw unit, scaled by `1e30`.
+- `chain` is a name from the factory's chains config: `base`, `robinhood` or `solana`.
+- Ratios are basis points: `10000` = 100% = 1.0x.
+- "Anyone" means any NEAR account. Who calls does not change the outcome; the contract checks every input.
+
+<Callout type="info" title="No admin">
+Neither contract has an owner method. Every parameter is fixed at `new` and readable through views. See [Security](/docs/security).
+</Callout>
+
+## Factory
+
+### Change methods
+
+| Method | Args | Deposit | Caller | Effect |
+| --- | --- | --- | --- | --- |
+| `new` | `usdc: AccountId`, `oracle: AccountId`, `chains: ChainsConfig`, `stocks: Stock[]` | none | deployer, once (`#[init]`) | Stores the immutable config. Requires at least one stock. |
+| `create_meme` | `name: string`, `symbol: string`, `thesis_stock: string`, `icon: string \| null` | at least `launch_cost()` yoctoNEAR | anyone | Creates `<symbol lowercased>.<factory>`, transfers the whole deposit to it, deploys the meme code and calls its `new`. `symbol` must be 2 to 10 ASCII letters or digits and not yet launched; `thesis_stock` must be a listed ticker. On failure the deposit is refunded to the caller. |
+| `on_create` | `meme`, `creator`, `deposit` | none | factory only (`#[private]`) | Callback. On success records the meme and emits `launch`; otherwise refunds the deposit. |
+
+### View methods
+
+| Method | Args | Returns |
+| --- | --- | --- |
+| `launch_cost` | none | `U128`: storage cost of the meme code plus 20,000 bytes of state. Live value: `4459990000000000000000000` (4.46 NEAR). |
+| `get_memes` | `from_index?: u32` (default 0), `limit?: u32` (default 50) | `AccountId[]` in launch order |
+| `get_usdc` | none | USDC token account |
+| `get_oracle` | none | Oracle account |
+| `get_chains` | none | `ChainsConfig` |
+| `get_stocks` | none | `Stock[]` |
+
+### Config types
+
+<TypeTable
+  type={{
+    mpc: { type: 'AccountId', description: 'Chain Signatures MPC contract. Testnet: v1.signer-prod.testnet.', required: true },
+    bridge: { type: 'AccountId', description: 'Receives USDC from fund_chain (testnet: keeper.solidon.testnet; mainnet: NEAR Intents / 1Click leg).', required: true },
+    relayer: { type: 'AccountId', description: 'Reports cash arrivals on chains the MPC cannot verify, and sets the Solana token accounts.', required: true },
+    evm: { type: 'EvmChain[]', description: 'EVM treasury chains, in ledger order.', required: true },
+    solana: { type: 'SolanaChain | null', description: 'Solana treasury chain, or null.', required: true },
+  }}
+/>
+
+`EvmChain`: `{name, chain_id, usdc, usdc_decimals, swap_router, pool_fee, max_fee_per_gas, max_priority_fee_per_gas, max_swap_usdc, proof}`. `proof` is `{"Mpc": {"foreign_chain": "Base", "finality": "Latest" | "Safe" | "Finalized"}}` or `"Relayer"`.
+
+`SolanaChain`: `{name, usdc_mint, usdc_token_program, stock_token_program, clmm_program, amm_config, max_swap_usdc}`. The USDC program must be SPL Token and the stock program Token-2022; `max_swap_usdc` must fit a `u64`.
+
+`Stock`: `{ticker, price_id, venues: [{chain, token, decimals, solana}]}`. `price_id` is 64 lowercase hex characters. One venue per chain; `solana` is `{pool, usdc_vault, stock_vault, observation, bitmap_extension}` on the Solana venue and `null` elsewhere. `decimals` at most 18.
+
+The live config is on the [Deployments](/docs/reference/deployments) page.
+
+## Meme: token and pool
+
+The meme is a standard NEP-141 token (`ft_transfer`, `ft_transfer_call`, `ft_total_supply`, `ft_balance_of`, `ft_metadata`) with NEP-145 storage management (`storage_deposit`, `storage_withdraw`, `storage_unregister`, `storage_balance_bounds`, `storage_balance_of`). Decimals: 18. At `new`, 1,000,000,000 tokens are minted to the meme contract itself as pool inventory.
+
+<Callout type="warn" title="Register first">
+A buyer must be registered on the meme (`storage_deposit`) before a buy, or the transfer of meme tokens panics and the USDC is refunded. The meme must be registered on the USDC contract before any USDC can be sent to it.
+</Callout>
+
+### Buying and seeding: `ft_transfer_call` on USDC
+
+USDC enters through `ft_transfer_call` on the USDC contract with `receiver_id` = the meme. The meme's `ft_on_transfer` accepts only the factory-fixed USDC and parses `msg`:
+
+| `msg` | Caller | Effect |
+| --- | --- | --- |
+| `{"action":"seed"}` | the creator, once | Sets the USDC reserve to the full amount. Panics if already seeded or amount is 0. Emits `seed`. |
+| `{"action":"buy","min_out":"<u128>"}` | anyone | Takes the 1% fee on the USDC side (0.8% to treasury cash, 0.2% claimable by the creator), swaps the rest on `x * y = k`, sends meme tokens to the sender. Panics if output is 0 or below `min_out`. Emits `buy`. |
+
+Any panic refunds the full USDC amount through `ft_resolve_transfer`. Attach 1 yoctoNEAR; the web app uses 150 TGas.
+
+```bash
+near contract call-function as-transaction usdc.solidon.testnet ft_transfer_call \
+  json-args '{"receiver_id":"honey.solidon.testnet","amount":"10000000","msg":"{\"action\":\"buy\",\"min_out\":\"1\"}"}' \
+  prepaid-gas '150.0 Tgas' attached-deposit '1 yoctoNEAR' \
+  sign-as <you>.testnet network-config testnet sign-with-keychain send
+```
+
+### Change methods
+
+| Method | Args | Deposit | Caller | Effect |
+| --- | --- | --- | --- | --- |
+| `sell` | `amount: U128`, `min_out: U128` | 1 yoctoNEAR | holder | Sells `amount` meme into the pool. Fee taken from the USDC output (same split as a buy). Panics if net output is 0 or below `min_out`. Emits `sell`, then pays USDC; a failed payout becomes claimable (`payout_failed`). |
+| `claim_usdc` | none | none | any account with a claimable balance | Withdraws USDC credited to the caller: creator fees, rebalance tips, failed payouts. Panics with `Nothing to claim`. |
+
+### View methods
+
+| Method | Args | Returns |
+| --- | --- | --- |
+| `get_pool` | none | `{meme_reserve, usdc_reserve, treasury_usdc, spot_price, twap_price}`. `twap_price` is `null` while the pool is younger than the 30-minute window. |
+| `quote_buy` | `usdc_in: U128` | Meme out after fees |
+| `quote_sell` | `meme_in: U128` | USDC out after fees |
+| `claimable_of` | `account_id` | `U128` USDC claimable |
+| `get_params` | none | `Params` (below) |
+| `get_info` | none | `{creator, usdc, oracle, stock}` |
+
+### Locked parameters (`get_params`)
+
+| Field | Value | Meaning |
+| --- | --- | --- |
+| `pool_fee_bps` | 100 | 1% fee on every trade, USDC side |
+| `treasury_fee_bps` | 80 | Of which 0.8% to treasury cash |
+| `creator_fee_bps` | 20 | Of which 0.2% claimable by the creator |
+| `issuance_mnav_bps` | 20000 | Issue new tokens above mNAV 2.0 |
+| `max_issuance_bps_per_epoch` | 100 | At most 1% of circulating supply per epoch |
+| `epoch_secs` | 86400 | Epoch: 24 h |
+| `buyback_mnav_bps` | 10000 | Buy back and burn below mNAV 1.0 |
+| `redemption_mnav_bps` | 9000 | Redemption window opens below mNAV 0.9 |
+| `cash_buffer_bps` | 2000 | 20% of treasury value kept as cash on NEAR |
+| `cash_refill_bps` | 1000 | Refill threshold, 10% |
+| `twap_window_secs` | 1800 | 30-minute TWAP |
+| `oracle_max_age_secs` | 900 | Price older than 15 minutes is stale |
+| `rebalance_cooldown_secs` | 3600 | One rebalance per hour |
+| `caller_tip_bps` | 5 | 0.05% of the rebalance amount to the caller |
+| `target_leverage_bps` | 10000 | 1.0x |
+
+## Meme: mNAV engine
+
+| Method | Args | Deposit | Caller | Effect |
+| --- | --- | --- | --- | --- |
+| `rebalance` | none | none | anyone, once per cooldown | Attach 100 TGas. Reads the oracle (`get_price_no_older_than`, 900 s), then evaluates mNAV = TWAP / NAV: above 2.0 issues tokens into the pool (capped by the epoch, only if accretive), below 1.0 buys back and burns with cash above the 20% buffer, and sets the redemption window (open below 0.9). Credits the 0.05% tip to the caller. Emits `rebalance`. Panics if the cooldown has not ended. |
+| `redeem` | `amount: U128`, `min_usdc: U128` | 1 yoctoNEAR | holder, while the window is open | Attach 100 TGas (the web app uses 150). Burns `amount`, reads a fresh price, pays NAV per token in USDC from treasury cash. Refunds the tokens on a stale price, on `min_usdc` not met, or on insufficient cash. Emits `redeem` or `redeem_refunded`. |
+| `get_treasury` | none | view | anyone | `{stock_units, treasury_usdc, circulating, redemption_open, last_rebalance, next_rebalance, last_nav, last_mnav_bps, epoch_cap, epoch_issued}` |
+
+`rebalance` returns an `Outcome`: `"cooldown"`, `"stale_price"` (no state change, cooldown not consumed), `"no_market"` (pool younger than the TWAP window or nothing circulating, cooldown not consumed), `{"issued": {meme, usdc}}`, `{"bought_back": {meme, usdc}}`, or `"no_action"`.
+
+See [mNAV](/docs/concepts/mnav) for the formulas and [Rebalance](/docs/guides/rebalance) and [Redeem](/docs/guides/redeem) for walkthroughs.
+
+## Meme: treasury
+
+Each meme owns one EVM address (MPC path `evm-treasury`, secp256k1 domain 0), shared by Base and Robinhood Chain, and one Solana address (path `solana-treasury`, EdDSA domain 1). One signature is in flight at a time across all chains. See [Treasuries](/docs/concepts/treasuries).
+
+The Gas column is the prepaid gas the contract's doc comment asks for, or what the keeper attaches.
+
+### Setup
+
+| Method | Args | Caller | Gas | Effect |
+| --- | --- | --- | --- | --- |
+| `init_treasury` | none | anyone, once | 100 TGas | Reads `derived_public_key` from the MPC and stores the EVM treasury address. Emits `treasury` with `evm_address`. |
+| `init_solana_treasury` | none | anyone, once | 100 TGas | Reads the derived EdDSA key and stores the Solana treasury address. Emits `treasury` with `solana_address`. |
+| `approve_router` | `chain: string` | anyone, once per EVM chain | 300 TGas | MPC-signs `approve(swap_router, max)` on that chain's USDC. Emits `evm_tx_signed` (or `evm_tx_rejected`). |
+| `set_solana_accounts` | `usdc_account_bump: u8`, `stock_account_bump: u8` | relayer only (may correct) | 30 TGas | Stores the treasury's USDC (SPL Token) and stock (Token-2022) associated token accounts. Emits `solana_accounts`. |
+
+### Cash flow
+
+| Method | Args | Caller | Gas | Effect |
+| --- | --- | --- | --- | --- |
+| `fund_chain` | `chain: string` | anyone | 100 TGas | Reads a fresh price, then sends NEAR cash above the 20% buffer, at most `max_swap_usdc`, to the factory's `bridge` with memo `solidon fund <chain> <treasury>`. Booked as `in_transit` (still counted in NAV). Emits `cash_sent` or `fund_chain_skipped`; a failed transfer returns the cash (`cash_returned`). |
+| `credit_cash` | `chain: string`, `tx_hash: string`, `log_index: u64`, `log: {block_hash, block_number, transaction_index, address, topics, data}` | anyone, chains with `proof: Mpc` (Base) | 300 TGas | Checks the log is a USDC `Transfer` to the treasury, then calls `verify_foreign_transaction` (domain 3) on the MPC. On success moves `min(value, in_transit)` into the chain's USDC ledger. Once per log. Emits `cash_credited` (`proof: "mpc"`) or `cash_rejected`. |
+| `report_cash` | `chain: string`, `tx_hash: string`, `amount: U128` | relayer only, chains with `proof: Relayer` (Robinhood) and Solana | 30 TGas | Same credit, capped by `in_transit`, once per `tx_hash`. `amount` is in the chain's raw USDC units. On Solana `tx_hash` is the base58 transaction signature. Emits `cash_credited` (`proof: "relayer"`). |
+
+### Stock buys
+
+| Method | Args | Caller | Gas | Effect |
+| --- | --- | --- | --- | --- |
+| `buy_stock` | `chain: string` | anyone, EVM chain with a venue, router approved | 300 TGas | Fresh price, then MPC-signs a Uniswap v3 SwapRouter02 `exactInputSingle` of up to `max_swap_usdc` of the chain's USDC into the thesis stock, `minOut` = oracle value minus 1%. The ledger books `minOut` at signing. Emits `evm_tx_signed`, or `buy_stock_skipped` on a stale price. |
+| `buy_stock_solana` | `blockhash: string`, `tick_arrays: [i32, u8][]` | anyone | 300 TGas | Fresh price, then MPC-signs (EdDSA) a Raydium CLMM `swap_v2` of up to `max_swap_usdc` USDC into the stock, `minOut` = oracle value minus 1%. `blockhash`: recent, base58. `tick_arrays`: 1 to 3 `[start_index, bump]` pairs in the swap direction, nearest first. Emits `solana_tx_signed`. |
+| `resign_solana` | `blockhash: string`, `tick_arrays: [i32, u8][]` | anyone, 200 NEAR blocks after the last Solana signature | 300 TGas | Signs the last Solana buy again with the same amounts and a new blockhash. The ledger is not touched. |
+| `clear_stuck_signature` | none | anyone, 300 blocks after a request | default | Frees a signing slot whose callback never completed. The nonce is not consumed. Emits `signature_cleared`. |
+
+### Treasury views
+
+| Method | Args | Returns |
+| --- | --- | --- |
+| `get_treasury_chains` | none | `{address, mpc, signing, chains: [{config, venue, nonce, approved, usdc, stock, in_transit}], solana: {config, venue, address, usdc_account, stock_account, seq, usdc, stock, in_transit, last_buy} \| null}`. `usdc` and `stock` are raw units of the chain's tokens; `in_transit` is 6-decimal USDC. |
+| `get_signed_tx` | `chain: string`, `nonce: u64` | Signed raw transaction or `null`: `0x` hex on EVM chains, base64 on Solana (ready for `sendTransaction` with `encoding: base64`). |
+
+Anyone can broadcast a signed transaction; the keeper's broadcaster does it automatically. See [Keeper](/docs/reference/keeper).
+
+### Internal callbacks
+
+These are `#[private]` and can only be called by the contract itself: `on_payout`, `on_rebalance_price`, `on_redeem_price`, `on_fund_price`, `on_funded`, `on_cash_verified`, `on_treasury_key`, `on_solana_treasury_key`, `on_buy_price`, `on_solana_buy_price`, `on_signed`, `ft_resolve_transfer`.
+
+## Read-only calls
+
+All views work with near-cli-rs and no account:
+
+```bash
+NET="network-config testnet"
+near contract call-function as-read-only solidon.testnet get_memes json-args '{}' $NET now
+near contract call-function as-read-only solidon.testnet launch_cost json-args '{}' $NET now
+near contract call-function as-read-only solidon.testnet get_chains json-args '{}' $NET now
+near contract call-function as-read-only honey.solidon.testnet get_pool json-args '{}' $NET now
+near contract call-function as-read-only honey.solidon.testnet get_treasury json-args '{}' $NET now
+near contract call-function as-read-only honey.solidon.testnet get_treasury_chains json-args '{}' $NET now
+near contract call-function as-read-only honey.solidon.testnet quote_buy json-args '{"usdc_in":"10000000"}' $NET now
+near contract call-function as-read-only honey.solidon.testnet get_signed_tx json-args '{"chain":"base","nonce":0}' $NET now
+```
+
+Example `get_treasury` of `floor.solidon.testnet`:
+
+```json
+{
+  "circulating": "497487437185929648241206030",
+  "epoch_cap": "0",
+  "epoch_issued": "0",
+  "last_mnav_bps": "0",
+  "last_nav": "0",
+  "last_rebalance": 0,
+  "next_rebalance": 3600,
+  "redemption_open": false,
+  "stock_units": "0",
+  "treasury_usdc": "800000"
+}
+```
+
+## Events
+
+Every event is a NEP-297 log line `EVENT_JSON:{"standard":"solidon","version":"1.0.0","event":"<name>","data":[{...}]}`. The meme also emits standard NEP-141 events (`ft_mint` at launch and on issuance, `ft_burn` on buyback and redemption, `ft_transfer`).
+
+| Event | Emitter | `data` fields |
+| --- | --- | --- |
+| `launch` | factory | `meme`, `creator` |
+| `seed` | meme | `account`, `usdc_in` |
+| `buy` | meme | `account`, `usdc_in`, `meme_out` |
+| `sell` | meme | `account`, `meme_in`, `usdc_out` |
+| `payout_failed` | meme | `account`, `amount` |
+| `rebalance` | meme | `caller`, `mnav_bps`, `nav`, `twap`, `redemption_open`, `outcome`, `tip` |
+| `redeem` | meme | `account`, `meme_in`, `usdc_out` |
+| `redeem_refunded` | meme | `account`, `meme` |
+| `treasury` | meme | `evm_address` or `solana_address` |
+| `solana_accounts` | meme | `usdc_account`, `stock_account` |
+| `cash_sent` | meme | `chain`, `amount`, `bridge`, `to` |
+| `fund_chain_skipped` | meme | `chain`, `reason` |
+| `cash_returned` | meme | `chain`, `amount` |
+| `cash_credited` | meme | `chain`, `tx_hash`, `amount`, `proof` (`mpc` adds `log_index`) |
+| `cash_rejected` | meme | `chain`, `tx_hash`, `log_index` |
+| `buy_stock_skipped` | meme | `chain`, `reason` |
+| `evm_tx_signed` | meme | `chain`, `nonce`, `kind`, `raw` |
+| `evm_tx_rejected` | meme | `chain`, `nonce` |
+| `solana_tx_signed` | meme | `chain`, `seq`, `kind`, `tx` (base64) |
+| `solana_tx_rejected` | meme | `chain`, `seq` |
+| `signature_cleared` | meme | `chain`, `nonce` |
+
+`kind` is `"Approve"`, `{"Swap": {"usdc_in", "min_stock_out"}}` or `"Resign"`.
+
+Example `rebalance` event, as served by the [read API](/docs/reference/api):
+
+```json
+{
+  "event": "rebalance",
+  "standard": "solidon",
+  "version": "1.0.0",
+  "data": {
+    "caller": "keeper.solidon.testnet",
+    "mnav_bps": "291610",
+    "nav": "406123708214",
+    "twap": "11843000782134",
+    "redemption_open": false,
+    "outcome": "no_action",
+    "tip": "0"
+  }
+}
+```
+
+## Testnet helpers
+
+| Contract | Method | Args | Note |
+| --- | --- | --- | --- |
+| `usdc.solidon.testnet` (`mock-ft`) | `mint` | `account_id`, `amount` | Open to anyone; registers the account if needed. Plus NEP-141 and NEP-145. |
+| `pyth.solidon.testnet` (`mock-pyth`) | `set_price` | `price_id`, `price: I64`, `expo: i32`, `publish_time?: i64` | Open to anyone; the keeper pushes Chainlink prices. |
+| `pyth.solidon.testnet` | `get_price_no_older_than` | `price_id`, `age: u64` | Returns `{price, conf, expo, publish_time}` or `null` |
+| `pyth.solidon.testnet` | `get_price_unsafe` | `price_identifier` | Same, without the age check |

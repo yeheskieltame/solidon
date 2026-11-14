@@ -1,0 +1,102 @@
+---
+title: "Stocks"
+description: "The eight stocks a Solidon meme can hold, how they are priced, and their synthetic tokens and trading venues on each treasury chain."
+---
+
+The factory lists eight stocks, fixed at init. A creator picks one as the meme's thesis stock in `create_meme(thesis_stock)`; it cannot be changed. Read the list with `get_stocks` on `solidon.testnet`.
+
+<Callout type="warn" title="Testnet tokens">
+Every stock token on this page is synthetic: a Solidon-deployed token with a Solidon-seeded pool, priced from the real Chainlink feed. They are not tokenized shares and have no value.
+</Callout>
+
+## The list
+
+| Ticker | Company | Oracle feed id (`price_id`) | Chainlink proxy (Robinhood Chain mainnet) |
+| --- | --- | --- | --- |
+| NVDA | NVIDIA | `b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593` | `0x379EC4f7C378F34a1B47E4F3cbeBCbAC3E8E9F15` |
+| AAPL | Apple | `49f6b65cb1de6b10eaf75e7c03ca029c306d0357e91b5311b175084a5ad55688` | `0x6B22A786bAa607d76728168703a39Ea9C99f2cD0` |
+| MSFT | Microsoft | `d0ca23c1cc005e004ccf1db5bf76aeb6a49218f43dac3d4b275e92de12ded4d1` | `0x45C3C877C15E6BA2EBB19eA114Ea508d14C1Af2E` |
+| GOOGL | Alphabet | `5a48c03e9b9cb337801073ed9d166817473697efff0d138874e0f6a33d6d5aa6` | `0xF6f373a037c30F0e5010d854385cA89185AE638b` |
+| AMZN | Amazon | `b5d0e0fa58a1f8b81498ae670ce93c872d14434b72c364885d4fa1b257cbb07a` | `0xD5a1508ceD74c084eBf3cBe853e2C968fB2a651C` |
+| META | Meta Platforms | `78a3e3b8e676a8f73c439f5d749737034b139bbbe899ba5775216fba596607fe` | `0x7C38C00C30BEe9378381E7B6135d7283356D71b1` |
+| TSLA | Tesla | `16dad506d7db8da01c87581c87ca897a012a153557d4d578c3b9c9e1bc0632f1` | `0x4A1166a659A55625345e9515b32adECea5547C38` |
+| SPCX | SpaceX | `8a593d6edde7a3095213c88116d8840d01e93c2ddeb800bc891772eb8b93bb94` | `0xB265810950ba6c5C0Ff821c9963014a56fD8Bffb` |
+
+Sources: `contracts/stocks/feeds.json` (feed ids) and `CHAINLINK_PROXIES` in `backend/keeper/src/config.js`.
+
+## Pricing
+
+<Steps>
+<Step>
+
+### Chainlink is the reference
+
+The keeper reads `latestRoundData()` from the official Chainlink proxies on Robinhood Chain mainnet. These are 24/5 equity feeds with 8 decimals.
+
+</Step>
+<Step>
+
+### The keeper writes the mock oracle
+
+Every `ORACLE_INTERVAL_SECS` (300 s) the keeper calls `set_price(price_id, price, expo)` on `pyth.solidon.testnet` for all eight stocks in one NEAR transaction. The feed id is the Pyth id of `Equity.US.<TICKER>/USD`, used as the oracle key. A Chainlink answer older than 25 hours (weekend or broken feed) is not pushed.
+
+</Step>
+<Step>
+
+### The contract reads one price per stock
+
+The meme calls `get_price_no_older_than(price_id, 900)`. A price older than 15 minutes is stale: `rebalance`, `redeem`, `fund_chain` and the stock buys then do nothing. The same price values the stock held on every chain.
+
+</Step>
+<Step>
+
+### Buys are bounded by the oracle
+
+`buy_stock` and `buy_stock_solana` sign a swap with `minOut` = oracle value of the USDC in, minus 1%. If the pool fills worse than that, the swap reverts on the destination chain.
+
+</Step>
+</Steps>
+
+The mock oracle is open on testnet (anyone can call `set_price`), so testnet mNAV numbers are a demo, not a market signal. See [mNAV](/docs/concepts/mnav).
+
+## Tokens per chain
+
+| Chain | Token standard | Symbol | Decimals | Venue | Pool fee | Cash proof |
+| --- | --- | --- | --- | --- | --- | --- |
+| Base Sepolia | ERC-20 (`MockERC20`) | `NVDAc`, `AAPLc`, ... | 8 | Uniswap v3 (SwapRouter02 `exactInputSingle`) | 0.3% | MPC-verified (`credit_cash`) |
+| Robinhood Chain testnet | ERC-20 (`MockERC20`) | `NVDA`, `AAPL`, ... | 18 | Uniswap v3 (SwapRouter02 `exactInputSingle`) | 0.3% | Relayer (`report_cash`) |
+| Solana devnet | Token-2022 mint with metadata | `NVDAx`, `AAPLx`, ... | 8 | Raydium CLMM (`swap_v2`) | 0.05% | Relayer (`report_cash`) |
+
+Every listed stock has one venue on each of the three chains. Each token address, pool and explorer link is on [Deployments](/docs/reference/deployments).
+
+USDC per chain: Circle USDC (6 decimals) on Base Sepolia, the testnet USDC (18 decimals) on Robinhood, Circle devnet USDC (6 decimals) on Solana. The contract normalises all of them to 6 decimals in NAV.
+
+### How the pools were seeded
+
+| Chain | Script | Liquidity |
+| --- | --- | --- |
+| Base Sepolia, Robinhood testnet | `contracts/evm/deploy-testnet-stocks.py` | One-sided stock liquidity worth $50,000, from the reference price at creation to about 2x |
+| Solana devnet | `backend/solana-spike/1_setup.js` | Same, on Raydium CLMM; vault, observation and bitmap accounts checked by `contracts/stocks/solana-accounts.py` |
+
+Reference prices at creation (10 Nov 2026), USD:
+
+| NVDA | AAPL | MSFT | GOOGL | AMZN | META | TSLA | SPCX |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 177.56 | 350.44 | 544.15 | 290.38 | 268.14 | 642.58 | 376.77 | 141.18 |
+
+On Solana the NVDA reference was 176.59.
+
+### Re-peg
+
+One-sided liquidity starts at the reference price. When the stock falls, a buy still fills at the range edge, above the oracle, and the treasury's swap fails its `minOut`. The keeper's re-peg pass (every 30 minutes in production) moves any pool whose next buy fills more than 0.5% above Chainlink to 0.995 x Chainlink and adds $50,000 of new stock liquidity. A pool below the oracle is left alone. See [Keeper](/docs/reference/keeper).
+
+## Registries
+
+| File | Content |
+| --- | --- |
+| `contracts/stocks/feeds.json` | Oracle feed id per ticker |
+| `contracts/stocks/base-sepolia.json` | USDC, Uniswap v3 factory, SwapRouter02, position manager, and per stock: token, symbol, decimals, pool, fee, reference price, tick range |
+| `contracts/stocks/hood-testnet.json` | Same for Robinhood Chain testnet |
+| `contracts/stocks/solana-devnet.json` | USDC mint and token programs, Raydium CLMM program and AMM config, and per stock: mint, pool, `usdc_vault`, `stock_vault`, `observation`, `bitmap_extension` |
+
+`contracts/deploy-testnet.sh` builds the factory's init args from these files; `DRY_RUN=1 ./deploy-testnet.sh` prints them without sending.

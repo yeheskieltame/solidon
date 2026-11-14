@@ -1,0 +1,115 @@
+---
+title: "Launch a meme"
+description: "Create a meme with its thesis stock, seed its pool with USDC, and open its treasury, in three transactions."
+---
+
+Anyone can launch a meme from the **Launch** tab of the app. The flow has three steps, shown at the top of the page: **Create** (name it, pick its stock), **Seed** (add the first USDC), **Open treasury** (derive its addresses). Each step is one transaction, or two when a storage registration is needed.
+
+If you leave halfway, the page keeps the meme in its URL (`/launch?meme=<account>`), and the "Your memes" panel lists the memes you created so you can continue their setup.
+
+## What it costs
+
+| Item | Amount |
+| --- | --- |
+| Launch cost | `launch_cost()` on the factory, 4.46 NEAR today. It pays for the meme contract's storage (its code plus 20,000 bytes of state) |
+| Seed | Your USDC, which becomes the pool's first liquidity |
+| USDC registration for the meme | 0.00125 NEAR, only if the meme is not yet registered on USDC |
+| Gas | Three transactions |
+
+On testnet, **Get test funds** gives you NEAR for gas and 1,000 test USDC. The launch cost is more than the faucet's 0.5 NEAR, so fund the launching account with testnet NEAR first (for example from the NEAR testnet faucet).
+
+<Steps>
+<Step>
+
+### Step 1: Create (`create_meme`)
+
+Fill in the form under "Create your meme":
+
+| Field | Rule |
+| --- | --- |
+| Name | Free text, up to 40 characters in the app |
+| Ticker | 2 to 10 ASCII letters or digits. The meme's account is the ticker in lowercase under the factory, for example `floor.solidon.testnet`. The app checks it live: "Free: …" or "That ticker is taken" |
+| Which stock does it believe in? | One of the factory's listed stocks: NVDA, AAPL, MSFT, GOOGL, AMZN, META, TSLA, SPCX |
+| Icon (optional) | Any image. The app crops it square, resizes it to 64×64 and stores it on-chain in the token metadata as a data URL, 8 KB max |
+
+<Callout type="warn" title="The icon is immutable">
+The icon is part of the token metadata and no method changes it. Check the preview on the right before you create. (`honeypot.solidon.testnet` was abandoned for this reason: it launched with a cropped icon and was replaced by `$HONEY`.)
+</Callout>
+
+Click **Create TICKER for 4.46 NEAR**. The app calls the factory:
+
+```json title="create_meme on solidon.testnet (deposit: launch_cost, 300 TGas)"
+{ "name": "The Floor Is Lava", "symbol": "FLOOR", "thesis_stock": "TSLA", "icon": "data:image/webp;base64,…" }
+```
+
+The factory creates the sub-account, deploys the meme code, and calls `new` with the locked parameters and the stock's venues on every chain. All 1,000,000,000 tokens are minted to the meme's own pool. If the deploy fails, the deposit is refunded to you. On success the factory logs a `launch` event.
+
+The toast reads "Creating TICKER", then "TICKER is live".
+
+</Step>
+<Step>
+
+### Step 2: Seed the pool
+
+Only the creator can seed, and only once. Enter the amount in "You seed USDC" (quick amounts 100, 500, 1,000 or MAX; default 1,000).
+
+The opening price is the seed divided by 1,000,000,000: a 1,000 USDC seed opens at $0.000001 per token.
+
+Click **Seed the pool with … USDC**. The app sends:
+
+1. `storage_deposit` on `usdc.solidon.testnet` for the meme (0.00125 NEAR), only if it is not yet registered.
+2. `ft_transfer_call` on `usdc.solidon.testnet` to the meme with `msg` `{"action":"seed"}`.
+
+The contract refuses a seed from anyone but the creator ("Only the creator can seed") and a second seed ("Pool is already seeded"). The toast reads "Seeding the pool", then "Pool seeded". Trading opens now. Until then the meme page shows "Trading has not opened yet".
+
+</Step>
+<Step>
+
+### Step 3: Open the treasury (`init_treasury`)
+
+Click **Open the treasury**. The app calls `init_treasury()` on the meme ("Free apart from gas"). Anyone can call it, once.
+
+The meme asks the MPC signer `v1.signer-prod.testnet` for the public key derived for its own account (path `evm-treasury`) and stores the resulting EVM address. That one address is the treasury on Base Sepolia and on Robinhood Chain testnet.
+
+The toast reads "Opening the treasury", then "Treasury opened".
+
+</Step>
+</Steps>
+
+## What "live" means
+
+After the three steps the page shows **All three steps done** and "TICKER is live.": the meme is seeded and tradable, its treasury address exists, and every trade now feeds the balance sheet. Buttons: **Open TICKER** and **Launch another**.
+
+The remaining setup needs no action from you. These methods are public, and the Solidon keeper calls them for every meme it finds:
+
+| Call | Effect |
+| --- | --- |
+| `init_solana_treasury()` | Derives the Solana treasury address (EdDSA, path `solana-treasury`) |
+| `set_solana_accounts(...)` | Relayer only: sets the Solana treasury's USDC and stock token accounts |
+| `approve_router(chain)` | MPC-signed approval of the chain's Uniswap v3 SwapRouter02 for USDC |
+| `fund_chain(chain)`, `buy_stock(chain)`, `buy_stock_solana(...)` | Moves cash above the 20% buffer to a chain and buys the stock |
+| `rebalance()` | Runs the mNAV rules once an hour |
+
+## Example: $FLOOR, "The Floor Is Lava"
+
+`floor.solidon.testnet` holds TSLA. It was launched on 13 Nov 2026 from the app, seeded with 100 USDC.
+
+| Step | Transaction |
+| --- | --- |
+| `create_meme` (`name` "The Floor Is Lava", `symbol` "FLOOR", `thesis_stock` "TSLA", icon) | [`FYksRfSV…`](https://testnet.nearblocks.io/txns/FYksRfSVMa3NogLoxszJU3QMNiRgpDe366ZYTZYJ6oN6) |
+| Seed: `ft_transfer_call` of 100 USDC, `msg` `{"action":"seed"}` | [`8omCZa5M…`](https://testnet.nearblocks.io/txns/8omCZa5MGSYmBJS77bwhNjmv8CsvCGyUBqeHbtdg7bg1) |
+| `init_treasury` | [`9PZPgpfY…`](https://testnet.nearblocks.io/txns/9PZPgpfYhfBQ7kS3NSyuDUZbKqjzNWN9YVbtqMKugT9c) |
+
+Its EVM treasury is `0x68c1e3adc85bf1fcb60697dbef01db4521dbbb72`. The hosted keeper is configured to leave FLOOR alone (`KEEPER_SKIP_MEMES`), so its cash stays on NEAR and buybacks and redemptions can be shown by hand. Its open methods still work for anyone. See [Rebalance](/docs/guides/rebalance).
+
+## Launch from the CLI
+
+```bash
+NET="network-config testnet"
+COST=$(near contract call-function as-read-only solidon.testnet launch_cost json-args '{}' $NET now 2>/dev/null | tr -d '"')
+near contract call-function as-transaction solidon.testnet create_meme \
+  json-args '{"name":"Elon Doge","symbol":"ELONDOGE","thesis_stock":"SPCX","icon":null}' \
+  prepaid-gas '300.0 Tgas' attached-deposit '4.46 NEAR' sign-as <you>.testnet $NET sign-with-keychain send
+```
+
+Then register the meme on `usdc.solidon.testnet` with `storage_deposit`, seed it with `ft_transfer_call` and `msg` `{"action":"seed"}`, and call `init_treasury` on the meme.

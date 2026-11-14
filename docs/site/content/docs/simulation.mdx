@@ -1,0 +1,85 @@
+---
+title: "60-day simulation"
+description: "The 60-day simulation of a Solidon meme against its stock across five market scenarios, what it checks, what it found, and how to rerun it."
+---
+
+The simulation tests the core claim: a Solidon meme moves in the same direction as its stock, more aggressively, with a floor at NAV. It runs the contract's locked parameters against simulated stock prices and meme demand. The parameters were locked only after every check passed (9 Nov 2026).
+
+## Method
+
+The script `simulation/sim.py` mirrors the meme contract: the x times y = k pool with a 1% USDC-side fee (0.8% to the treasury), treasury cash and stock units, and the mNAV engine with the locked parameters. It uses the Python standard library only and deterministic seeds.
+
+| Piece | How it is modelled |
+| --- | --- |
+| Day 0 | End of a 90-day launch: a fresh pool seeded with 10,000 USDC and the full supply, then hype buying. The treasury is built only by pool fees and issuance |
+| Traders | Move the meme by 1.5 times the stock's move, plus a hype drift per scenario and 5% per day noise |
+| Sellers | Redeem at NAV while the redemption window is open and the pool pays less; sell the rest |
+| Arbitrageurs | Buy below NAV in the pool and redeem, limited by the cash on hand |
+| `rebalance()` | Every hour: 30-minute TWAP, then issuance (mNAV above 2.0, capped at 1% of circulating supply per 24 hours, accretive only), buyback (mNAV below 1.0, cash above the 20% buffer only), redemption window (mNAV below 0.9) |
+| Treasury | Cash above 20% of NAV buys stock; cash below 10% sells stock to refill to 20%. Every stock trade loses 1% to slippage |
+| Oracle | Stale after 15 minutes without an update; no mNAV action while stale |
+| Steps | 5-minute steps over 60 days |
+| Seeds | 12 per scenario. Tables show the median across seeds; "Min mNAV" and "Longest below 0.9" are the worst seed |
+
+## Scenarios
+
+| Scenario | Stock path | Meme demand | What must hold |
+| --- | --- | --- | --- |
+| Steady bull | +30% over 60 days | Rising | Meme return above stock return; stock units per token rise after each issuance |
+| Bull then hype fades | +30% over 30 days, then flat | Rising, then falling | Meme falls back toward NAV; mNAV back at 0.9 or above within 2 hours of dropping below |
+| Stock crash | -30% | Panic selling | Meme falls with the stock; redemption brings mNAV back to 0.9 or above within 2 hours |
+| Sideways chop | Plus or minus 5% swings | Random | No runaway issuance; supply changes stay within the epoch cap |
+| Weekend gap | Flat, oracle stale for 48 hours | Random | No mNAV action during staleness; the pool keeps trading |
+
+## Results
+
+Median of 12 seeds per scenario, from `simulation/RESULTS.md`.
+
+| Scenario | Meme | Stock | NAV/token | Corr | Beta | Meme max DD | Stock max DD | Min mNAV | Longest below 0.9 | Supply | Stock units/token |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Steady bull | +31.1% | +28.7% | +47.9% | 0.55 | 1.36 | -22.1% | -8.0% | 1.07 | 0 h | +7.1% | +13.1% |
+| Bull then hype fades | -24.7% | +28.7% | +56.6% | 0.50 | 1.34 | -46.1% | -9.6% | 0.87 | 1 h | -1.6% | +29.1% |
+| Stock crash | -46.9% | -31.6% | +3.9% | 0.59 | 1.35 | -54.4% | -36.0% | 0.87 | 1 h | -22.6% | +68.8% |
+| Sideways chop | -19.6% | -4.7% | +22.1% | 0.66 | 1.43 | -39.9% | -18.5% | 0.88 | 1 h | +1.2% | +34.7% |
+| Weekend gap | -19.0% | +0.0% | +18.5% | n/a | n/a | -30.5% | +0.0% | 0.88 | 1 h | +1.7% | +22.9% |
+
+All 13 checks from `docs/SPEC.md` pass:
+
+| Scenario | Check | Result |
+| --- | --- | --- |
+| All five | Every issuance is accretive (all seeds) | pass |
+| Steady bull | Median meme return above median stock return | pass |
+| Steady bull | Median beta to the stock above 1 | pass |
+| Steady bull | Stock units per token rise (all seeds) | pass |
+| Bull then hype fades | mNAV back at 0.9 or above within 2 hours of dropping below (all seeds) | pass |
+| Stock crash | Meme falls with the stock (median return below 0, median correlation above 0) | pass |
+| Stock crash | mNAV back at 0.9 or above within 2 hours of dropping below (all seeds) | pass |
+| Sideways chop | Supply growth per day within the 1% cap (all seeds) | pass |
+| Weekend gap | No mNAV action while the oracle is stale (all seeds) | pass |
+
+## Findings
+
+- **Same direction, more aggressive.** Beta to the stock is 1.34 to 1.43 in every scenario with stock movement, and correlation is positive.
+- **Stock per token grows in every scenario.** Accretive issuance and buybacks below NAV raise stock units per token, from +13.1% (steady bull) to +68.8% (stock crash).
+- **The floor holds.** Worst case across all runs: minimum mNAV 0.87, at most 1 hour below 0.9. The floor is stated as "back at 0.9 or above within 2 hours" because the redemption window only opens once mNAV is already below 0.9.
+- **The meme can still lose.** In the fade, crash, chop and weekend scenarios the meme price ends lower than it started, while NAV per token ends higher. The premium paid at launch is what falls. The floor defends NAV, not the hype premium paid on entry.
+- **Parameter sweep.** Thresholds 2.0, 2.5, 3.0 times caps 0.5%, 1% kept the floor identical; a 0.5% cap hurt the bull case. 2.0 and 1% were kept.
+
+### The finding that changed the spec: a buyback must not sell stock
+
+Tokens bought back come from the pool's inventory, not from holders, so circulating supply does not fall and each buyback lowers NAV per token. Under the first version of the rule, a buyback could spend cash down to the 10% refill level; the refill then sold stock to top cash back up, and the next buyback spent it again. The adopted rule: a buyback only spends cash above the 20% buffer and never triggers a stock sale. Redemption, which is value-neutral, carries the floor.
+
+| Stock crash, median of 12 seeds | Stock units per token, day 60 vs day 0 | NAV/token | Worst min mNAV |
+| --- | --- | --- | --- |
+| First rule (cash down to 10%) | +56.4% | +0.9% | 0.89 |
+| Adopted (cash above 20% only) | +68.8% | +3.9% | 0.87 |
+
+The contract implements the adopted rule (`buy_back` in `contracts/meme/src/mnav.rs`).
+
+## Rerun it
+
+```bash
+python3 simulation/sim.py
+```
+
+Python 3.10 or newer, standard library only, about 2 seconds. It rewrites `simulation/RESULTS.md` and the charts in `simulation/charts/`, and exits non-zero if any check fails, so it doubles as a test.

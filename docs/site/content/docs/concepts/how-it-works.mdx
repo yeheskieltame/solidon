@@ -1,0 +1,108 @@
+---
+title: "How it works"
+description: "The end-to-end path from a trade on NEAR to a tokenized stock held on Base Sepolia, Robinhood Chain testnet and Solana devnet."
+---
+
+Each Solidon meme is one NEAR contract. It is a token, a pool, a treasury ledger and a set of capital rules at the same time. Trading fees become treasury cash. The contract sends that cash to its own addresses on three chains and signs, through NEAR Chain Signatures, the swaps that turn it into the meme's thesis stock.
+
+<Callout type="info" title="Testnet">
+  Everything described here runs on testnets: NEAR testnet, Base Sepolia, Robinhood Chain testnet and Solana devnet. The stock tokens are Solidon synthetic tokens priced from the Chainlink feeds on Robinhood Chain mainnet. The USDC is test USDC with no value.
+</Callout>
+
+## The flow
+
+<Mermaid chart={`flowchart LR
+  U["Trader"] -- "USDC" --> M["Meme contract on NEAR: NEP-141 + AMM + mNAV engine"]
+  M -- "0.8% fee" --> T[("Treasury cash on NEAR")]
+  T -- "fund_chain" --> B["Bridge: keeper on testnet, Intents 1Click on mainnet"]
+  B -- "USDC" --> E1["Base treasury"]
+  B -- "USDC" --> E2["Robinhood Chain treasury"]
+  B -- "USDC" --> S1["Solana treasury"]
+  M -- "sign approve and swap" --> MPC["MPC signer v1.signer-prod.testnet"]
+  MPC -- "signature, checked by the contract" --> M
+  M -- "signed tx" --> K["Anyone broadcasts"]
+  K --> E1
+  K --> E2
+  K --> S1
+  E1 -- "Uniswap v3" --> N1["Stock"]
+  E2 -- "Uniswap v3" --> N2["Stock"]
+  S1 -- "Raydium CLMM" --> N3["Stock"]`} />
+
+<Steps>
+<Step>
+### A trader buys the meme
+
+The trader sends USDC to the meme contract with `ft_transfer_call` and `msg: {"action":"buy","min_out":"..."}`. The contract takes a 1% fee from the USDC: 0.8% goes to treasury cash, 0.2% is credited to the creator. The rest goes into the constant-product pool and the trader receives meme tokens. See [The meme token](/docs/concepts/token).
+</Step>
+<Step>
+### Fees build treasury cash on NEAR
+
+Treasury cash is USDC held by the meme contract on NEAR. The contract keeps 20% of NAV on NEAR as a buffer for buybacks and redemptions.
+</Step>
+<Step>
+### Anyone calls fund_chain
+
+`fund_chain(chain)` reads a fresh oracle price, then sends the NEAR cash above the 20% buffer (at most one swap's worth, `max_swap_usdc`) to the factory's bridge account. The amount is booked as *in transit* for that chain and stays in NAV. A failed transfer returns it to NEAR cash.
+</Step>
+<Step>
+### The bridge delivers USDC to the treasury
+
+On testnet the bridge is a keeper account (`keeper.solidon.testnet`) that delivers test USDC to the treasury address on the target chain. On mainnet this leg is NEAR Intents / 1Click. See [NEAR Intents](/docs/concepts/intents).
+</Step>
+<Step>
+### The arrival is credited
+
+- **Base:** anyone calls `credit_cash` with the USDC `Transfer` log. The contract asks the MPC network to verify that exact log (`verify_foreign_transaction`). Only then is the chain's USDC ledger credited.
+- **Robinhood Chain and Solana:** the factory's relayer account calls `report_cash`.
+
+Every credit is capped by the cash in transit for that chain and is booked once. See [Treasuries](/docs/concepts/treasuries).
+</Step>
+<Step>
+### Anyone calls buy_stock
+
+`buy_stock(chain)` (EVM) or `buy_stock_solana(blockhash, tick_arrays)` reads the oracle and builds the swap inside the contract, with `minAmountOut` set to the oracle value minus 1%. The contract asks `v1.signer-prod.testnet` for a signature, verifies it against its own treasury key, and stores the signed transaction.
+</Step>
+<Step>
+### Anyone broadcasts
+
+Any relayer can read the signed transaction with `get_signed_tx` and send it to the chain. The swap runs on Uniswap v3 (Base Sepolia, Robinhood Chain testnet) or Raydium CLMM (Solana devnet). The stock lands at the treasury address. The ledger books the `minAmountOut` it signed for.
+</Step>
+<Step>
+### The mNAV engine acts
+
+Once per hour anyone can call `rebalance()`. The contract compares the pool's 30-minute TWAP with NAV per token and issues, holds, buys back or opens redemptions. See [mNAV](/docs/concepts/mnav).
+</Step>
+</Steps>
+
+## The actors
+
+| Actor | What it is | What it can do |
+| --- | --- | --- |
+| Trader | Any NEAR account | Buy, sell, and redeem while the redemption window is open |
+| Creator | The account that launched the meme | Seeds the pool once, claims the 0.2% creator fee with `claim_usdc()` |
+| Factory | `solidon.testnet` | Deploys each meme as a sub-account (for example `honey.solidon.testnet`), holds the immutable stock list and chains config |
+| Meme contract | One per meme | NEP-141 token, AMM pool, mNAV engine, treasury ledger. Builds and requests signatures for every treasury transaction. No owner method |
+| MPC signer | `v1.signer-prod.testnet` (NEAR Chain Signatures) | Signs for the meme's derived EVM (ECDSA) and Solana (EdDSA) addresses. Verifies Base logs for `credit_cash` |
+| Oracle | A Pyth-interface contract on NEAR | Gives the stock price. On testnet it is a mock oracle fed live Chainlink prices (Robinhood Chain mainnet) by the keeper |
+| Bridge | The factory's `bridge` account | Delivers USDC from NEAR to a treasury chain. Testnet: keeper account. Mainnet: Intents / 1Click |
+| Relayer | The factory's `relayer` account | Reports cash arrivals on Robinhood Chain and Solana, sets the Solana token accounts. Capped by cash in transit |
+| Broadcaster | Anyone | Sends signed transactions to the chains. The official keeper is a convenience, not a trust point |
+| Caller of `rebalance()` | Anyone | Triggers the mNAV engine once per hour and earns a 0.05% tip of the action value |
+
+## One meme, three chains, live
+
+The test meme `e2etest.solidon.testnet` holds NVDA on all three chains. Every treasury step was signed by the NEAR MPC at the meme contract's request; the keeper only broadcast and bridged. The full list of transactions is in `docs/DEPLOYMENTS.md` under "End to end" and on [Deployments](/docs/reference/deployments).
+
+| Chain | Ledger NVDA (booked minimum) | On-chain NVDA |
+| --- | --- | --- |
+| Base Sepolia | 0.02965417 | 0.03032966 |
+| Robinhood testnet | 0.01060760 | 0.01082210 |
+| Solana devnet | 0.02770371 | 0.02831835 |
+
+The ledger is below the on-chain balance on every chain, as designed for swaps that land.
+
+<Cards>
+  <Card title="mNAV" href="/docs/concepts/mnav" description="The four zones and why each rule exists." />
+  <Card title="Treasuries" href="/docs/concepts/treasuries" description="Chain Signatures, signature checks and cash proofs." />
+  <Card title="Security" href="/docs/security" description="Trust assumptions and threat model." />
+</Cards>
